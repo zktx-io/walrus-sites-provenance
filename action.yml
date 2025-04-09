@@ -1,0 +1,21 @@
+name: 'Walrus SLSA Action'
+description: 'Deploy Walrus sites with cryptographic provenance using SLSA + Sigstore.'
+author: 'daoauth'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  config-path:
+    description: 'Path to site config JSON file'
+    required: false
+    default: './site.config.json'
+
+env:
+  WALRUS_KEYPAIR:
+    description: 'Base64-encoded keypair used to sign and deploy'
+    required: true
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

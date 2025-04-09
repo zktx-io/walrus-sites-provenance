@@ -1,0 +1,60 @@
+import { WalrusClient, RetryableWalrusClientError } from '@mysten/walrus';
+import { BlobDictionary, SiteConfig } from '../types';
+
+export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export const writeBlobs = async ({
+  retryLimit,
+  walrusClient,
+  blobs,
+}: {
+  retryLimit: number;
+  walrusClient: WalrusClient;
+  blobs: BlobDictionary;
+}) => {
+  for (const blobId of Object.keys(blobs)) {
+    const blob = blobs[blobId];
+
+    let success = false;
+    let attempt = 0;
+    let confirmations;
+
+    while (!success && attempt < retryLimit) {
+      try {
+        confirmations = await walrusClient.writeEncodedBlobToNodes({
+          blobId,
+          metadata: blob.metadata,
+          sliversByNode: blob.sliversByNode,
+          deletable: true,
+          objectId: blob.objectId,
+        });
+
+        success = true;
+      } catch (error) {
+        attempt++;
+        console.warn(`⚠️ Write failed for ${blobId} (attempt ${attempt})`);
+
+        if (error instanceof RetryableWalrusClientError) {
+          console.log('↩️ Resetting walrus client...');
+          walrusClient.reset();
+          await sleep(10000); // Wait for 1 second before retrying
+        } else {
+          throw error; // Non-retryable
+        }
+        if (attempt >= retryLimit) {
+          throw new Error(`❌ Failed to write blob ${blobId} after ${retryLimit} attempts.`);
+        }
+      }
+    }
+
+    for (const f of Object.keys(blobs)) {
+      if (f === blobId) {
+        blobs[f].confirmations = confirmations;
+      }
+    }
+
+    console.log(`✅ Storing resource on Walrus: ${blobId}`);
+  }
+
+  return blobs;
+};

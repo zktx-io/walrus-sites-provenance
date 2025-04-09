@@ -1,0 +1,65 @@
+{
+  "name": "walrus-slsa-action",
+  "version": "0.0.1",
+  "description": "Deploy Walrus sites with cryptographic provenance using SLSA + Sigstore.",
+  "keywords": [
+    "sui",
+    "walrus",
+    "slsa",
+    "github",
+    "action",
+    "deployment",
+    "provenance"
+  ],
+  "homepage": "https://github.com/zktx-io/walrus-slsa-action#readme",
+  "bugs": {
+    "url": "https://github.com/zktx-io/walrus-slsa-action/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zktx-io/walrus-slsa-action.git"
+  },
+  "license": "ISC",
+  "author": "daoauth",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "format": "npx prettier --check .",
+    "format:write": "npx prettier --write .",
+    "lint": "npx eslint 'src/**/*.{ts,js}'",
+    "lint:fix": "npx eslint 'src/**/*.{ts,js}' --fix",
+    "test": "jest",
+    "ci-test": "jest",
+    "coverage": "jest --coverage",
+    "build": "npx ncc build src/index.ts -o dist --source-map --license licenses.txt"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@mysten/sui": "^1.26.1",
+    "@mysten/walrus": "^0.0.13",
+    "glob": "^11.0.1"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.14.0",
+    "@typescript-eslint/eslint-plugin": "^8.29.1",
+    "@typescript-eslint/parser": "^8.29.1",
+    "@vercel/ncc": "^0.38.3",
+    "eslint": "^9.24.0",
+    "eslint-plugin-github": "^6.0.0",
+    "eslint-plugin-jest": "^28.11.0",
+    "eslint-plugin-jsonc": "^2.20.0",
+    "eslint-plugin-prettier": "^5.2.6",
+    "jest": "^29.7.0",
+    "prettier": "^3.5.3",
+    "ts-jest": "^29.3.1",
+    "typescript": "^5.8.3"
+  }
+}
