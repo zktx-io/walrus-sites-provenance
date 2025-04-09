@@ -58709,14 +58709,49 @@ module.exports = {
 /***/ }),
 
 /***/ 21219:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.certifyBlobs = void 0;
+const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
 const constants_1 = __nccwpck_require__(56156);
+const failWithMessage_1 = __nccwpck_require__(60210);
 const certifyBlobs = async ({ config, suiClient, walrusClient, blobs, signer, }) => {
     for (let i = 0; i < Object.keys(blobs).length; i += constants_1.MAX_CMD_CERTIFICATIONS) {
         const chunk = Object.keys(blobs).slice(i, i + constants_1.MAX_CMD_CERTIFICATIONS);
@@ -58739,11 +58774,10 @@ const certifyBlobs = async ({ config, suiClient, walrusClient, blobs, signer, })
             options: { showEffects: true, showEvents: true },
         });
         if (receipt.errors) {
-            console.error('Transaction failed:', receipt.errors);
-            throw new Error('Transaction failed');
+            (0, failWithMessage_1.failWithMessage)(`Transaction failed: ${JSON.stringify(receipt.errors)}`);
         }
         else {
-            console.log(`🚀 Certified ${chunk.length} blob(s), tx digest: ${digest}`);
+            core.info(`🚀 Certified ${chunk.length} blob(s), tx digest: ${digest}`);
         }
     }
 };
@@ -58757,6 +58791,39 @@ exports.certifyBlobs = certifyBlobs;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -58765,6 +58832,7 @@ exports.groupFilesBySize = void 0;
 const fs_1 = __importDefault(__nccwpck_require__(79896));
 const path_1 = __importDefault(__nccwpck_require__(16928));
 const glob_1 = __nccwpck_require__(21363);
+const core = __importStar(__nccwpck_require__(37484));
 const constants_1 = __nccwpck_require__(56156);
 const contentTypeMap = {
     aac: 'audio/aac',
@@ -58848,11 +58916,15 @@ const getContentTypeFromExtension = (ext) => {
     return contentTypeMap[ext.toLowerCase()];
 };
 const groupFilesBySize = (config) => {
-    const siteRoot = path_1.default.join(__dirname, config.path);
+    const siteRoot = path_1.default.resolve(process.cwd(), config.path);
+    if (!fs_1.default.existsSync(siteRoot)) {
+        core.setFailed(`❌ Provided path "${siteRoot}" does not exist.`);
+        return [];
+    }
     const files = glob_1.glob.sync('**/*.*', { cwd: siteRoot }).map(relativePath => {
         const fullPath = path_1.default.join(siteRoot, relativePath);
         const { size } = fs_1.default.statSync(fullPath);
-        const ext = path_1.default.extname(relativePath).slice(1); // "index.html" → "html"
+        const ext = path_1.default.extname(relativePath).slice(1);
         const contentType = getContentTypeFromExtension(ext) ?? 'application/octet-stream';
         return {
             path: fullPath,
@@ -58880,9 +58952,9 @@ const groupFilesBySize = (config) => {
     let totalSize = 0;
     let totalFiles = 0;
     for (const group of groups) {
-        console.log(`✅ Group ${group.groupId} (${group.size} bytes)`);
+        core.info(`✅ Group ${group.groupId} (${group.size} bytes)`);
         for (const file of group.files) {
-            console.log(` + ${file.name} (${file.size} bytes)`);
+            core.info(` + ${file.name} (${file.size} bytes)`);
         }
         totalSize += group.size;
         totalFiles += group.files.length;
@@ -58990,11 +59062,45 @@ exports.getSourceSymbols = getSourceSymbols;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerBlobs = void 0;
+const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
 const crypto_1 = __nccwpck_require__(76982);
 const fs_1 = __importDefault(__nccwpck_require__(79896));
@@ -59021,7 +59127,6 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
     const subsidiesPackageId = (0, getWalrusSystem_1.getSubsidiesPackageId)(config.network);
     const blobs = {};
     let totalCost = BigInt(0);
-    console.log(config);
     for (let i = 0; i < groups.length; i++) {
         const { files } = groups[i];
         const buffers = [];
@@ -59128,14 +59233,14 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
             });
             const suiBlobObjects = createdObjects.filter(obj => obj.data?.type === `${blobPackageId}::blob::Blob` &&
                 obj.data?.bcs?.dataType === 'moveObject');
-            console.log(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
+            core.info(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
             txIndex++;
             for (const obj of suiBlobObjects) {
                 const parsed = (0, blob_1.Blob)().fromBase64(obj.data.bcs.bcsBytes);
                 const blobId = base64url_1.base64url.fromNumber(parsed.blob_id);
                 blobs[blobId].objectId = parsed.id.id;
                 const group = registrations.find(r => r.blobId === blobId)?.groupId;
-                console.log(` + Blob ID: ${blobId} (Group ${group})`);
+                core.info(` + Blob ID: ${blobId} (Group ${group})`);
             }
         }
     }
@@ -59147,13 +59252,48 @@ exports.registerBlobs = registerBlobs;
 /***/ }),
 
 /***/ 59338:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.writeBlobs = exports.sleep = void 0;
+const core = __importStar(__nccwpck_require__(37484));
 const walrus_1 = __nccwpck_require__(19044);
+const failWithMessage_1 = __nccwpck_require__(60210);
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 exports.sleep = sleep;
 const writeBlobs = async ({ retryLimit, walrusClient, blobs, }) => {
@@ -59177,7 +59317,7 @@ const writeBlobs = async ({ retryLimit, walrusClient, blobs, }) => {
                 attempt++;
                 console.warn(`⚠️ Write failed for ${blobId} (attempt ${attempt})`);
                 if (error instanceof walrus_1.RetryableWalrusClientError) {
-                    console.log('↩️ Resetting walrus client...');
+                    core.info('↩️ Resetting walrus client...');
                     walrusClient.reset();
                     await (0, exports.sleep)(10000); // Wait for 1 second before retrying
                 }
@@ -59185,7 +59325,7 @@ const writeBlobs = async ({ retryLimit, walrusClient, blobs, }) => {
                     throw error; // Non-retryable
                 }
                 if (attempt >= retryLimit) {
-                    throw new Error(`❌ Failed to write blob ${blobId} after ${retryLimit} attempts.`);
+                    (0, failWithMessage_1.failWithMessage)(`❌ Failed to write blob ${blobId} after ${retryLimit} attempts.`);
                 }
             }
         }
@@ -59194,7 +59334,7 @@ const writeBlobs = async ({ retryLimit, walrusClient, blobs, }) => {
                 blobs[f].confirmations = confirmations;
             }
         }
-        console.log(`✅ Storing resource on Walrus: ${blobId}`);
+        core.info(`✅ Storing resource on Walrus: ${blobId}`);
     }
     return blobs;
 };
@@ -59203,19 +59343,188 @@ exports.writeBlobs = writeBlobs;
 
 /***/ }),
 
-/***/ 10308:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ 79407:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const core = __importStar(__nccwpck_require__(37484));
+const client_1 = __nccwpck_require__(70827);
+const walrus_1 = __nccwpck_require__(19044);
+const registerBlobs_1 = __nccwpck_require__(3964);
+const writeBlobs_1 = __nccwpck_require__(59338);
+const certifyBlobs_1 = __nccwpck_require__(21219);
+const groupFilesBySize_1 = __nccwpck_require__(77685);
+const createSite_1 = __nccwpck_require__(10308);
+const updateSite_1 = __nccwpck_require__(38713);
+const getWalrusSystem_1 = __nccwpck_require__(40802);
+const accountState_1 = __nccwpck_require__(26417);
+const loadConfig_1 = __nccwpck_require__(75523);
+const getSigner_1 = __nccwpck_require__(73207);
+const failWithMessage_1 = __nccwpck_require__(60210);
+const main = async () => {
+    // Load configuration
+    const config = (0, loadConfig_1.loadConfig)();
+    const signer = (0, getSigner_1.getSigner)();
+    // Initialize Sui and Walrus clients
+    const suiClient = new client_1.SuiClient({ url: (0, client_1.getFullnodeUrl)(config.network) });
+    const walrusClient = new walrus_1.WalrusClient({
+        network: config.network,
+        suiClient,
+    });
+    const { systemObjectId, blobPackageId, walCoinType } = await (0, getWalrusSystem_1.getWalrusSystem)(config.network, suiClient, walrusClient);
+    // Display owner address
+    core.info('\nStarting Publish Walrus Site...');
+    core.info(`\nNetwork: ${config.network}`);
+    const walBlance = await (0, accountState_1.accountState)(config.owner, suiClient, walCoinType);
+    // STEP 1: Load files from the specified directory
+    core.info(`\n📦 Grouping files by size...`);
+    const groups = (0, groupFilesBySize_1.groupFilesBySize)(config);
+    if (groups.length === 0) {
+        (0, failWithMessage_1.failWithMessage)('🚫 No files found to upload.');
+    }
+    // STEP 2: Register Blob IDs
+    core.info('\n📝 Registering Blobs...');
+    const blobs = await (0, registerBlobs_1.registerBlobs)({
+        config,
+        suiClient,
+        walrusClient,
+        walCoinType,
+        groups,
+        blobPackageId,
+        systemObjectId,
+        walBlance,
+        signer,
+    });
+    // Wait for 3 seconds to allow for blob registration
+    await (0, writeBlobs_1.sleep)(3000); // Wait for 3 seconds
+    // STEP 3: Write Blobs to Walrus
+    core.info('\n📤 Writing blobs to nodes...');
+    const blobsWithNodes = await (0, writeBlobs_1.writeBlobs)({
+        retryLimit: config.write_retry_limit || 5,
+        walrusClient,
+        blobs,
+    });
+    // STEP 4: Certify Blobs
+    core.info('\n🛡️ Certifying Blobs...');
+    await (0, certifyBlobs_1.certifyBlobs)({
+        config,
+        suiClient,
+        walrusClient,
+        blobs: blobsWithNodes,
+        signer,
+    });
+    // STEP 5: Create Site with Resources
+    if (config.object_id) {
+        core.info('\n🛠️ Update Site with Resources...');
+        await (0, updateSite_1.updateSite)({
+            config,
+            suiClient,
+            walrusClient,
+            blobPackageId,
+            blobs,
+            systemObjectId,
+            siteObjectId: config.object_id,
+            signer,
+        });
+    }
+    else {
+        core.info('\n🛠️ Creating Site with Resources...');
+        await (0, createSite_1.createSite)({
+            config,
+            suiClient,
+            blobs: blobsWithNodes,
+            signer,
+        });
+    }
+};
+main();
+
+
+/***/ }),
+
+/***/ 10308:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSite = void 0;
+const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
 const hexToBase36_1 = __nccwpck_require__(88793);
 const registerResources_1 = __nccwpck_require__(12318);
 const addRoutes_1 = __nccwpck_require__(97989);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const getWalrusSystem_1 = __nccwpck_require__(40802);
+const failWithMessage_1 = __nccwpck_require__(60210);
 const createSite = async ({ config, suiClient, blobs, signer, }) => {
     const packageId = (0, getWalrusSystem_1.getSitePackageId)(config.network);
     const transaction = new transactions_1.Transaction();
@@ -59267,12 +59576,11 @@ const createSite = async ({ config, suiClient, blobs, signer, }) => {
     // Log created site object IDs
     let siteObjectId = '';
     if (receipt.errors || suiSiteObjects.length === 0) {
-        console.error('❌ Create site failed:', receipt.errors);
-        throw new Error('Create site failed');
+        (0, failWithMessage_1.failWithMessage)(`❌ Create site failed: ${JSON.stringify(receipt.errors)}`);
     }
     else {
         siteObjectId = suiSiteObjects[0].data?.objectId || '';
-        console.log(`🚀 Site created successfully, tx digest: ${digest}`);
+        core.info(`🚀 Site created successfully, tx digest: ${digest}`);
     }
     if (batchedCommands.length > 1) {
         const tx = new transactions_1.Transaction();
@@ -59288,17 +59596,17 @@ const createSite = async ({ config, suiClient, blobs, signer, }) => {
             digest: digest2,
             options: { showEffects: true, showEvents: true },
         });
-        console.log(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+        core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
     }
     const b36 = (0, hexToBase36_1.hexToBase36)(siteObjectId);
-    console.log(`\n📦 Site object ID: ${siteObjectId}`);
+    core.info(`\n📦 Site object ID: ${siteObjectId}`);
     if (config.network === 'mainnet') {
-        console.log(`🌐 https://${b36}.wal.app/`);
-        console.log(`👉 You can now register this site on SuiNS using the object ID above.`);
+        core.info(`🌐 https://${b36}.wal.app/`);
+        core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
     }
     else {
-        console.log(`🌐 http://${b36}.localhost:3000/`);
-        console.log(`👉 You can test this Walrus Site locally.`);
+        core.info(`🌐 http://${b36}.localhost:3000/`);
+        core.info(`👉 You can test this Walrus Site locally.`);
     }
 };
 exports.createSite = createSite;
@@ -59602,12 +59910,46 @@ exports.registerResources = registerResources;
 /***/ }),
 
 /***/ 38713:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updateSite = void 0;
+const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
 const hexToBase36_1 = __nccwpck_require__(88793);
 const registerResources_1 = __nccwpck_require__(12318);
@@ -59670,7 +60012,7 @@ const updateSite = async ({ config, suiClient, walrusClient, blobPackageId, blob
         throw new Error('Update site failed');
     }
     else {
-        console.log(`🚀 Site updated successfully, tx digest: ${digest}`);
+        core.info(`🚀 Site updated successfully, tx digest: ${digest}`);
     }
     if (batchedCommands.length > 1) {
         const tx = new transactions_1.Transaction();
@@ -59686,7 +60028,7 @@ const updateSite = async ({ config, suiClient, walrusClient, blobPackageId, blob
             digest: digest2,
             options: { showEffects: true, showEvents: true },
         });
-        console.log(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+        core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
     }
     // Cleanup old blobs
     if (oldBlobObjects.length > 0) {
@@ -59706,23 +60048,23 @@ const updateSite = async ({ config, suiClient, walrusClient, blobPackageId, blob
             digest,
             options: { showEffects: true, showEvents: true },
         });
-        console.log(`🗑️  Old blobs deleted successfully, tx digest: ${digest3}`);
+        core.info(`🗑️  Old blobs deleted successfully, tx digest: ${digest3}`);
         oldBlobObjects.forEach(blobObjectId => {
-            console.log(` - Removed blob object ID: ${blobObjectId}`);
+            core.info(` - Removed blob object ID: ${blobObjectId}`);
         });
     }
     else {
-        console.log(`🗑️  No old blobs to delete.`);
+        core.info(`🗑️  No old blobs to delete.`);
     }
     const b36 = (0, hexToBase36_1.hexToBase36)(siteObjectId);
-    console.log(`\n📦 Site object ID: ${siteObjectId}`);
+    core.info(`\n📦 Site object ID: ${siteObjectId}`);
     if (config.network === 'mainnet') {
-        console.log(`🌐 https://${b36}.wal.app/`);
-        console.log(`👉 You can now register this site on SuiNS using the object ID above.`);
+        core.info(`🌐 https://${b36}.wal.app/`);
+        core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
     }
     else {
-        console.log(`🌐 http://${b36}.localhost:3000/`);
-        console.log(`👉 You can test this Walrus Site locally.`);
+        core.info(`🌐 http://${b36}.localhost:3000/`);
+        core.info(`👉 You can test this Walrus Site locally.`);
     }
 };
 exports.updateSite = updateSite;
@@ -59731,15 +60073,49 @@ exports.updateSite = updateSite;
 /***/ }),
 
 /***/ 26417:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.accountState = void 0;
+const core = __importStar(__nccwpck_require__(37484));
 const convert_1 = __nccwpck_require__(31190);
 const printBalance = (symbol, { amount, decimals }) => {
-    console.log(`${symbol}: ${(0, convert_1.convert)({ amount, decimals })}`);
+    core.info(`${symbol}: ${(0, convert_1.convert)({ amount, decimals })}`);
 };
 const accountState = async (owner, suiClient, walCoinType) => {
     const balances = await suiClient.getAllBalances({
@@ -59753,7 +60129,7 @@ const accountState = async (owner, suiClient, walCoinType) => {
     const walData = await suiClient.getCoinMetadata({
         coinType: walCoinType,
     });
-    console.log(`Adr: ${owner}`);
+    core.info(`Adr: ${owner}`);
     printBalance('Sui', {
         amount: sui?.totalBalance || '0',
         decimals: suiData?.decimals || 0,
@@ -59915,6 +60291,56 @@ exports.convert = convert;
 
 /***/ }),
 
+/***/ 60210:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.failWithMessage = void 0;
+const core = __importStar(__nccwpck_require__(37484));
+const failWithMessage = (message) => {
+    core.setFailed(message);
+    throw new Error('Process will be terminated.');
+};
+exports.failWithMessage = failWithMessage;
+
+
+/***/ }),
+
 /***/ 73207:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -59962,14 +60388,14 @@ const getSigner = () => {
     const raw = process.env.WALRUS_KEYPAIR;
     if (!raw) {
         core.setFailed('❌ WALRUS_KEYPAIR environment variable is missing.');
-        throw new Error('WALRUS_KEYPAIR is not set');
+        throw new Error('Process will be terminated.');
     }
     try {
         return ed25519_1.Ed25519Keypair.fromSecretKey((0, utils_1.fromBase64)(raw));
     }
     catch (err) {
         core.setFailed(`❌ Failed to parse WALRUS_KEYPAIR: ${err.message}`);
-        throw err;
+        throw new Error('Process will be terminated.');
     }
 };
 exports.getSigner = getSigner;
@@ -60188,7 +60614,7 @@ const loadConfig = () => {
         };
     }
     catch (err) {
-        core.error(`[walrus] Failed to load config: ${err.message}`);
+        core.warning(`[walrus] Failed to load config: ${err.message}`);
         core.warning('Using default config instead. Make sure your config is valid JSON.');
         return (0, exports.getDefaultConfig)();
     }
@@ -94334,107 +94760,13 @@ function unwrap(schema) {
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be in strict mode.
-(() => {
-"use strict";
-var exports = __webpack_exports__;
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const client_1 = __nccwpck_require__(70827);
-const walrus_1 = __nccwpck_require__(19044);
-const registerBlobs_1 = __nccwpck_require__(3964);
-const writeBlobs_1 = __nccwpck_require__(59338);
-const certifyBlobs_1 = __nccwpck_require__(21219);
-const groupFilesBySize_1 = __nccwpck_require__(77685);
-const createSite_1 = __nccwpck_require__(10308);
-const updateSite_1 = __nccwpck_require__(38713);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
-const accountState_1 = __nccwpck_require__(26417);
-const loadConfig_1 = __nccwpck_require__(75523);
-const getSigner_1 = __nccwpck_require__(73207);
-const main = async () => {
-    // Load configuration
-    const config = (0, loadConfig_1.loadConfig)();
-    const signer = (0, getSigner_1.getSigner)();
-    // Initialize Sui and Walrus clients
-    const suiClient = new client_1.SuiClient({ url: (0, client_1.getFullnodeUrl)(config.network) });
-    const walrusClient = new walrus_1.WalrusClient({
-        network: config.network,
-        suiClient,
-    });
-    const { systemObjectId, blobPackageId, walCoinType } = await (0, getWalrusSystem_1.getWalrusSystem)(config.network, suiClient, walrusClient);
-    // Display owner address
-    console.log('\nStarting Publish Walrus Site...');
-    console.log(`\nNetwork: ${config.network}`);
-    const walBlance = await (0, accountState_1.accountState)(config.owner, suiClient, walCoinType);
-    // STEP 1: Load files from the specified directory
-    console.log(`\n📦 Grouping files by size...`);
-    const groups = (0, groupFilesBySize_1.groupFilesBySize)(config);
-    if (groups.length === 0) {
-        console.log('\n🚫 No files found to upload.');
-        return;
-    }
-    // STEP 2: Register Blob IDs
-    console.log('\n📝 Registering Blobs...');
-    const blobs = await (0, registerBlobs_1.registerBlobs)({
-        config,
-        suiClient,
-        walrusClient,
-        walCoinType,
-        groups,
-        blobPackageId,
-        systemObjectId,
-        walBlance,
-        signer,
-    });
-    // Wait for 3 seconds to allow for blob registration
-    await (0, writeBlobs_1.sleep)(3000); // Wait for 3 seconds
-    // STEP 3: Write Blobs to Walrus
-    console.log('\n📤 Writing blobs to nodes...');
-    const blobsWithNodes = await (0, writeBlobs_1.writeBlobs)({
-        retryLimit: config.write_retry_limit || 5,
-        walrusClient,
-        blobs,
-    });
-    // STEP 4: Certify Blobs
-    console.log('\n🛡️ Certifying Blobs...');
-    await (0, certifyBlobs_1.certifyBlobs)({
-        config,
-        suiClient,
-        walrusClient,
-        blobs: blobsWithNodes,
-        signer,
-    });
-    // STEP 5: Create Site with Resources
-    if (config.object_id) {
-        console.log('\n🛠️ Update Site with Resources...');
-        await (0, updateSite_1.updateSite)({
-            config,
-            suiClient,
-            walrusClient,
-            blobPackageId,
-            blobs,
-            systemObjectId,
-            siteObjectId: config.object_id,
-            signer,
-        });
-    }
-    else {
-        console.log('\n🛠️ Creating Site with Resources...');
-        await (0, createSite_1.createSite)({
-            config,
-            suiClient,
-            blobs: blobsWithNodes,
-            signer,
-        });
-    }
-};
-main();
-
-})();
-
-module.exports = __webpack_exports__;
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __nccwpck_require__(79407);
+/******/ 	module.exports = __webpack_exports__;
+/******/ 	
 /******/ })()
 ;
 //# sourceMappingURL=index.js.map

@@ -1,3 +1,4 @@
+import * as core from '@actions/core';
 import { SuiClient } from '@mysten/sui/client';
 import { Signer } from '@mysten/sui/cryptography';
 import { Transaction } from '@mysten/sui/transactions';
@@ -5,6 +6,7 @@ import { WalrusClient } from '@mysten/walrus';
 
 import { BlobDictionary, SiteConfig } from '../types';
 import { MAX_CMD_CERTIFICATIONS } from '../utils/constants';
+import { failWithMessage } from '../utils/failWithMessage';
 
 export const certifyBlobs = async ({
   config,
@@ -47,10 +49,9 @@ export const certifyBlobs = async ({
     });
 
     if (receipt.errors) {
-      console.error('Transaction failed:', receipt.errors);
-      throw new Error('Transaction failed');
+      failWithMessage(`Transaction failed: ${JSON.stringify(receipt.errors)}`);
     } else {
-      console.log(`🚀 Certified ${chunk.length} blob(s), tx digest: ${digest}`);
+      core.info(`🚀 Certified ${chunk.length} blob(s), tx digest: ${digest}`);
     }
   }
 };

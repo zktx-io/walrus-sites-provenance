@@ -1,3 +1,4 @@
+import * as core from '@actions/core';
 import { SuiClient } from '@mysten/sui/client';
 import { Signer } from '@mysten/sui/cryptography';
 import { Transaction } from '@mysten/sui/transactions';
@@ -94,7 +95,7 @@ export const updateSite = async ({
     console.error('❌ Update site failed:', receipt.errors);
     throw new Error('Update site failed');
   } else {
-    console.log(`🚀 Site updated successfully, tx digest: ${digest}`);
+    core.info(`🚀 Site updated successfully, tx digest: ${digest}`);
   }
 
   if (batchedCommands.length > 1) {
@@ -113,7 +114,7 @@ export const updateSite = async ({
       digest: digest2,
       options: { showEffects: true, showEvents: true },
     });
-    console.log(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+    core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
   }
 
   // Cleanup old blobs
@@ -136,21 +137,21 @@ export const updateSite = async ({
       digest,
       options: { showEffects: true, showEvents: true },
     });
-    console.log(`🗑️  Old blobs deleted successfully, tx digest: ${digest3}`);
+    core.info(`🗑️  Old blobs deleted successfully, tx digest: ${digest3}`);
     oldBlobObjects.forEach(blobObjectId => {
-      console.log(` - Removed blob object ID: ${blobObjectId}`);
+      core.info(` - Removed blob object ID: ${blobObjectId}`);
     });
   } else {
-    console.log(`🗑️  No old blobs to delete.`);
+    core.info(`🗑️  No old blobs to delete.`);
   }
 
   const b36 = hexToBase36(siteObjectId);
-  console.log(`\n📦 Site object ID: ${siteObjectId}`);
+  core.info(`\n📦 Site object ID: ${siteObjectId}`);
   if (config.network === 'mainnet') {
-    console.log(`🌐 https://${b36}.wal.app/`);
-    console.log(`👉 You can now register this site on SuiNS using the object ID above.`);
+    core.info(`🌐 https://${b36}.wal.app/`);
+    core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
   } else {
-    console.log(`🌐 http://${b36}.localhost:3000/`);
-    console.log(`👉 You can test this Walrus Site locally.`);
+    core.info(`🌐 http://${b36}.localhost:3000/`);
+    core.info(`👉 You can test this Walrus Site locally.`);
   }
 };
