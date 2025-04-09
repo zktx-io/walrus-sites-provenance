@@ -1,4 +1,4 @@
-name: 'Walrus SLSA Action'
+name: 'Walrus Sites SLSA Action'
 description: 'Deploy Walrus sites with cryptographic provenance using SLSA + Sigstore.'
 author: 'daoauth'
 branding:
