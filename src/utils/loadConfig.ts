@@ -41,7 +41,7 @@ export const loadConfig = (): SiteConfig => {
       },
     };
   } catch (err) {
-    core.error(`[walrus] Failed to load config: ${(err as Error).message}`);
+    core.warning(`[walrus] Failed to load config: ${(err as Error).message}`);
     core.warning('Using default config instead. Make sure your config is valid JSON.');
     return getDefaultConfig();
   }

@@ -7,13 +7,12 @@ export const getSigner = (): Keypair => {
   const raw = process.env.WALRUS_KEYPAIR;
   if (!raw) {
     core.setFailed('❌ WALRUS_KEYPAIR environment variable is missing.');
-    throw new Error('WALRUS_KEYPAIR is not set');
+    throw new Error('Process will be terminated.');
   }
-
   try {
     return Ed25519Keypair.fromSecretKey(fromBase64(raw));
   } catch (err) {
     core.setFailed(`❌ Failed to parse WALRUS_KEYPAIR: ${(err as Error).message}`);
-    throw err;
+    throw new Error('Process will be terminated.');
   }
 };

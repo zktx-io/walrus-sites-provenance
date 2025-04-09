@@ -1,3 +1,4 @@
+import * as core from '@actions/core';
 import { SuiClient } from '@mysten/sui/client';
 import { convert } from './convert';
 
@@ -5,7 +6,7 @@ const printBalance = (
   symbol: string,
   { amount, decimals }: { amount: string; decimals: number },
 ) => {
-  console.log(`${symbol}: ${convert({ amount, decimals })}`);
+  core.info(`${symbol}: ${convert({ amount, decimals })}`);
 };
 
 export const accountState = async (
@@ -25,7 +26,7 @@ export const accountState = async (
     coinType: walCoinType,
   });
 
-  console.log(`Adr: ${owner}`);
+  core.info(`Adr: ${owner}`);
   printBalance('Sui', {
     amount: sui?.totalBalance || '0',
     decimals: suiData?.decimals || 0,

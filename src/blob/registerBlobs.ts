@@ -1,3 +1,4 @@
+import * as core from '@actions/core';
 import { SuiClient } from '@mysten/sui/client';
 import { Transaction, TransactionResult } from '@mysten/sui/transactions';
 import { Signer } from '@mysten/sui/cryptography';
@@ -62,8 +63,6 @@ export const registerBlobs = async ({
 
   const blobs: BlobDictionary = {};
   let totalCost: bigint = BigInt(0);
-
-  console.log(config);
 
   for (let i = 0; i < groups.length; i++) {
     const { files } = groups[i];
@@ -212,14 +211,14 @@ export const registerBlobs = async ({
           obj.data?.bcs?.dataType === 'moveObject',
       );
 
-      console.log(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
+      core.info(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
       txIndex++;
       for (const obj of suiBlobObjects) {
         const parsed = Blob().fromBase64((obj.data as any).bcs.bcsBytes);
         const blobId = base64url.fromNumber(parsed.blob_id);
         blobs[blobId].objectId = parsed.id.id;
         const group = registrations.find(r => r.blobId === blobId)?.groupId;
-        console.log(` + Blob ID: ${blobId} (Group ${group})`);
+        core.info(` + Blob ID: ${blobId} (Group ${group})`);
       }
     }
   }

@@ -1,5 +1,7 @@
+import * as core from '@actions/core';
 import { WalrusClient, RetryableWalrusClientError } from '@mysten/walrus';
-import { BlobDictionary, SiteConfig } from '../types';
+import { BlobDictionary } from '../types';
+import { failWithMessage } from '../utils/failWithMessage';
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -35,14 +37,14 @@ export const writeBlobs = async ({
         console.warn(`⚠️ Write failed for ${blobId} (attempt ${attempt})`);
 
         if (error instanceof RetryableWalrusClientError) {
-          console.log('↩️ Resetting walrus client...');
+          core.info('↩️ Resetting walrus client...');
           walrusClient.reset();
           await sleep(10000); // Wait for 1 second before retrying
         } else {
           throw error; // Non-retryable
         }
         if (attempt >= retryLimit) {
-          throw new Error(`❌ Failed to write blob ${blobId} after ${retryLimit} attempts.`);
+          failWithMessage(`❌ Failed to write blob ${blobId} after ${retryLimit} attempts.`);
         }
       }
     }
@@ -53,7 +55,7 @@ export const writeBlobs = async ({
       }
     }
 
-    console.log(`✅ Storing resource on Walrus: ${blobId}`);
+    core.info(`✅ Storing resource on Walrus: ${blobId}`);
   }
 
   return blobs;

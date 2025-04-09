@@ -1,3 +1,4 @@
+import * as core from '@actions/core';
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 import { WalrusClient } from '@mysten/walrus';
 
@@ -12,6 +13,7 @@ import { getWalrusSystem } from './utils/getWalrusSystem';
 import { accountState } from './utils/accountState';
 import { loadConfig } from './utils/loadConfig';
 import { getSigner } from './utils/getSigner';
+import { failWithMessage } from './utils/failWithMessage';
 
 const main = async (): Promise<void> => {
   // Load configuration
@@ -32,21 +34,20 @@ const main = async (): Promise<void> => {
   );
 
   // Display owner address
-  console.log('\nStarting Publish Walrus Site...');
-  console.log(`\nNetwork: ${config.network}`);
+  core.info('\nStarting Publish Walrus Site...');
+  core.info(`\nNetwork: ${config.network}`);
   const walBlance = await accountState(config.owner, suiClient, walCoinType);
 
   // STEP 1: Load files from the specified directory
-  console.log(`\n📦 Grouping files by size...`);
+  core.info(`\n📦 Grouping files by size...`);
   const groups = groupFilesBySize(config);
 
   if (groups.length === 0) {
-    console.log('\n🚫 No files found to upload.');
-    return;
+    failWithMessage('🚫 No files found to upload.');
   }
 
   // STEP 2: Register Blob IDs
-  console.log('\n📝 Registering Blobs...');
+  core.info('\n📝 Registering Blobs...');
   const blobs = await registerBlobs({
     config,
     suiClient,
@@ -63,7 +64,7 @@ const main = async (): Promise<void> => {
   await sleep(3000); // Wait for 3 seconds
 
   // STEP 3: Write Blobs to Walrus
-  console.log('\n📤 Writing blobs to nodes...');
+  core.info('\n📤 Writing blobs to nodes...');
   const blobsWithNodes = await writeBlobs({
     retryLimit: config.write_retry_limit || 5,
     walrusClient,
@@ -71,7 +72,7 @@ const main = async (): Promise<void> => {
   });
 
   // STEP 4: Certify Blobs
-  console.log('\n🛡️ Certifying Blobs...');
+  core.info('\n🛡️ Certifying Blobs...');
   await certifyBlobs({
     config,
     suiClient,
@@ -82,7 +83,7 @@ const main = async (): Promise<void> => {
 
   // STEP 5: Create Site with Resources
   if (config.object_id) {
-    console.log('\n🛠️ Update Site with Resources...');
+    core.info('\n🛠️ Update Site with Resources...');
     await updateSite({
       config,
       suiClient,
@@ -94,7 +95,7 @@ const main = async (): Promise<void> => {
       signer,
     });
   } else {
-    console.log('\n🛠️ Creating Site with Resources...');
+    core.info('\n🛠️ Creating Site with Resources...');
     await createSite({
       config,
       suiClient,

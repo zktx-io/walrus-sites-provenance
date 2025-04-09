@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { glob } from 'glob';
+import * as core from '@actions/core';
 
 import { FileGroup, SiteConfig } from '../types';
 import { MAX_BLOB_SIZE } from '../utils/constants';
@@ -89,11 +90,17 @@ const getContentTypeFromExtension = (ext: string): string | undefined => {
 };
 
 export const groupFilesBySize = (config: SiteConfig): FileGroup[] => {
-  const siteRoot = path.join(__dirname, config.path);
+  const siteRoot = path.resolve(process.cwd(), config.path);
+
+  if (!fs.existsSync(siteRoot)) {
+    core.setFailed(`❌ Provided path "${siteRoot}" does not exist.`);
+    return [];
+  }
+
   const files = glob.sync('**/*.*', { cwd: siteRoot }).map(relativePath => {
     const fullPath = path.join(siteRoot, relativePath);
     const { size } = fs.statSync(fullPath);
-    const ext = path.extname(relativePath).slice(1); // "index.html" → "html"
+    const ext = path.extname(relativePath).slice(1);
     const contentType = getContentTypeFromExtension(ext) ?? 'application/octet-stream';
     return {
       path: fullPath,
@@ -126,9 +133,9 @@ export const groupFilesBySize = (config: SiteConfig): FileGroup[] => {
   let totalFiles = 0;
 
   for (const group of groups) {
-    console.log(`✅ Group ${group.groupId} (${group.size} bytes)`);
+    core.info(`✅ Group ${group.groupId} (${group.size} bytes)`);
     for (const file of group.files) {
-      console.log(` + ${file.name} (${file.size} bytes)`);
+      core.info(` + ${file.name} (${file.size} bytes)`);
     }
     totalSize += group.size;
     totalFiles += group.files.length;
