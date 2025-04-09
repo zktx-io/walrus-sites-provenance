@@ -59057,6 +59057,41 @@ exports.getSourceSymbols = getSourceSymbols;
 
 /***/ }),
 
+/***/ 42452:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.writeBlobHelper = void 0;
+const writeBlobHelper = async (client, { blobId, metadata, sliversByNode, signal, ...options }) => {
+    const controller = new AbortController();
+    const combinedSignal = signal ? AbortSignal.any([controller.signal, signal]) : controller.signal;
+    const confirmations = [];
+    for (let i = 0; i < sliversByNode.length; i++) {
+        try {
+            const confirmation = await client.writeEncodedBlobToNode({
+                blobId,
+                nodeIndex: i,
+                metadata,
+                slivers: sliversByNode[i],
+                signal: combinedSignal,
+                ...options,
+            });
+            confirmations.push(confirmation);
+        }
+        catch (error) {
+            console.warn(`Node ${i} failed to store blob:`, error);
+            confirmations.push(null);
+        }
+    }
+    return confirmations;
+};
+exports.writeBlobHelper = writeBlobHelper;
+
+
+/***/ }),
+
 /***/ 3964:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -59294,6 +59329,7 @@ exports.writeBlobs = exports.sleep = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const walrus_1 = __nccwpck_require__(19044);
 const failWithMessage_1 = __nccwpck_require__(60210);
+const writeBlobHelper_1 = __nccwpck_require__(42452);
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 exports.sleep = sleep;
 const writeBlobs = async ({ retryLimit, walrusClient, blobs, }) => {
@@ -59301,10 +59337,10 @@ const writeBlobs = async ({ retryLimit, walrusClient, blobs, }) => {
         const blob = blobs[blobId];
         let success = false;
         let attempt = 0;
-        let confirmations;
+        let confirmations = [];
         while (!success && attempt < retryLimit) {
             try {
-                confirmations = await walrusClient.writeEncodedBlobToNodes({
+                confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, {
                     blobId,
                     metadata: blob.metadata,
                     sliversByNode: blob.sliversByNode,

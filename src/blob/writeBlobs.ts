@@ -1,7 +1,8 @@
 import * as core from '@actions/core';
 import { WalrusClient, RetryableWalrusClientError } from '@mysten/walrus';
-import { BlobDictionary } from '../types';
+import { BlobDictionary, StorageConfirmation } from '../types';
 import { failWithMessage } from '../utils/failWithMessage';
+import { writeBlobHelper } from './helper/writeBlobHelper';
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -19,18 +20,17 @@ export const writeBlobs = async ({
 
     let success = false;
     let attempt = 0;
-    let confirmations;
+    let confirmations: (StorageConfirmation | null)[] = [];
 
     while (!success && attempt < retryLimit) {
       try {
-        confirmations = await walrusClient.writeEncodedBlobToNodes({
+        confirmations = await writeBlobHelper(walrusClient, {
           blobId,
           metadata: blob.metadata,
           sliversByNode: blob.sliversByNode,
           deletable: true,
           objectId: blob.objectId,
         });
-
         success = true;
       } catch (error) {
         attempt++;
