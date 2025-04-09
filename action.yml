@@ -1,6 +1,6 @@
-name: 'Walrus Sites SLSA Action'
-description: 'Deploy Walrus sites with cryptographic provenance using SLSA + Sigstore.'
-author: 'daoauth'
+name: 'Walrus Sites Provenance'
+description: 'Securely deploy Walrus Sites with verifiable SLSA provenance and tamper-proof signatures.'
+author: 'zktx.io'
 branding:
   icon: 'shield'
   color: 'blue'

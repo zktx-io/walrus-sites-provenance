@@ -1,5 +1,5 @@
 {
-  "name": "walrus-site-provenance",
+  "name": "walrus-sites-provenance",
   "version": "0.0.1",
   "description": "Deploy Walrus sites with cryptographic provenance using SLSA + Sigstore.",
   "keywords": [
@@ -11,13 +11,13 @@
     "deployment",
     "provenance"
   ],
-  "homepage": "https://github.com/zktx-io/walrus-site-provenance#readme",
+  "homepage": "https://github.com/zktx-io/walrus-sites-provenance#readme",
   "bugs": {
-    "url": "https://github.com/zktx-io/walrus-site-provenance/issues"
+    "url": "https://github.com/zktx-io/walrus-sites-provenance/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zktx-io/walrus-site-provenance.git"
+    "url": "git+https://github.com/zktx-io/walrus-sites-provenance.git"
   },
   "license": "ISC",
   "author": "daoauth",
