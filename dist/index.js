@@ -59385,7 +59385,7 @@ const writeBlobHelper_1 = __nccwpck_require__(42452);
 const writeBlobs = async ({ retryLimit, walrusClient, blobs, }) => {
     for (const blobId of Object.keys(blobs)) {
         const blob = blobs[blobId];
-        const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit, {
+        const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit + 1, {
             blobId,
             metadata: blob.metadata,
             sliversByNode: blob.sliversByNode,

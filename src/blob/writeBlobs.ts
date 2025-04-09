@@ -14,7 +14,7 @@ export const writeBlobs = async ({
 }) => {
   for (const blobId of Object.keys(blobs)) {
     const blob = blobs[blobId];
-    const confirmations = await writeBlobHelper(walrusClient, retryLimit, {
+    const confirmations = await writeBlobHelper(walrusClient, retryLimit + 1, {
       blobId,
       metadata: blob.metadata,
       sliversByNode: blob.sliversByNode,
