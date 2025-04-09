@@ -59125,7 +59125,7 @@ const writeBlobHelper = async (walrusClient, retryLimit, { blobId, metadata, sli
             }
             catch (error) {
                 attempt++;
-                if (attempt >= retryLimit) {
+                if (attempt > retryLimit) {
                     (0, failWithMessage_1.failWithMessage)(`❌ Failed to write blob ${blobId} after ${retryLimit} attempts.`);
                 }
                 console.warn(`⚠️ Write failed for ${blobId} (attempt ${attempt})`);
@@ -59324,8 +59324,12 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
                 const parsed = (0, blob_1.Blob)().fromBase64(obj.data.bcs.bcsBytes);
                 const blobId = base64url_1.base64url.fromNumber(parsed.blob_id);
                 blobs[blobId].objectId = parsed.id.id;
-                const group = registrations.find(r => r.blobId === blobId)?.groupId;
-                core.info(` + Blob ID: ${blobId} (Group ${group})`);
+            }
+            const sortedRegistrations = registrations
+                .filter(r => blobs[r.blobId])
+                .sort((a, b) => (a.groupId ?? 0) - (b.groupId ?? 0));
+            for (const { blobId, groupId } of sortedRegistrations) {
+                core.info(` + Blob ID: ${blobId} (Group ${groupId})`);
             }
         }
     }
