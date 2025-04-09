@@ -66,3 +66,38 @@ jobs:
 | Name             | Required | Description                    |
 | ---------------- | -------- | ------------------------------ |
 | `WALRUS_KEYPAIR` | ✅       | Base64-encoded signing keypair |
+
+### 2. Configure site.config.json
+
+Here’s an example config file:
+
+```json
+{
+  "network": "testnet",
+  "owner": "0x1234567890abcdef1234567890abcdef12345678",
+  "site_name": "my-walrus-site",
+  "metadata": {
+    "link": "https://myproject.xyz",
+    "image_url": "https://myproject.xyz/preview.png",
+    "name": "My Project",
+    "description": "A decentralized web app deployed on Walrus.",
+    "project_url": "https://github.com/my-org/my-walrus-site",
+    "creator": "creator"
+  },
+  "epochs": 30,
+  "path": "./dist",
+  "gas_budget": 100000000
+}
+```
+
+🧾 Description
+
+| Field      | Description                                   |
+| ---------- | --------------------------------------------- |
+| network    | "mainnet" or "testnet"                        |
+| owner      | Your Sui address (who owns the site object)   |
+| site_name  | Human-readable site name                      |
+| metadata   | Site metadata for display and discoverability |
+| epochs     | Number of epochs to store the site            |
+| path       | Directory containing the built site assets    |
+| gas_budget | Gas budget to use for on-chain transactions   |
