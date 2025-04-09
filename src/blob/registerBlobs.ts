@@ -1,0 +1,228 @@
+import { SuiClient } from '@mysten/sui/client';
+import { Transaction, TransactionResult } from '@mysten/sui/transactions';
+import { Signer } from '@mysten/sui/cryptography';
+import { WalrusClient } from '@mysten/walrus';
+import { createHash } from 'crypto';
+import fs from 'fs';
+
+import { BlobDictionary, FileGroup, SiteConfig } from '../types';
+import { Blob } from '../utils/blob';
+import { base64url } from '../utils/base64url';
+import { getAllTokens } from './helper/getAllTokens';
+import { encodedBlobLength } from './helper/encodedBlobLength';
+import { getSubsidiesObjectId, getSubsidiesPackageId } from '../utils/getWalrusSystem';
+import { bcs } from '@mysten/sui/bcs';
+import { MAX_CMD_REGISTRATIONS } from '../utils/constants';
+import { convert } from '../utils/convert';
+
+const sha256ToU256LE = (buffer: Buffer): string => {
+  const hash = createHash('sha256').update(buffer).digest();
+  const reversed = Buffer.from(hash).reverse();
+  return BigInt('0x' + reversed.toString('hex')).toString();
+};
+
+const blobIdToInt = (blobId: string): bigint => {
+  return BigInt(bcs.u256().fromBase64(blobId.replaceAll('-', '+').replaceAll('_', '/')));
+};
+
+export const registerBlobs = async ({
+  config,
+  suiClient,
+  walrusClient,
+  walCoinType,
+  groups,
+  systemObjectId,
+  blobPackageId,
+  walBlance,
+  signer,
+}: {
+  config: SiteConfig;
+  suiClient: SuiClient;
+  walrusClient: WalrusClient;
+  walCoinType: string;
+  groups: FileGroup[];
+  systemObjectId: string;
+  blobPackageId: string;
+  walBlance: bigint;
+  signer: Signer;
+}) => {
+  const registrations: {
+    groupId: number;
+    blobId: string;
+    rootHash: Uint8Array;
+    size: number;
+    epochs: number;
+    storageCost: bigint;
+    writeCost: bigint;
+    totalCost: bigint;
+  }[] = [];
+  const systemState = await walrusClient.systemState();
+  const subsidiesObjectId: string = getSubsidiesObjectId(config.network);
+  const subsidiesPackageId: string = getSubsidiesPackageId(config.network);
+
+  const blobs: BlobDictionary = {};
+  let totalCost: bigint = BigInt(0);
+
+  console.log(config);
+
+  for (let i = 0; i < groups.length; i++) {
+    const { files } = groups[i];
+
+    const buffers: Buffer[] = [];
+    for (const file of files) {
+      const fileBuffer = fs.readFileSync(file.path);
+      buffers.push(fileBuffer);
+    }
+
+    const combinedBuffer = Buffer.concat(buffers);
+    const { blobId, metadata, sliversByNode, rootHash } =
+      await walrusClient.encodeBlob(combinedBuffer);
+    const {
+      storageCost,
+      writeCost,
+      totalCost: groupCost,
+    } = await walrusClient.storageCost(combinedBuffer.length, config.epochs);
+
+    blobs[blobId] = {
+      objectId: '',
+      files,
+      metadata,
+      sliversByNode,
+      rootHash,
+      blobHash: sha256ToU256LE(combinedBuffer),
+    };
+    registrations.push({
+      groupId: groups[i].groupId,
+      blobId,
+      rootHash,
+      size: combinedBuffer.length,
+      epochs: config.epochs,
+      storageCost,
+      writeCost,
+      totalCost: groupCost,
+    });
+    totalCost = totalCost + groupCost;
+  }
+
+  if (totalCost > walBlance) {
+    const decimals = 9;
+    throw new Error(
+      `Not enough WAL balance. Required: ${convert({ amount: totalCost.toString(), decimals })}, Available: ${convert({ amount: walBlance.toString(), decimals })}`,
+    );
+  }
+
+  let txIndex = 0;
+
+  const allWalTokenIds = await getAllTokens({
+    suiClient,
+    owner: config.owner,
+    coinType: walCoinType,
+  });
+
+  for (let i = 0; i < registrations.length; i += MAX_CMD_REGISTRATIONS) {
+    const chunk = registrations.slice(i, i + MAX_CMD_REGISTRATIONS);
+    const transaction = new Transaction();
+    const subsidiesObject = transaction.object(subsidiesObjectId);
+    const systemObject = transaction.object(systemObjectId);
+    transaction.setGasBudget(config.gas_budget);
+
+    const coin = transaction.object(allWalTokenIds[0]);
+
+    if (allWalTokenIds.length > 1) {
+      transaction.mergeCoins(
+        coin,
+        allWalTokenIds.slice(1).map(id => transaction.object(id)),
+      );
+    } else {
+      throw 'No WAL coin found';
+    }
+
+    const amounts: { storageCost: bigint; writeCost: bigint }[] = chunk.map(
+      ({ storageCost, writeCost }) => {
+        return { storageCost, writeCost };
+      },
+    );
+    const [...writeCoins] = transaction.splitCoins(
+      coin,
+      amounts.map(a => a.writeCost),
+    );
+    const [...storageCoins] = transaction.splitCoins(
+      coin,
+      amounts.map(a => a.storageCost),
+    );
+    const regisered: TransactionResult[] = [];
+    const returnCoins: {
+      $kind: 'NestedResult';
+      NestedResult: [number, number];
+    }[] = [];
+    chunk.forEach((item, index) => {
+      const storage = transaction.moveCall({
+        target: `${subsidiesPackageId}::subsidies::reserve_space`,
+        arguments: [
+          subsidiesObject,
+          systemObject,
+          transaction.pure.u64(encodedBlobLength(item.size, systemState.committee.n_shards)),
+          transaction.pure.u32(item.epochs),
+          storageCoins[index],
+        ],
+      });
+      regisered.push(
+        transaction.moveCall({
+          target: `${blobPackageId}::system::register_blob`,
+          arguments: [
+            systemObject,
+            storage,
+            transaction.pure.u256(blobIdToInt(item.blobId)),
+            transaction.pure.u256(BigInt(bcs.u256().parse(item.rootHash))),
+            transaction.pure.u64(item.size),
+            transaction.pure.u8(1),
+            transaction.pure.bool(true),
+            writeCoins[index],
+          ],
+        }),
+      );
+    });
+
+    transaction.transferObjects([...regisered, ...storageCoins, ...writeCoins], config.owner);
+
+    const { digest } = await suiClient.signAndExecuteTransaction({
+      signer,
+      transaction,
+    });
+
+    const receipt = await suiClient.waitForTransaction({
+      digest,
+      options: { showEffects: true, showEvents: true },
+    });
+
+    if (receipt.errors) {
+      console.error('Transaction failed:', receipt.errors);
+      throw new Error('Transaction failed');
+    } else {
+      const txCreatedIds = receipt.effects?.created?.map(e => e.reference.objectId) ?? [];
+
+      const createdObjects = await suiClient.multiGetObjects({
+        ids: txCreatedIds,
+        options: { showType: true, showBcs: true },
+      });
+
+      const suiBlobObjects = createdObjects.filter(
+        obj =>
+          obj.data?.type === `${blobPackageId}::blob::Blob` &&
+          obj.data?.bcs?.dataType === 'moveObject',
+      );
+
+      console.log(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
+      txIndex++;
+      for (const obj of suiBlobObjects) {
+        const parsed = Blob().fromBase64((obj.data as any).bcs.bcsBytes);
+        const blobId = base64url.fromNumber(parsed.blob_id);
+        blobs[blobId].objectId = parsed.id.id;
+        const group = registrations.find(r => r.blobId === blobId)?.groupId;
+        console.log(` + Blob ID: ${blobId} (Group ${group})`);
+      }
+    }
+  }
+
+  return blobs;
+};
