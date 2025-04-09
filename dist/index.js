@@ -59058,31 +59058,81 @@ exports.getSourceSymbols = getSourceSymbols;
 /***/ }),
 
 /***/ 42452:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.writeBlobHelper = void 0;
-const writeBlobHelper = async (client, { blobId, metadata, sliversByNode, signal, ...options }) => {
-    const controller = new AbortController();
-    const combinedSignal = signal ? AbortSignal.any([controller.signal, signal]) : controller.signal;
+exports.writeBlobHelper = exports.sleep = void 0;
+const core = __importStar(__nccwpck_require__(37484));
+const failWithMessage_1 = __nccwpck_require__(60210);
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+exports.sleep = sleep;
+const writeBlobHelper = async (walrusClient, retryLimit, { blobId, metadata, sliversByNode, signal, ...options }) => {
     const confirmations = [];
     for (let i = 0; i < sliversByNode.length; i++) {
-        try {
-            const confirmation = await client.writeEncodedBlobToNode({
-                blobId,
-                nodeIndex: i,
-                metadata,
-                slivers: sliversByNode[i],
-                signal: combinedSignal,
-                ...options,
-            });
-            confirmations.push(confirmation);
-        }
-        catch (error) {
-            console.warn(`Node ${i} failed to store blob:`, error);
-            confirmations.push(null);
+        let success = false;
+        let attempt = 0;
+        while (!success && attempt < retryLimit) {
+            const controller = new AbortController();
+            const combinedSignal = signal
+                ? AbortSignal.any([controller.signal, signal])
+                : controller.signal;
+            try {
+                const confirmation = await walrusClient.writeEncodedBlobToNode({
+                    blobId,
+                    nodeIndex: i,
+                    metadata,
+                    slivers: sliversByNode[i],
+                    signal: combinedSignal,
+                    ...options,
+                });
+                confirmations.push(confirmation);
+                success = true;
+            }
+            catch (error) {
+                attempt++;
+                if (attempt >= retryLimit) {
+                    (0, failWithMessage_1.failWithMessage)(`❌ Failed to write blob ${blobId} after ${retryLimit} attempts.`);
+                }
+                console.warn(`⚠️ Write failed for ${blobId} (attempt ${attempt})`);
+                core.info('↩️ Resetting walrus client...');
+                walrusClient.reset();
+                await (0, exports.sleep)(10000);
+            }
         }
     }
     return confirmations;
@@ -59325,51 +59375,20 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.writeBlobs = exports.sleep = void 0;
+exports.writeBlobs = void 0;
 const core = __importStar(__nccwpck_require__(37484));
-const walrus_1 = __nccwpck_require__(19044);
-const failWithMessage_1 = __nccwpck_require__(60210);
 const writeBlobHelper_1 = __nccwpck_require__(42452);
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-exports.sleep = sleep;
 const writeBlobs = async ({ retryLimit, walrusClient, blobs, }) => {
     for (const blobId of Object.keys(blobs)) {
         const blob = blobs[blobId];
-        let success = false;
-        let attempt = 0;
-        let confirmations = [];
-        while (!success && attempt < retryLimit) {
-            try {
-                confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, {
-                    blobId,
-                    metadata: blob.metadata,
-                    sliversByNode: blob.sliversByNode,
-                    deletable: true,
-                    objectId: blob.objectId,
-                });
-                success = true;
-            }
-            catch (error) {
-                attempt++;
-                console.warn(`⚠️ Write failed for ${blobId} (attempt ${attempt})`);
-                if (error instanceof walrus_1.RetryableWalrusClientError) {
-                    core.info('↩️ Resetting walrus client...');
-                    walrusClient.reset();
-                    await (0, exports.sleep)(10000); // Wait for 1 second before retrying
-                }
-                else {
-                    throw error; // Non-retryable
-                }
-                if (attempt >= retryLimit) {
-                    (0, failWithMessage_1.failWithMessage)(`❌ Failed to write blob ${blobId} after ${retryLimit} attempts.`);
-                }
-            }
-        }
-        for (const f of Object.keys(blobs)) {
-            if (f === blobId) {
-                blobs[f].confirmations = confirmations;
-            }
-        }
+        const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit, {
+            blobId,
+            metadata: blob.metadata,
+            sliversByNode: blob.sliversByNode,
+            deletable: true,
+            objectId: blob.objectId,
+        });
+        blobs[blobId].confirmations = confirmations;
         core.info(`✅ Storing resource on Walrus: ${blobId}`);
     }
     return blobs;
@@ -59423,6 +59442,7 @@ const client_1 = __nccwpck_require__(70827);
 const walrus_1 = __nccwpck_require__(19044);
 const registerBlobs_1 = __nccwpck_require__(3964);
 const writeBlobs_1 = __nccwpck_require__(59338);
+const writeBlobHelper_1 = __nccwpck_require__(42452);
 const certifyBlobs_1 = __nccwpck_require__(21219);
 const groupFilesBySize_1 = __nccwpck_require__(77685);
 const createSite_1 = __nccwpck_require__(10308);
@@ -59466,8 +59486,8 @@ const main = async () => {
         walBlance,
         signer,
     });
-    // Wait for 3 seconds to allow for blob registration
-    await (0, writeBlobs_1.sleep)(3000); // Wait for 3 seconds
+    // Wait for 5 seconds to allow for blob registration
+    await (0, writeBlobHelper_1.sleep)(5000);
     // STEP 3: Write Blobs to Walrus
     core.info('\n📤 Writing blobs to nodes...');
     const blobsWithNodes = await (0, writeBlobs_1.writeBlobs)({

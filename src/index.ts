@@ -3,7 +3,8 @@ import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 import { WalrusClient } from '@mysten/walrus';
 
 import { registerBlobs } from './blob/registerBlobs';
-import { sleep, writeBlobs } from './blob/writeBlobs';
+import { writeBlobs } from './blob/writeBlobs';
+import { sleep } from './blob/helper/writeBlobHelper';
 import { certifyBlobs } from './blob/certifyBlobs';
 import { groupFilesBySize } from './blob/groupFilesBySize';
 import { createSite } from './site/createSite';
@@ -60,8 +61,8 @@ const main = async (): Promise<void> => {
     signer,
   });
 
-  // Wait for 3 seconds to allow for blob registration
-  await sleep(3000); // Wait for 3 seconds
+  // Wait for 5 seconds to allow for blob registration
+  await sleep(5000);
 
   // STEP 3: Write Blobs to Walrus
   core.info('\n📤 Writing blobs to nodes...');
