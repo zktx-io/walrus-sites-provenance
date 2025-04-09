@@ -1,4 +1,4 @@
-# 🚀 Walrus SLSA Action
+# 🚀 Walrus Sites SLSA Action
 
 > **Your trusted source of truth.**  
 > Sign, attest, and verify with absolute confidence.
@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Deploy to Walrus Sites with SLSA
-        uses: zktx-io/walrus-slsa-action@v1
+        uses: zktx-io/walrus-site-provenance@v1
         with:
           config-path: './site.config.json'
         env:
