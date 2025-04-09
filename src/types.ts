@@ -43,6 +43,11 @@ interface BlobMetadata {
   };
 }
 
+export type StorageConfirmation = {
+  serializedMessage: string;
+  signature: string;
+};
+
 export interface BlobData {
   files: FileInfo[];
   metadata: BlobMetadata;
@@ -50,10 +55,7 @@ export interface BlobData {
   rootHash: Uint8Array<ArrayBufferLike>;
   sliversByNode: SliversForNode[];
   objectId: string;
-  confirmations?: ({
-    serializedMessage: string;
-    signature: string;
-  } | null)[];
+  confirmations?: (StorageConfirmation | null)[];
 }
 
 export interface BlobDictionary {
