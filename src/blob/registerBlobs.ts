@@ -217,8 +217,13 @@ export const registerBlobs = async ({
         const parsed = Blob().fromBase64((obj.data as any).bcs.bcsBytes);
         const blobId = base64url.fromNumber(parsed.blob_id);
         blobs[blobId].objectId = parsed.id.id;
-        const group = registrations.find(r => r.blobId === blobId)?.groupId;
-        core.info(` + Blob ID: ${blobId} (Group ${group})`);
+      }
+
+      const sortedRegistrations = registrations
+        .filter(r => blobs[r.blobId])
+        .sort((a, b) => (a.groupId ?? 0) - (b.groupId ?? 0));
+      for (const { blobId, groupId } of sortedRegistrations) {
+        core.info(` + Blob ID: ${blobId} (Group ${groupId})`);
       }
     }
   }
