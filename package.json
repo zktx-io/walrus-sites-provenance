@@ -31,7 +31,7 @@
   },
   "scripts": {
     "format": "npx prettier --check .",
-    "format:write": "npx prettier --write .",
+    "format:write": "npx prettier --write . --ignore-path .prettierignore",
     "lint": "npx eslint 'src/**/*.{ts,js}'",
     "lint:fix": "npx eslint 'src/**/*.{ts,js}' --fix",
     "test": "jest",
