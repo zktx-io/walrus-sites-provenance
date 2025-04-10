@@ -59125,7 +59125,7 @@ const writeBlobHelper = async (walrusClient, retryLimit, { blobId, metadata, sli
             }
             catch (error) {
                 attempt++;
-                if (attempt > retryLimit) {
+                if (attempt >= retryLimit) {
                     (0, failWithMessage_1.failWithMessage)(`❌ Failed to write blob ${blobId} after ${retryLimit} attempts.`);
                 }
                 console.warn(`⚠️ Write failed for ${blobId} (attempt ${attempt})`);
