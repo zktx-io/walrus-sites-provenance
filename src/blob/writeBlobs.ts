@@ -24,19 +24,13 @@ export const writeBlobs = async ({
 
   for (const blobId of Object.keys(blobs)) {
     const blob = blobs[blobId];
-    const confirmations = await writeBlobHelper(
-      walrusClient,
-      retryLimit + 1,
-      quorum,
-      committee,
-      {
-        blobId,
-        metadata: blob.metadata,
-        sliversByNode: blob.sliversByNode,
-        deletable: true,
-        objectId: blob.objectId,
-      },
-    );
+    const confirmations = await writeBlobHelper(walrusClient, retryLimit + 1, quorum, committee, {
+      blobId,
+      metadata: blob.metadata,
+      sliversByNode: blob.sliversByNode,
+      deletable: true,
+      objectId: blob.objectId,
+    });
     blobs[blobId].confirmations = confirmations;
   }
 

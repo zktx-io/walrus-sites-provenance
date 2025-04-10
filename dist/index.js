@@ -59308,7 +59308,7 @@ const failWithMessage_1 = __nccwpck_require__(60210);
 const batchSize = 10;
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 exports.sleep = sleep;
-const writeBlobHelper = async (SuiClient, walrusClient, retryLimit, quorum, committee, { blobId, metadata, sliversByNode, signal, ...options }) => {
+const writeBlobHelper = async (walrusClient, retryLimit, quorum, committee, { blobId, metadata, sliversByNode, signal, ...options }) => {
     let successfulShardCount = 0;
     const confirmations = new Array(sliversByNode.length).fill(null);
     const pending = Array.from({ length: sliversByNode.length }, (_, i) => i);
@@ -59352,7 +59352,7 @@ const writeBlobHelper = async (SuiClient, walrusClient, retryLimit, quorum, comm
     // Retry if needed
     let attempt = 1;
     while (failures.length > 0 && successfulShardCount < quorum && attempt <= retryLimit) {
-        core.info(`🔁 Retry attempt ${attempt} for ${failures.length} nodes`);
+        core.warning(`🔁 Retry attempt ${attempt} for ${failures.length} nodes`);
         await (0, exports.sleep)(10000);
         failures = await retryFailures(failures);
         attempt++;
@@ -59586,7 +59586,7 @@ const writeBlobs = async ({ retryLimit, suiClient, walrusClient, blobs, }) => {
     const quorum = systemState.committee.n_shards - Math.floor((systemState.committee.n_shards - 1) / 3);
     for (const blobId of Object.keys(blobs)) {
         const blob = blobs[blobId];
-        const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(suiClient, walrusClient, retryLimit + 1, quorum, committee, {
+        const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit + 1, quorum, committee, {
             blobId,
             metadata: blob.metadata,
             sliversByNode: blob.sliversByNode,
@@ -59738,12 +59738,46 @@ main();
 /***/ }),
 
 /***/ 10308:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSite = void 0;
+const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
 const hexToBase36_1 = __nccwpck_require__(88793);
 const registerResources_1 = __nccwpck_require__(12318);
@@ -59751,6 +59785,7 @@ const addRoutes_1 = __nccwpck_require__(97989);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const getWalrusSystem_1 = __nccwpck_require__(40802);
 const getAllObjects_1 = __nccwpck_require__(20108);
+const failWithMessage_1 = __nccwpck_require__(60210);
 const createSite = async ({ config, suiClient, blobs, signer, }) => {
     const packageId = (0, getWalrusSystem_1.getSitePackageId)(config.network);
     const transaction = new transactions_1.Transaction();
@@ -59802,12 +59837,11 @@ const createSite = async ({ config, suiClient, blobs, signer, }) => {
     // Log created site object IDs
     let siteObjectId = '';
     if (receipt.errors || suiSiteObjects.length === 0) {
-        console.error('❌ Create site failed:', receipt.errors);
-        throw new Error('Create site failed');
+        (0, failWithMessage_1.failWithMessage)(`❌ Create site failed: ${JSON.stringify(receipt.errors)}`);
     }
     else {
         siteObjectId = suiSiteObjects[0].data?.objectId || '';
-        console.log(`🚀 Site created successfully, tx digest: ${digest}`);
+        core.info(`🚀 Site created successfully, tx digest: ${digest}`);
     }
     if (batchedCommands.length > 1) {
         const tx = new transactions_1.Transaction();
@@ -59823,17 +59857,17 @@ const createSite = async ({ config, suiClient, blobs, signer, }) => {
             digest: digest2,
             options: { showEffects: true, showEvents: true },
         });
-        console.log(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+        core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
     }
     const b36 = (0, hexToBase36_1.hexToBase36)(siteObjectId);
-    console.log(`\n📦 Site object ID: ${siteObjectId}`);
+    core.info(`\n📦 Site object ID: ${siteObjectId}`);
     if (config.network === 'mainnet') {
-        console.log(`🌐 https://${b36}.wal.app/`);
-        console.log(`👉 You can now register this site on SuiNS using the object ID above.`);
+        core.info(`🌐 https://${b36}.wal.app/`);
+        core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
     }
     else {
-        console.log(`🌐 http://${b36}.localhost:3000/`);
-        console.log(`👉 You can test this Walrus Site locally.`);
+        core.info(`🌐 http://${b36}.localhost:3000/`);
+        core.info(`👉 You can test this Walrus Site locally.`);
     }
 };
 exports.createSite = createSite;
@@ -60638,18 +60672,17 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getSigner = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const ed25519_1 = __nccwpck_require__(92094);
-const utils_1 = __nccwpck_require__(33973);
 const getSigner = () => {
-    const raw = process.env.WALRUS_KEYPAIR;
-    if (!raw) {
-        core.setFailed('❌ WALRUS_KEYPAIR environment variable is missing.');
+    const suiprivkey = process.env.ED25519_PRIVATE_KEY;
+    if (!suiprivkey) {
+        core.setFailed('❌ ED25519_PRIVATE_KEY environment variable is missing.');
         throw new Error('Process will be terminated.');
     }
     try {
-        return ed25519_1.Ed25519Keypair.fromSecretKey((0, utils_1.fromBase64)(raw));
+        return ed25519_1.Ed25519Keypair.fromSecretKey(suiprivkey);
     }
     catch (err) {
-        core.setFailed(`❌ Failed to parse WALRUS_KEYPAIR: ${err.message}`);
+        core.setFailed(`❌ Failed to parse ED25519_PRIVATE_KEY: ${err.message}`);
         throw new Error('Process will be terminated.');
     }
 };

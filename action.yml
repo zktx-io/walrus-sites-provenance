@@ -12,8 +12,8 @@ inputs:
     default: './site.config.json'
 
 env:
-  WALRUS_KEYPAIR:
-    description: 'Base64-encoded keypair used to sign and deploy'
+  ED25519_PRIVATE_KEY:
+    description: 'Private key in Sui format (starts with "suiprivkey")'
     required: true
 
 runs:
