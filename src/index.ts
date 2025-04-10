@@ -35,9 +35,8 @@ const main = async (): Promise<void> => {
   );
 
   // Display owner address
-  core.info('\nStarting Publish Walrus Site...');
-  core.info(`\nNetwork: ${config.network}`);
-  const walBlance = await accountState(config.owner, suiClient, walCoinType);
+  core.info('\nStarting Publish Walrus Site...\n');
+  const walBlance = await accountState(config.owner, config.network, suiClient, walCoinType);
 
   // STEP 1: Load files from the specified directory
   core.info(`\n📦 Grouping files by size...`);

@@ -103,11 +103,13 @@ export const registerBlobs = async ({
     totalCost = totalCost + groupCost;
   }
 
+  const decimals = 9;
   if (totalCost > walBlance) {
-    const decimals = 9;
     throw new Error(
       `Not enough WAL balance. Required: ${convert({ amount: totalCost.toString(), decimals })}, Available: ${convert({ amount: walBlance.toString(), decimals })}`,
     );
+  } else {
+    core.info(`🦭  Estimate cost: ${convert({ amount: totalCost.toString(), decimals })} WAL`);
   }
 
   let txIndex = 0;

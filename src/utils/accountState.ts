@@ -11,6 +11,7 @@ const printBalance = (
 
 export const accountState = async (
   owner: string,
+  network: string,
   suiClient: SuiClient,
   walCoinType: string,
 ): Promise<bigint> => {
@@ -26,12 +27,13 @@ export const accountState = async (
     coinType: walCoinType,
   });
 
-  core.info(`Adr: ${owner}`);
-  printBalance('Sui', {
+  core.info(`🌐 Network: ${network}`);
+  core.info(`📍 Adr: ${owner}`);
+  printBalance('💧 Sui', {
     amount: sui?.totalBalance || '0',
     decimals: suiData?.decimals || 0,
   });
-  printBalance('Wal', {
+  printBalance('🦭  Wal', {
     amount: wal?.totalBalance || '0',
     decimals: walData?.decimals || 0,
   });
