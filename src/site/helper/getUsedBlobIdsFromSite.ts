@@ -2,6 +2,7 @@ import { bcs } from '@mysten/sui/bcs';
 import { fromBase64, fromHex, toHex } from '@mysten/sui/utils';
 import { SuiClient } from '@mysten/sui/client';
 import { getResourceObjects } from './getResourceObjects';
+import { getAllObjects } from '../../utils/getAllObjects';
 import { base64url } from '../../utils/base64url';
 
 const Address = bcs.bytes(32).transform({
@@ -46,7 +47,7 @@ export const getUsedBlobIdsFromSite = async ({
     siteObjectId,
   });
 
-  const resourceObjects = await suiClient.multiGetObjects({
+  const resourceObjects = await getAllObjects(suiClient, {
     ids: resourceIds.map(obj => obj.objectId),
     options: { showType: true, showBcs: true },
   });

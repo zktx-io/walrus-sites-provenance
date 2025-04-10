@@ -8,6 +8,7 @@ import { registerResources, RegisterResourcesOption } from './helper/registerRes
 import { addRoutes } from './helper/addRoutes';
 import { generateBatchedResourceCommands } from './helper/generateBatchedResourceCommands';
 import { getSitePackageId } from '../utils/getWalrusSystem';
+import { getAllObjects } from '../utils/getAllObjects';
 import { failWithMessage } from '../utils/failWithMessage';
 
 export const createSite = async ({
@@ -74,7 +75,7 @@ export const createSite = async ({
 
   const txCreatedIds = receipt.effects?.created?.map(e => e.reference.objectId) ?? [];
 
-  const createdObjects = await suiClient.multiGetObjects({
+  const createdObjects = await getAllObjects(suiClient, {
     ids: txCreatedIds,
     options: { showType: true, showBcs: true },
   });

@@ -33,7 +33,7 @@ export const accountState = async (
     amount: sui?.totalBalance || '0',
     decimals: suiData?.decimals || 0,
   });
-  printBalance('🦭  Wal', {
+  printBalance('🦭 Wal', {
     amount: wal?.totalBalance || '0',
     decimals: walData?.decimals || 0,
   });

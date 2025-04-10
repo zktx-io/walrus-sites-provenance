@@ -15,6 +15,7 @@ import { getSubsidiesObjectId, getSubsidiesPackageId } from '../utils/getWalrusS
 import { bcs } from '@mysten/sui/bcs';
 import { MAX_CMD_REGISTRATIONS } from '../utils/constants';
 import { convert } from '../utils/convert';
+import { getAllObjects } from '../utils/getAllObjects';
 
 const sha256ToU256LE = (buffer: Buffer): string => {
   const hash = createHash('sha256').update(buffer).digest();
@@ -109,7 +110,7 @@ export const registerBlobs = async ({
       `Not enough WAL balance. Required: ${convert({ amount: totalCost.toString(), decimals })}, Available: ${convert({ amount: walBlance.toString(), decimals })}`,
     );
   } else {
-    core.info(`🦭  Estimate cost: ${convert({ amount: totalCost.toString(), decimals })} WAL`);
+    core.info(`🦭 Estimate cost: ${convert({ amount: totalCost.toString(), decimals })} WAL`);
   }
 
   let txIndex = 0;
@@ -202,7 +203,7 @@ export const registerBlobs = async ({
     } else {
       const txCreatedIds = receipt.effects?.created?.map(e => e.reference.objectId) ?? [];
 
-      const createdObjects = await suiClient.multiGetObjects({
+      const createdObjects = await getAllObjects(suiClient, {
         ids: txCreatedIds,
         options: { showType: true, showBcs: true },
       });
