@@ -52,7 +52,7 @@ jobs:
         with:
           config-path: './site.config.json'
         env:
-          WALRUS_KEYPAIR: ${{ secrets.WALRUS_KEYPAIR }}
+          ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
 ```
 
 ## 📁 Inputs
@@ -63,9 +63,9 @@ jobs:
 
 ## 🔐 Environment Variables
 
-| Name             | Required | Description                    |
-| ---------------- | -------- | ------------------------------ |
-| `WALRUS_KEYPAIR` | ✅       | Base64-encoded signing keypair |
+| Name                  | Required | Description                                          |
+| --------------------- | -------- | ---------------------------------------------------- |
+| `ED25519_PRIVATE_KEY` | ✅       | Private key in Sui format (starts with "suiprivkey") |
 
 ### 2. Configure site.config.json
 

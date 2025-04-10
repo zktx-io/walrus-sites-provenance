@@ -59057,6 +59057,212 @@ exports.getSourceSymbols = getSourceSymbols;
 
 /***/ }),
 
+/***/ 33196:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Committee = exports.StakingPool = exports.Field = void 0;
+const bcs_1 = __nccwpck_require__(56244);
+const Authorized = () => {
+    return bcs_1.bcs.enum('Authorized', {
+        Address: bcs_1.bcs.Address,
+        ObjectID: bcs_1.bcs.Address,
+    });
+};
+const Bag = () => {
+    return bcs_1.bcs.struct('Bag', {
+        id: UID(),
+        size: bcs_1.bcs.u64(),
+    });
+};
+const Balance = () => {
+    return bcs_1.bcs.struct('Balance', {
+        value: bcs_1.bcs.u64(),
+    });
+};
+const Element = () => {
+    return bcs_1.bcs.struct('Element', {
+        bytes: bcs_1.bcs.vector(bcs_1.bcs.u8()),
+    });
+};
+const PendingValues = () => {
+    return bcs_1.bcs.struct('PendingValues', {
+        pos0: VecMap(bcs_1.bcs.u32(), bcs_1.bcs.u64()),
+    });
+};
+const UID = () => {
+    return bcs_1.bcs.struct('UID', {
+        id: bcs_1.bcs.Address,
+    });
+};
+const ExtendedField = () => {
+    return bcs_1.bcs.struct('ExtendedField', {
+        id: UID(),
+    });
+};
+const StorageNodeInfo = () => {
+    return bcs_1.bcs.struct('StorageNodeInfo', {
+        name: bcs_1.bcs.string(),
+        node_id: bcs_1.bcs.Address,
+        network_address: bcs_1.bcs.string(),
+        public_key: Element(),
+        next_epoch_public_key: bcs_1.bcs.option(Element()),
+        network_public_key: bcs_1.bcs.vector(bcs_1.bcs.u8()),
+        metadata: ExtendedField(),
+    });
+};
+const PoolState = () => {
+    return bcs_1.bcs.enum('PoolState', {
+        Active: null,
+        Withdrawing: bcs_1.bcs.u32(),
+        Withdrawn: null,
+    });
+};
+const Table = () => {
+    return bcs_1.bcs.struct('Table', {
+        id: UID(),
+        size: bcs_1.bcs.u64(),
+    });
+};
+const VotingParams = () => {
+    return bcs_1.bcs.struct('VotingParams', {
+        storage_price: bcs_1.bcs.u64(),
+        write_price: bcs_1.bcs.u64(),
+        node_capacity: bcs_1.bcs.u64(),
+    });
+};
+const VecMap = (...typeParameters) => {
+    return bcs_1.bcs.struct('VecMap', {
+        contents: bcs_1.bcs.vector(Entry(typeParameters[0], typeParameters[1])),
+    });
+};
+const Entry = (...typeParameters) => {
+    return bcs_1.bcs.struct('Entry', {
+        key: typeParameters[0],
+        value: typeParameters[1],
+    });
+};
+const Field = (...typeParameters) => {
+    return bcs_1.bcs.struct('Field', {
+        id: UID(),
+        name: typeParameters[0],
+        value: typeParameters[1],
+    });
+};
+exports.Field = Field;
+const StakingPool = () => {
+    return bcs_1.bcs.struct('StakingPool', {
+        id: UID(),
+        state: PoolState(),
+        voting_params: VotingParams(),
+        node_info: StorageNodeInfo(),
+        activation_epoch: bcs_1.bcs.u32(),
+        latest_epoch: bcs_1.bcs.u32(),
+        wal_balance: bcs_1.bcs.u64(),
+        num_shares: bcs_1.bcs.u64(),
+        pending_shares_withdraw: PendingValues(),
+        pre_active_withdrawals: PendingValues(),
+        pending_commission_rate: PendingValues(),
+        commission_rate: bcs_1.bcs.u16(),
+        exchange_rates: Table(),
+        pending_stake: PendingValues(),
+        rewards_pool: Balance(),
+        commission: Balance(),
+        commission_receiver: Authorized(),
+        governance_authorized: Authorized(),
+        extra_fields: Bag(),
+    });
+};
+exports.StakingPool = StakingPool;
+const Committee = () => {
+    return bcs_1.bcs.struct('Committee', {
+        pos0: VecMap(bcs_1.bcs.Address, bcs_1.bcs.vector(bcs_1.bcs.u16())),
+    });
+};
+exports.Committee = Committee;
+
+
+/***/ }),
+
+/***/ 27026:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getCommittee = void 0;
+const bcs_1 = __nccwpck_require__(88830);
+const contracts_1 = __nccwpck_require__(33196);
+const getAllObjects_1 = __nccwpck_require__(20108);
+const getShardIndicesByNodeId = (committee) => {
+    const shardIndicesByNodeId = new Map();
+    for (const node of committee.pos0.contents) {
+        if (!shardIndicesByNodeId.has(node.key)) {
+            shardIndicesByNodeId.set(node.key, []);
+        }
+        shardIndicesByNodeId.get(node.key).push(...node.value);
+    }
+    return shardIndicesByNodeId;
+};
+const loadManyOrThrow = async (suiClient, ids, schema) => {
+    const response = await (0, getAllObjects_1.getAllObjects)(suiClient, {
+        ids,
+        options: { showBcs: true, showOwner: true },
+    });
+    const objects = response.map(obj => {
+        return {
+            id: obj.data?.objectId,
+            version: obj.data?.version,
+            digest: obj.data?.digest,
+            type: (obj.data?.bcs).type,
+            content: (0, bcs_1.fromBase64)((obj.data?.bcs).bcsBytes),
+            owner: {
+                $kind: 'ObjectOwner',
+                ObjectOwner: (obj.data?.owner).ObjectOwner,
+            },
+        };
+    });
+    const parsed = objects.map(obj => {
+        if (obj instanceof Error)
+            throw obj;
+        return schema.parse(obj.content);
+    });
+    return parsed;
+};
+const getStakingPool = async (SuiClient, committee) => {
+    const nodeIds = committee.pos0.contents.map((node) => node.key);
+    return await loadManyOrThrow(SuiClient, nodeIds, (0, contracts_1.StakingPool)());
+};
+const getCommittee = async (SuiClient, committee) => {
+    const stakingPool = await getStakingPool(SuiClient, committee);
+    const shardIndicesByNodeId = getShardIndicesByNodeId(committee);
+    const byShardIndex = new Map();
+    const nodes = stakingPool.map(({ node_info }, nodeIndex) => {
+        const shardIndices = shardIndicesByNodeId.get(node_info.node_id) ?? [];
+        const node = {
+            id: node_info.node_id,
+            info: node_info,
+            networkUrl: `https://${node_info.network_address}`,
+            shardIndices,
+            nodeIndex,
+        };
+        for (const shardIndex of shardIndices) {
+            byShardIndex.set(shardIndex, node);
+        }
+        return node;
+    });
+    return {
+        byShardIndex,
+        nodes,
+    };
+};
+exports.getCommittee = getCommittee;
+
+
+/***/ }),
+
 /***/ 42452:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -59099,42 +59305,62 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.writeBlobHelper = exports.sleep = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const failWithMessage_1 = __nccwpck_require__(60210);
+const batchSize = 10;
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 exports.sleep = sleep;
-const writeBlobHelper = async (walrusClient, retryLimit, { blobId, metadata, sliversByNode, signal, ...options }) => {
-    const confirmations = [];
-    for (let i = 0; i < sliversByNode.length; i++) {
-        let success = false;
-        let attempt = 0;
-        while (!success && attempt < retryLimit) {
-            const controller = new AbortController();
-            const combinedSignal = signal
-                ? AbortSignal.any([controller.signal, signal])
-                : controller.signal;
+const writeBlobHelper = async (walrusClient, retryLimit, quorum, committee, { blobId, metadata, sliversByNode, signal, ...options }) => {
+    let successfulShardCount = 0;
+    const confirmations = new Array(sliversByNode.length).fill(null);
+    const pending = Array.from({ length: sliversByNode.length }, (_, i) => i);
+    const uploadBatch = async (nodeIndices) => {
+        const results = await Promise.all(nodeIndices.map(async (i) => {
             try {
                 const confirmation = await walrusClient.writeEncodedBlobToNode({
                     blobId,
                     nodeIndex: i,
                     metadata,
                     slivers: sliversByNode[i],
-                    signal: combinedSignal,
+                    signal,
                     ...options,
                 });
-                confirmations.push(confirmation);
-                success = true;
+                confirmations[i] = confirmation;
+                successfulShardCount += committee.nodes[i].shardIndices.length;
+                return null;
             }
-            catch (error) {
-                attempt++;
-                if (attempt >= retryLimit) {
-                    (0, failWithMessage_1.failWithMessage)(`❌ Failed to write blob ${blobId} after ${retryLimit} attempts.`);
-                }
-                console.warn(`⚠️ Write failed for ${blobId} (attempt ${attempt})`);
-                core.info('↩️ Resetting walrus client...');
-                walrusClient.reset();
-                await (0, exports.sleep)(10000);
+            catch (e) {
+                return i;
             }
+        }));
+        return results.filter((i) => i !== null);
+    };
+    const retryFailures = async (failures) => {
+        const stillFailing = [];
+        for (let i = 0; i < failures.length; i += batchSize) {
+            const batch = failures.slice(i, i + batchSize);
+            const failed = await uploadBatch(batch);
+            stillFailing.push(...failed);
         }
+        return stillFailing;
+    };
+    // Initial attempt
+    let failures = [];
+    while (pending.length > 0 && successfulShardCount < quorum) {
+        const batch = pending.splice(0, batchSize);
+        const failedInBatch = await uploadBatch(batch);
+        failures.push(...failedInBatch);
     }
+    // Retry if needed
+    let attempt = 1;
+    while (failures.length > 0 && successfulShardCount < quorum && attempt <= retryLimit) {
+        core.warning(`🔁 Retry attempt ${attempt} for ${failures.length} nodes`);
+        await (0, exports.sleep)(10000);
+        failures = await retryFailures(failures);
+        attempt++;
+    }
+    if (successfulShardCount < quorum) {
+        (0, failWithMessage_1.failWithMessage)(`❌ Failed to store blob ${blobId}: quorum not reached (${successfulShardCount}/${quorum})`);
+    }
+    core.info(`✅ Storing resource on Walrus: ${blobId}`);
     return confirmations;
 };
 exports.writeBlobHelper = writeBlobHelper;
@@ -59197,6 +59423,7 @@ const getWalrusSystem_1 = __nccwpck_require__(40802);
 const bcs_1 = __nccwpck_require__(56244);
 const constants_1 = __nccwpck_require__(56156);
 const convert_1 = __nccwpck_require__(31190);
+const getAllObjects_1 = __nccwpck_require__(20108);
 const sha256ToU256LE = (buffer) => {
     const hash = (0, crypto_1.createHash)('sha256').update(buffer).digest();
     const reversed = Buffer.from(hash).reverse();
@@ -59242,9 +59469,12 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
         });
         totalCost = totalCost + groupCost;
     }
+    const decimals = 9;
     if (totalCost > walBlance) {
-        const decimals = 9;
         throw new Error(`Not enough WAL balance. Required: ${(0, convert_1.convert)({ amount: totalCost.toString(), decimals })}, Available: ${(0, convert_1.convert)({ amount: walBlance.toString(), decimals })}`);
+    }
+    else {
+        core.info(`🦭 Estimate cost: ${(0, convert_1.convert)({ amount: totalCost.toString(), decimals })} WAL`);
     }
     let txIndex = 0;
     const allWalTokenIds = await (0, getAllTokens_1.getAllTokens)({
@@ -59312,7 +59542,7 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
         }
         else {
             const txCreatedIds = receipt.effects?.created?.map(e => e.reference.objectId) ?? [];
-            const createdObjects = await suiClient.multiGetObjects({
+            const createdObjects = await (0, getAllObjects_1.getAllObjects)(suiClient, {
                 ids: txCreatedIds,
                 options: { showType: true, showBcs: true },
             });
@@ -59341,51 +59571,22 @@ exports.registerBlobs = registerBlobs;
 /***/ }),
 
 /***/ 59338:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.writeBlobs = void 0;
-const core = __importStar(__nccwpck_require__(37484));
 const writeBlobHelper_1 = __nccwpck_require__(42452);
-const writeBlobs = async ({ retryLimit, walrusClient, blobs, }) => {
+const getCommittee_1 = __nccwpck_require__(27026);
+const writeBlobs = async ({ retryLimit, suiClient, walrusClient, blobs, }) => {
+    const systemState = await walrusClient.systemState();
+    const stakingState = await walrusClient.stakingState();
+    const committee = await (0, getCommittee_1.getCommittee)(suiClient, stakingState.committee);
+    const quorum = systemState.committee.n_shards - Math.floor((systemState.committee.n_shards - 1) / 3);
     for (const blobId of Object.keys(blobs)) {
         const blob = blobs[blobId];
-        const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit + 1, {
+        const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit + 1, quorum, committee, {
             blobId,
             metadata: blob.metadata,
             sliversByNode: blob.sliversByNode,
@@ -59393,7 +59594,6 @@ const writeBlobs = async ({ retryLimit, walrusClient, blobs, }) => {
             objectId: blob.objectId,
         });
         blobs[blobId].confirmations = confirmations;
-        core.info(`✅ Storing resource on Walrus: ${blobId}`);
     }
     return blobs;
 };
@@ -59468,9 +59668,8 @@ const main = async () => {
     });
     const { systemObjectId, blobPackageId, walCoinType } = await (0, getWalrusSystem_1.getWalrusSystem)(config.network, suiClient, walrusClient);
     // Display owner address
-    core.info('\nStarting Publish Walrus Site...');
-    core.info(`\nNetwork: ${config.network}`);
-    const walBlance = await (0, accountState_1.accountState)(config.owner, suiClient, walCoinType);
+    core.info('\nStarting Publish Walrus Site...\n');
+    const walBlance = await (0, accountState_1.accountState)(config.owner, config.network, suiClient, walCoinType);
     // STEP 1: Load files from the specified directory
     core.info(`\n📦 Grouping files by size...`);
     const groups = (0, groupFilesBySize_1.groupFilesBySize)(config);
@@ -59496,6 +59695,7 @@ const main = async () => {
     core.info('\n📤 Writing blobs to nodes...');
     const blobsWithNodes = await (0, writeBlobs_1.writeBlobs)({
         retryLimit: config.write_retry_limit || 5,
+        suiClient,
         walrusClient,
         blobs,
     });
@@ -59584,6 +59784,7 @@ const registerResources_1 = __nccwpck_require__(12318);
 const addRoutes_1 = __nccwpck_require__(97989);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const getWalrusSystem_1 = __nccwpck_require__(40802);
+const getAllObjects_1 = __nccwpck_require__(20108);
 const failWithMessage_1 = __nccwpck_require__(60210);
 const createSite = async ({ config, suiClient, blobs, signer, }) => {
     const packageId = (0, getWalrusSystem_1.getSitePackageId)(config.network);
@@ -59628,7 +59829,7 @@ const createSite = async ({ config, suiClient, blobs, signer, }) => {
         options: { showEffects: true, showEvents: true },
     });
     const txCreatedIds = receipt.effects?.created?.map(e => e.reference.objectId) ?? [];
-    const createdObjects = await suiClient.multiGetObjects({
+    const createdObjects = await (0, getAllObjects_1.getAllObjects)(suiClient, {
         ids: txCreatedIds,
         options: { showType: true, showBcs: true },
     });
@@ -59865,6 +60066,7 @@ exports.getUsedBlobIdsFromSite = void 0;
 const bcs_1 = __nccwpck_require__(56244);
 const utils_1 = __nccwpck_require__(33973);
 const getResourceObjects_1 = __nccwpck_require__(53098);
+const getAllObjects_1 = __nccwpck_require__(20108);
 const base64url_1 = __nccwpck_require__(50881);
 const Address = bcs_1.bcs.bytes(32).transform({
     input: (id) => (0, utils_1.fromHex)(id),
@@ -59895,7 +60097,7 @@ const getUsedBlobIdsFromSite = async ({ suiClient, siteObjectId, }) => {
         suiClient,
         siteObjectId,
     });
-    const resourceObjects = await suiClient.multiGetObjects({
+    const resourceObjects = await (0, getAllObjects_1.getAllObjects)(suiClient, {
         ids: resourceIds.map(obj => obj.objectId),
         options: { showType: true, showBcs: true },
     });
@@ -60177,7 +60379,7 @@ const convert_1 = __nccwpck_require__(31190);
 const printBalance = (symbol, { amount, decimals }) => {
     core.info(`${symbol}: ${(0, convert_1.convert)({ amount, decimals })}`);
 };
-const accountState = async (owner, suiClient, walCoinType) => {
+const accountState = async (owner, network, suiClient, walCoinType) => {
     const balances = await suiClient.getAllBalances({
         owner,
     });
@@ -60189,12 +60391,13 @@ const accountState = async (owner, suiClient, walCoinType) => {
     const walData = await suiClient.getCoinMetadata({
         coinType: walCoinType,
     });
-    core.info(`Adr: ${owner}`);
-    printBalance('Sui', {
+    core.info(`🌐 Network: ${network}`);
+    core.info(`📍 Adr: ${owner}`);
+    printBalance('💧 Sui', {
         amount: sui?.totalBalance || '0',
         decimals: suiData?.decimals || 0,
     });
-    printBalance('Wal', {
+    printBalance('🦭 Wal', {
         amount: wal?.totalBalance || '0',
         decimals: walData?.decimals || 0,
     });
@@ -60401,6 +60604,32 @@ exports.failWithMessage = failWithMessage;
 
 /***/ }),
 
+/***/ 20108:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getAllObjects = getAllObjects;
+const chunkSize = 50;
+async function getAllObjects(client, { ids, ...rest }) {
+    if (ids.length === 0)
+        return [];
+    const results = [];
+    for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const response = await client.multiGetObjects({
+            ids: chunk,
+            ...rest,
+        });
+        results.push(...response);
+    }
+    return results;
+}
+
+
+/***/ }),
+
 /***/ 73207:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -60443,18 +60672,17 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getSigner = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const ed25519_1 = __nccwpck_require__(92094);
-const utils_1 = __nccwpck_require__(33973);
 const getSigner = () => {
-    const raw = process.env.WALRUS_KEYPAIR;
-    if (!raw) {
-        core.setFailed('❌ WALRUS_KEYPAIR environment variable is missing.');
+    const suiprivkey = process.env.ED25519_PRIVATE_KEY;
+    if (!suiprivkey) {
+        core.setFailed('❌ ED25519_PRIVATE_KEY environment variable is missing.');
         throw new Error('Process will be terminated.');
     }
     try {
-        return ed25519_1.Ed25519Keypair.fromSecretKey((0, utils_1.fromBase64)(raw));
+        return ed25519_1.Ed25519Keypair.fromSecretKey(suiprivkey);
     }
     catch (err) {
-        core.setFailed(`❌ Failed to parse WALRUS_KEYPAIR: ${err.message}`);
+        core.setFailed(`❌ Failed to parse ED25519_PRIVATE_KEY: ${err.message}`);
         throw new Error('Process will be terminated.');
     }
 };
