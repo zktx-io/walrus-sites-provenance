@@ -59816,7 +59816,7 @@ const createSite = async ({ config, suiClient, blobs, signer, }) => {
         throw new Error('No resources to register');
     }
     batchedCommands[0].forEach(option => transaction.add((0, registerResources_1.registerResources)(option)));
-    transaction.add((0, addRoutes_1.addRoutes)({ packageId, site, blobs, remove: false }));
+    transaction.add((0, addRoutes_1.addRoutes)({ packageId, site, blobs, isUpdate: false }));
     // Transfer site to owner
     transaction.transferObjects([site], config.owner);
     // Execute transaction
@@ -59876,24 +59876,22 @@ exports.createSite = createSite;
 /***/ }),
 
 /***/ 97989:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.addRoutes = void 0;
-const transactions_1 = __nccwpck_require__(59417);
-const addRoutes = ({ packageId, site, blobs, remove, }) => {
+const addRoutes = ({ packageId, site, blobs, isUpdate, }) => {
     return (tx) => {
         const siteRef = typeof site === 'string' ? tx.object(site) : site;
-        const transaction = new transactions_1.Transaction();
-        if (remove) {
-            transaction.moveCall({
+        if (isUpdate) {
+            tx.moveCall({
                 target: `${packageId}::site::remove_all_routes_if_exist`,
                 arguments: [siteRef],
             });
         }
-        let result = transaction.moveCall({
+        let result = tx.moveCall({
             target: `${packageId}::site::create_routes`,
             arguments: [siteRef],
         });
@@ -59902,7 +59900,7 @@ const addRoutes = ({ packageId, site, blobs, remove, }) => {
             .filter(file => file.name.endsWith('.html'));
         for (const file of htmlFiles) {
             const route = file.name === '/index.html' ? '/*' : file.name;
-            result = transaction.moveCall({
+            result = tx.moveCall({
                 target: `${packageId}::site::insert_route`,
                 arguments: [siteRef, tx.pure.string(route), tx.pure.string(file.name)],
             });
@@ -60258,7 +60256,7 @@ const updateSite = async ({ config, suiClient, walrusClient, blobPackageId, blob
         packageId: sitePackageId,
         site: siteObjectId,
         blobs,
-        remove: true,
+        isUpdate: true,
     }));
     // Execute transaction
     const { digest } = await suiClient.signAndExecuteTransaction({

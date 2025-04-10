@@ -76,7 +76,7 @@ export const updateSite = async ({
       packageId: sitePackageId,
       site: siteObjectId,
       blobs,
-      remove: true,
+      isUpdate: true,
     }),
   );
 
