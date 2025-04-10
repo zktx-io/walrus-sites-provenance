@@ -69,7 +69,7 @@ jobs:
 
 ### 2. Configure site.config.json
 
-Here’s an example config file:
+Your `site.config.json` defines how the Walrus Site will be deployed or updated.
 
 ```json
 {
@@ -82,22 +82,44 @@ Here’s an example config file:
     "name": "My Project",
     "description": "A decentralized web app deployed on Walrus.",
     "project_url": "https://github.com/my-org/my-walrus-site",
-    "creator": "creator"
+    "creator": "my-org"
   },
   "epochs": 30,
   "path": "./dist",
-  "gas_budget": 100000000
+  "gas_budget": 100000000,
+  "write_retry_limit": 3,
+  "object_id": "0xexisting_site_object_id"
 }
 ```
 
-🧾 Description
+#### 🧹 Top-level fields
 
-| Field      | Description                                   |
-| ---------- | --------------------------------------------- |
-| network    | "mainnet" or "testnet"                        |
-| owner      | Your Sui address (who owns the site object)   |
-| site_name  | Human-readable site name                      |
-| metadata   | Site metadata for display and discoverability |
-| epochs     | Number of epochs to store the site            |
-| path       | Directory containing the built site assets    |
-| gas_budget | Gas budget to use for on-chain transactions   |
+| Field               | Type                       | Required | Description                                                       |
+| ------------------- | -------------------------- | -------- | ----------------------------------------------------------------- |
+| `network`           | `"mainnet"` \| `"testnet"` | ✅       | Network to deploy to                                              |
+| `owner`             | `string`                   | ✅       | Sui address that will own the deployed site                       |
+| `site_name`         | `string`                   | ✅       | Human-readable name of your site                                  |
+| `metadata`          | `object`                   | ❌       | Descriptive site metadata (see below)                             |
+| `epochs`            | `number`                   | ✅       | How long the site should be stored (in epochs)                    |
+| `path`              | `string`                   | ✅       | Directory containing your built static site                       |
+| `gas_budget`        | `number`                   | ✅       | Max gas to use for on-chain transactions                          |
+| `write_retry_limit` | `number`                   | ❌       | Number of times to retry failed blob writes                       |
+| `object_id`         | `string`                   | ❌       | Existing site object ID to update (set this when updating a site) |
+
+> ✅ Leave `object_id` empty when deploying a new site.  
+> ↻ Set `object_id` only when **updating** an existing site deployment.
+
+---
+
+#### 🖼 `metadata` (Optional)
+
+Metadata fields describe your site and help users understand and discover it. These values are stored on-chain and displayed in UIs.
+
+| Field         | Type      | Description                                                        |
+| ------------- | --------- | ------------------------------------------------------------------ |
+| `link`        | `string?` | Canonical URL for your app or homepage                             |
+| `image_url`   | `string?` | URL to a preview image or thumbnail for your site                  |
+| `name`        | `string`  | Display name of your site (also provided as `site_name` top-level) |
+| `description` | `string?` | Short summary of what your site does                               |
+| `project_url` | `string?` | Link to your source code repository                                |
+| `creator`     | `string?` | Name, alias, or address of the creator or organization             |

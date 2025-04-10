@@ -57,7 +57,7 @@ export const createSite = async ({
 
   batchedCommands[0].forEach(option => transaction.add(registerResources(option)));
 
-  transaction.add(addRoutes({ packageId, site, blobs, remove: false }));
+  transaction.add(addRoutes({ packageId, site, blobs, isUpdate: false }));
 
   // Transfer site to owner
   transaction.transferObjects([site], config.owner);
