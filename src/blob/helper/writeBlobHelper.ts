@@ -32,7 +32,7 @@ export const writeBlobHelper = async (
         success = true;
       } catch (error) {
         attempt++;
-        if (attempt > retryLimit) {
+        if (attempt >= retryLimit) {
           failWithMessage(`❌ Failed to write blob ${blobId} after ${retryLimit} attempts.`);
         }
         console.warn(`⚠️ Write failed for ${blobId} (attempt ${attempt})`);
