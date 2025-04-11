@@ -1,8 +1,9 @@
+import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { createHash } from 'crypto';
-import { glob } from 'glob';
+
 import * as core from '@actions/core';
+import { glob } from 'glob';
 
 import { FileGroup, FileInfo, SiteConfig } from '../types';
 import { MAX_BLOB_SIZE } from '../utils/constants';

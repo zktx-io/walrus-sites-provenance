@@ -3,15 +3,17 @@ import { SuiClient } from '@mysten/sui/client';
 import { Signer } from '@mysten/sui/cryptography';
 import { Transaction } from '@mysten/sui/transactions';
 import { WalrusClient } from '@mysten/walrus';
+
 import { BlobDictionary, SiteConfig } from '../types';
+import { getSitePackageId } from '../utils/getWalrusSystem';
 import { hexToBase36 } from '../utils/hexToBase36';
-import { registerResources, RegisterResourcesOption } from './helper/registerResources';
+
 import { addRoutes } from './helper/addRoutes';
-import { getResourceObjects } from './helper/getResourceObjects';
+import { deleteOldBlobs } from './helper/deleteOldBlobs';
 import { generateBatchedResourceCommands } from './helper/generateBatchedResourceCommands';
 import { getOldBlobObjects } from './helper/getOldBlobObjects';
-import { deleteOldBlobs } from './helper/deleteOldBlobs';
-import { getSitePackageId } from '../utils/getWalrusSystem';
+import { getResourceObjects } from './helper/getResourceObjects';
+import { registerResources, RegisterResourcesOption } from './helper/registerResources';
 
 export const updateSite = async ({
   config,

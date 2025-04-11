@@ -58829,11 +58829,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.groupFilesBySize = void 0;
+const crypto_1 = __nccwpck_require__(76982);
 const fs_1 = __importDefault(__nccwpck_require__(79896));
 const path_1 = __importDefault(__nccwpck_require__(16928));
-const crypto_1 = __nccwpck_require__(76982);
-const glob_1 = __nccwpck_require__(21363);
 const core = __importStar(__nccwpck_require__(37484));
+const glob_1 = __nccwpck_require__(21363);
 const constants_1 = __nccwpck_require__(56156);
 const contentTypeMap = {
     aac: 'audio/aac',
@@ -58927,9 +58927,7 @@ const groupFilesBySize = (config) => {
         core.setFailed(`❌ Provided path "${siteRoot}" does not exist.`);
         return [];
     }
-    const files = glob_1.glob
-        .sync('**/*.*', { cwd: siteRoot })
-        .map((relativePath) => {
+    const files = glob_1.glob.sync('**/*.*', { cwd: siteRoot }).map(relativePath => {
         const fullPath = path_1.default.join(siteRoot, relativePath);
         const fileBuffer = fs_1.default.readFileSync(fullPath);
         const ext = path_1.default.extname(relativePath).slice(1);
@@ -58949,8 +58947,7 @@ const groupFilesBySize = (config) => {
     const groups = [];
     let currentGroup = { groupId: 0, files: [], size: 0 };
     for (const file of files) {
-        if (currentGroup.size + file.size > constants_1.MAX_BLOB_SIZE &&
-            currentGroup.files.length > 0) {
+        if (currentGroup.size + file.size > constants_1.MAX_BLOB_SIZE && currentGroup.files.length > 0) {
             groups.push(currentGroup);
             currentGroup = { groupId: currentGroup.groupId + 1, files: [], size: 0 };
         }
@@ -59205,8 +59202,8 @@ exports.Committee = Committee;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getCommittee = void 0;
 const bcs_1 = __nccwpck_require__(88830);
-const contracts_1 = __nccwpck_require__(33196);
 const getAllObjects_1 = __nccwpck_require__(20108);
+const contracts_1 = __nccwpck_require__(33196);
 const getShardIndicesByNodeId = (committee) => {
     const shardIndicesByNodeId = new Map();
     for (const node of committee.pos0.contents) {
@@ -59420,16 +59417,16 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerBlobs = void 0;
 const core = __importStar(__nccwpck_require__(37484));
-const transactions_1 = __nccwpck_require__(59417);
-const blob_1 = __nccwpck_require__(42458);
-const base64url_1 = __nccwpck_require__(50881);
-const getAllTokens_1 = __nccwpck_require__(18351);
-const encodedBlobLength_1 = __nccwpck_require__(12717);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
 const bcs_1 = __nccwpck_require__(56244);
+const transactions_1 = __nccwpck_require__(59417);
+const base64url_1 = __nccwpck_require__(50881);
+const blob_1 = __nccwpck_require__(42458);
 const constants_1 = __nccwpck_require__(56156);
 const convert_1 = __nccwpck_require__(31190);
 const getAllObjects_1 = __nccwpck_require__(20108);
+const getWalrusSystem_1 = __nccwpck_require__(40802);
+const encodedBlobLength_1 = __nccwpck_require__(12717);
+const getAllTokens_1 = __nccwpck_require__(18351);
 const blobIdToInt = (blobId) => {
     return BigInt(bcs_1.bcs.u256().fromBase64(blobId.replaceAll('-', '+').replaceAll('_', '/')));
 };
@@ -59489,7 +59486,7 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
         transaction.setGasBudget(config.gas_budget);
         const coin = transaction.object(allWalTokenIds[0]);
         if (allWalTokenIds.length > 1) {
-            transaction.mergeCoins(coin, allWalTokenIds.slice(1).map((id) => transaction.object(id)));
+            transaction.mergeCoins(coin, allWalTokenIds.slice(1).map(id => transaction.object(id)));
         }
         else {
             throw 'No WAL coin found';
@@ -59497,8 +59494,8 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
         const amounts = chunk.map(({ storageCost, writeCost }) => {
             return { storageCost, writeCost };
         });
-        const [...writeCoins] = transaction.splitCoins(coin, amounts.map((a) => a.writeCost));
-        const [...storageCoins] = transaction.splitCoins(coin, amounts.map((a) => a.storageCost));
+        const [...writeCoins] = transaction.splitCoins(coin, amounts.map(a => a.writeCost));
+        const [...storageCoins] = transaction.splitCoins(coin, amounts.map(a => a.storageCost));
         const regisered = [];
         const returnCoins = [];
         chunk.forEach((item, index) => {
@@ -59540,12 +59537,12 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
             throw new Error('Transaction failed');
         }
         else {
-            const txCreatedIds = receipt.effects?.created?.map((e) => e.reference.objectId) ?? [];
+            const txCreatedIds = receipt.effects?.created?.map(e => e.reference.objectId) ?? [];
             const createdObjects = await (0, getAllObjects_1.getAllObjects)(suiClient, {
                 ids: txCreatedIds,
                 options: { showType: true, showBcs: true },
             });
-            const suiBlobObjects = createdObjects.filter((obj) => obj.data?.type === `${blobPackageId}::blob::Blob` &&
+            const suiBlobObjects = createdObjects.filter(obj => obj.data?.type === `${blobPackageId}::blob::Blob` &&
                 obj.data?.bcs?.dataType === 'moveObject');
             core.info(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
             txIndex++;
@@ -59555,7 +59552,7 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
                 blobs[blobId].objectId = parsed.id.id;
             }
             const sortedRegistrations = registrations
-                .filter((r) => blobs[r.blobId])
+                .filter(r => blobs[r.blobId])
                 .sort((a, b) => (a.groupId ?? 0) - (b.groupId ?? 0));
             for (const { blobId, groupId } of sortedRegistrations) {
                 core.info(` + Blob ID: ${blobId} (Group ${groupId})`);
@@ -59576,8 +59573,8 @@ exports.registerBlobs = registerBlobs;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.writeBlobs = void 0;
-const writeBlobHelper_1 = __nccwpck_require__(42452);
 const getCommittee_1 = __nccwpck_require__(27026);
+const writeBlobHelper_1 = __nccwpck_require__(42452);
 const writeBlobs = async ({ retryLimit, suiClient, walrusClient, blobs, }) => {
     const systemState = await walrusClient.systemState();
     const stakingState = await walrusClient.stakingState();
@@ -59643,18 +59640,18 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(37484));
 const client_1 = __nccwpck_require__(70827);
 const walrus_1 = __nccwpck_require__(19044);
-const registerBlobs_1 = __nccwpck_require__(3964);
-const writeBlobs_1 = __nccwpck_require__(59338);
-const writeBlobHelper_1 = __nccwpck_require__(42452);
 const certifyBlobs_1 = __nccwpck_require__(21219);
 const groupFilesBySize_1 = __nccwpck_require__(77685);
+const writeBlobHelper_1 = __nccwpck_require__(42452);
+const registerBlobs_1 = __nccwpck_require__(3964);
+const writeBlobs_1 = __nccwpck_require__(59338);
 const createSite_1 = __nccwpck_require__(10308);
 const updateSite_1 = __nccwpck_require__(38713);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
 const accountState_1 = __nccwpck_require__(26417);
-const loadConfig_1 = __nccwpck_require__(75523);
-const getSigner_1 = __nccwpck_require__(73207);
 const failWithMessage_1 = __nccwpck_require__(60210);
+const getSigner_1 = __nccwpck_require__(73207);
+const getWalrusSystem_1 = __nccwpck_require__(40802);
+const loadConfig_1 = __nccwpck_require__(75523);
 const main = async () => {
     // Load configuration
     const config = (0, loadConfig_1.loadConfig)();
@@ -59778,13 +59775,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSite = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
+const failWithMessage_1 = __nccwpck_require__(60210);
+const getAllObjects_1 = __nccwpck_require__(20108);
+const getWalrusSystem_1 = __nccwpck_require__(40802);
 const hexToBase36_1 = __nccwpck_require__(88793);
-const registerResources_1 = __nccwpck_require__(12318);
 const addRoutes_1 = __nccwpck_require__(97989);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
-const getAllObjects_1 = __nccwpck_require__(20108);
-const failWithMessage_1 = __nccwpck_require__(60210);
+const registerResources_1 = __nccwpck_require__(12318);
 const createSite = async ({ config, suiClient, blobs, signer, }) => {
     const packageId = (0, getWalrusSystem_1.getSitePackageId)(config.network);
     const transaction = new transactions_1.Transaction();
@@ -60061,9 +60058,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getUsedBlobIdsFromSite = void 0;
 const bcs_1 = __nccwpck_require__(56244);
 const utils_1 = __nccwpck_require__(33973);
-const getResourceObjects_1 = __nccwpck_require__(53098);
-const getAllObjects_1 = __nccwpck_require__(20108);
 const base64url_1 = __nccwpck_require__(50881);
+const getAllObjects_1 = __nccwpck_require__(20108);
+const getResourceObjects_1 = __nccwpck_require__(53098);
 const Address = bcs_1.bcs.bytes(32).transform({
     input: (id) => (0, utils_1.fromHex)(id),
     output: id => (0, utils_1.toHex)(id),
@@ -60158,10 +60155,7 @@ const registerResources = ({ packageId, site, file, blobId, rangeOption, }) => {
         });
         return transaction.moveCall({
             target: `${packageId}::site::add_resource`,
-            arguments: [
-                typeof site === 'string' ? transaction.object(site) : site,
-                newResource,
-            ],
+            arguments: [typeof site === 'string' ? transaction.object(site) : site, newResource],
         });
     };
 };
@@ -60212,14 +60206,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updateSite = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
+const getWalrusSystem_1 = __nccwpck_require__(40802);
 const hexToBase36_1 = __nccwpck_require__(88793);
-const registerResources_1 = __nccwpck_require__(12318);
 const addRoutes_1 = __nccwpck_require__(97989);
-const getResourceObjects_1 = __nccwpck_require__(53098);
+const deleteOldBlobs_1 = __nccwpck_require__(74450);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const getOldBlobObjects_1 = __nccwpck_require__(76178);
-const deleteOldBlobs_1 = __nccwpck_require__(74450);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
+const getResourceObjects_1 = __nccwpck_require__(53098);
+const registerResources_1 = __nccwpck_require__(12318);
 const updateSite = async ({ config, suiClient, walrusClient, blobPackageId, blobs, systemObjectId, siteObjectId, signer, }) => {
     const sitePackageId = (0, getWalrusSystem_1.getSitePackageId)(config.network);
     const transaction = new transactions_1.Transaction();

@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import { SuiClient } from '@mysten/sui/client';
+
 import { convert } from './convert';
 
 const printBalance = (

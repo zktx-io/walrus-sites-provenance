@@ -1,6 +1,7 @@
 import { Transaction, TransactionResult } from '@mysten/sui/transactions';
-import { base64url } from '../../utils/base64url';
+
 import { FileInfo } from '../../types';
+import { base64url } from '../../utils/base64url';
 
 export interface RegisterResourcesOption {
   packageId: string;

@@ -2,19 +2,18 @@ import * as core from '@actions/core';
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 import { WalrusClient } from '@mysten/walrus';
 
-import { registerBlobs } from './blob/registerBlobs';
-import { writeBlobs } from './blob/writeBlobs';
-import { sleep } from './blob/helper/writeBlobHelper';
 import { certifyBlobs } from './blob/certifyBlobs';
 import { groupFilesBySize } from './blob/groupFilesBySize';
+import { sleep } from './blob/helper/writeBlobHelper';
+import { registerBlobs } from './blob/registerBlobs';
+import { writeBlobs } from './blob/writeBlobs';
 import { createSite } from './site/createSite';
 import { updateSite } from './site/updateSite';
-
-import { getWalrusSystem } from './utils/getWalrusSystem';
 import { accountState } from './utils/accountState';
-import { loadConfig } from './utils/loadConfig';
-import { getSigner } from './utils/getSigner';
 import { failWithMessage } from './utils/failWithMessage';
+import { getSigner } from './utils/getSigner';
+import { getWalrusSystem } from './utils/getWalrusSystem';
+import { loadConfig } from './utils/loadConfig';
 
 const main = async (): Promise<void> => {
   // Load configuration

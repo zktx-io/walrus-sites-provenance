@@ -1,7 +1,9 @@
 import { TransactionResult } from '@mysten/sui/transactions';
+
 import { BlobDictionary } from '../../types';
-import { RegisterResourcesOption } from './registerResources';
 import { MAX_CMD_SITE_CREATE } from '../../utils/constants';
+
+import { RegisterResourcesOption } from './registerResources';
 
 export function generateBatchedResourceCommands({
   blobs,

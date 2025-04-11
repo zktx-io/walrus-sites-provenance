@@ -1,8 +1,10 @@
 import { BcsType, fromBase64, InferBcsType } from '@mysten/bcs';
 import { SuiClient } from '@mysten/sui/client';
 import { CommitteeInfo, StorageNode } from '@mysten/walrus';
-import { Committee, StakingPool } from './contracts';
+
 import { getAllObjects } from '../../../utils/getAllObjects';
+
+import { Committee, StakingPool } from './contracts';
 
 const getShardIndicesByNodeId = (committee: InferBcsType<ReturnType<typeof Committee>>) => {
   const shardIndicesByNodeId = new Map<string, number[]>();

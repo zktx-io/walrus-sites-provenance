@@ -1,4 +1,5 @@
 import { EncodingType } from '@mysten/walrus';
+
 import { getSourceSymbols } from './getSourceSymbols';
 
 const DIGEST_LEN = 32;

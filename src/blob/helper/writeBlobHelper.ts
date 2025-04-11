@@ -1,6 +1,7 @@
 import * as core from '@actions/core';
 import { SuiClient } from '@mysten/sui/client';
 import { CommitteeInfo, WalrusClient, WriteEncodedBlobToNodesOptions } from '@mysten/walrus';
+
 import { StorageConfirmation } from '../../types';
 import { failWithMessage } from '../../utils/failWithMessage';
 
