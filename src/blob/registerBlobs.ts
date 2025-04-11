@@ -126,8 +126,6 @@ export const registerBlobs = async ({
         coin,
         allWalTokenIds.slice(1).map(id => transaction.object(id)),
       );
-    } else {
-      throw 'No WAL coin found';
     }
 
     const amounts: { storageCost: bigint; writeCost: bigint }[] = chunk.map(

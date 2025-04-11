@@ -59488,9 +59488,6 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
         if (allWalTokenIds.length > 1) {
             transaction.mergeCoins(coin, allWalTokenIds.slice(1).map(id => transaction.object(id)));
         }
-        else {
-            throw 'No WAL coin found';
-        }
         const amounts = chunk.map(({ storageCost, writeCost }) => {
             return { storageCost, writeCost };
         });
