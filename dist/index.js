@@ -58831,6 +58831,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.groupFilesBySize = void 0;
 const fs_1 = __importDefault(__nccwpck_require__(79896));
 const path_1 = __importDefault(__nccwpck_require__(16928));
+const crypto_1 = __nccwpck_require__(76982);
 const glob_1 = __nccwpck_require__(21363);
 const core = __importStar(__nccwpck_require__(37484));
 const constants_1 = __nccwpck_require__(56156);
@@ -58915,21 +58916,30 @@ const contentTypeMap = {
 const getContentTypeFromExtension = (ext) => {
     return contentTypeMap[ext.toLowerCase()];
 };
+const sha256ToU256LE = (buffer) => {
+    const hash = (0, crypto_1.createHash)('sha256').update(buffer).digest();
+    const reversed = Buffer.from(hash).reverse();
+    return BigInt('0x' + reversed.toString('hex')).toString();
+};
 const groupFilesBySize = (config) => {
     const siteRoot = path_1.default.resolve(process.cwd(), config.path);
     if (!fs_1.default.existsSync(siteRoot)) {
         core.setFailed(`❌ Provided path "${siteRoot}" does not exist.`);
         return [];
     }
-    const files = glob_1.glob.sync('**/*.*', { cwd: siteRoot }).map(relativePath => {
+    const files = glob_1.glob
+        .sync('**/*.*', { cwd: siteRoot })
+        .map((relativePath) => {
         const fullPath = path_1.default.join(siteRoot, relativePath);
-        const { size } = fs_1.default.statSync(fullPath);
+        const fileBuffer = fs_1.default.readFileSync(fullPath);
         const ext = path_1.default.extname(relativePath).slice(1);
         const contentType = getContentTypeFromExtension(ext) ?? 'application/octet-stream';
         return {
             path: fullPath,
             name: `/${relativePath}`,
-            size,
+            size: fileBuffer.length,
+            hash: sha256ToU256LE(fileBuffer),
+            buffer: fileBuffer,
             headers: {
                 'Content-Type': contentType,
                 'Content-Encoding': 'identity',
@@ -58939,7 +58949,8 @@ const groupFilesBySize = (config) => {
     const groups = [];
     let currentGroup = { groupId: 0, files: [], size: 0 };
     for (const file of files) {
-        if (currentGroup.size + file.size > constants_1.MAX_BLOB_SIZE && currentGroup.files.length > 0) {
+        if (currentGroup.size + file.size > constants_1.MAX_BLOB_SIZE &&
+            currentGroup.files.length > 0) {
             groups.push(currentGroup);
             currentGroup = { groupId: currentGroup.groupId + 1, files: [], size: 0 };
         }
@@ -59406,15 +59417,10 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerBlobs = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
-const crypto_1 = __nccwpck_require__(76982);
-const fs_1 = __importDefault(__nccwpck_require__(79896));
 const blob_1 = __nccwpck_require__(42458);
 const base64url_1 = __nccwpck_require__(50881);
 const getAllTokens_1 = __nccwpck_require__(18351);
@@ -59424,11 +59430,6 @@ const bcs_1 = __nccwpck_require__(56244);
 const constants_1 = __nccwpck_require__(56156);
 const convert_1 = __nccwpck_require__(31190);
 const getAllObjects_1 = __nccwpck_require__(20108);
-const sha256ToU256LE = (buffer) => {
-    const hash = (0, crypto_1.createHash)('sha256').update(buffer).digest();
-    const reversed = Buffer.from(hash).reverse();
-    return BigInt('0x' + reversed.toString('hex')).toString();
-};
 const blobIdToInt = (blobId) => {
     return BigInt(bcs_1.bcs.u256().fromBase64(blobId.replaceAll('-', '+').replaceAll('_', '/')));
 };
@@ -59441,10 +59442,9 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
     let totalCost = BigInt(0);
     for (let i = 0; i < groups.length; i++) {
         const { files } = groups[i];
-        const buffers = [];
+        const buffers = [Buffer.from([0xff])]; // dummy byte
         for (const file of files) {
-            const fileBuffer = fs_1.default.readFileSync(file.path);
-            buffers.push(fileBuffer);
+            buffers.push(file.buffer);
         }
         const combinedBuffer = Buffer.concat(buffers);
         const { blobId, metadata, sliversByNode, rootHash } = await walrusClient.encodeBlob(combinedBuffer);
@@ -59455,7 +59455,6 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
             metadata,
             sliversByNode,
             rootHash,
-            blobHash: sha256ToU256LE(combinedBuffer),
         };
         registrations.push({
             groupId: groups[i].groupId,
@@ -59490,7 +59489,7 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
         transaction.setGasBudget(config.gas_budget);
         const coin = transaction.object(allWalTokenIds[0]);
         if (allWalTokenIds.length > 1) {
-            transaction.mergeCoins(coin, allWalTokenIds.slice(1).map(id => transaction.object(id)));
+            transaction.mergeCoins(coin, allWalTokenIds.slice(1).map((id) => transaction.object(id)));
         }
         else {
             throw 'No WAL coin found';
@@ -59498,8 +59497,8 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
         const amounts = chunk.map(({ storageCost, writeCost }) => {
             return { storageCost, writeCost };
         });
-        const [...writeCoins] = transaction.splitCoins(coin, amounts.map(a => a.writeCost));
-        const [...storageCoins] = transaction.splitCoins(coin, amounts.map(a => a.storageCost));
+        const [...writeCoins] = transaction.splitCoins(coin, amounts.map((a) => a.writeCost));
+        const [...storageCoins] = transaction.splitCoins(coin, amounts.map((a) => a.storageCost));
         const regisered = [];
         const returnCoins = [];
         chunk.forEach((item, index) => {
@@ -59541,12 +59540,12 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
             throw new Error('Transaction failed');
         }
         else {
-            const txCreatedIds = receipt.effects?.created?.map(e => e.reference.objectId) ?? [];
+            const txCreatedIds = receipt.effects?.created?.map((e) => e.reference.objectId) ?? [];
             const createdObjects = await (0, getAllObjects_1.getAllObjects)(suiClient, {
                 ids: txCreatedIds,
                 options: { showType: true, showBcs: true },
             });
-            const suiBlobObjects = createdObjects.filter(obj => obj.data?.type === `${blobPackageId}::blob::Blob` &&
+            const suiBlobObjects = createdObjects.filter((obj) => obj.data?.type === `${blobPackageId}::blob::Blob` &&
                 obj.data?.bcs?.dataType === 'moveObject');
             core.info(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
             txIndex++;
@@ -59556,7 +59555,7 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
                 blobs[blobId].objectId = parsed.id.id;
             }
             const sortedRegistrations = registrations
-                .filter(r => blobs[r.blobId])
+                .filter((r) => blobs[r.blobId])
                 .sort((a, b) => (a.groupId ?? 0) - (b.groupId ?? 0));
             for (const { blobId, groupId } of sortedRegistrations) {
                 core.info(` + Blob ID: ${blobId} (Group ${groupId})`);
@@ -59948,17 +59947,16 @@ const constants_1 = __nccwpck_require__(56156);
 function generateBatchedResourceCommands({ blobs, packageId, site, }) {
     const resourceCommands = [];
     for (const [blobId, blob] of Object.entries(blobs)) {
-        let offset = 0;
+        let offset = 1;
         for (const file of blob.files) {
             const start = offset;
-            const end = start + file.size;
-            offset = end;
+            const end = start + (file.size - 1);
+            offset = end + 1;
             resourceCommands.push({
                 packageId,
                 site,
                 file,
                 blobId,
-                blob,
                 rangeOption: blob.files.length === 1
                     ? undefined
                     : {
@@ -60122,7 +60120,7 @@ exports.getUsedBlobIdsFromSite = getUsedBlobIdsFromSite;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerResources = void 0;
 const base64url_1 = __nccwpck_require__(50881);
-const registerResources = ({ packageId, site, file, blobId, blob, rangeOption, }) => {
+const registerResources = ({ packageId, site, file, blobId, rangeOption, }) => {
     return (transaction) => {
         const range = transaction.moveCall({
             target: `${packageId}::site::new_range_option`,
@@ -60137,7 +60135,7 @@ const registerResources = ({ packageId, site, file, blobId, blob, rangeOption, }
             arguments: [
                 transaction.pure.string(file.name),
                 transaction.pure.u256(base64url_1.base64url.toNumber(blobId)),
-                transaction.pure.u256(blob.blobHash),
+                transaction.pure.u256(file.hash),
                 range,
             ],
         });
@@ -60160,7 +60158,10 @@ const registerResources = ({ packageId, site, file, blobId, blob, rangeOption, }
         });
         return transaction.moveCall({
             target: `${packageId}::site::add_resource`,
-            arguments: [typeof site === 'string' ? transaction.object(site) : site, newResource],
+            arguments: [
+                typeof site === 'string' ? transaction.object(site) : site,
+                newResource,
+            ],
         });
     };
 };
@@ -60518,7 +60519,7 @@ function Blob() {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_CMD_SITE_UPDATE = exports.MAX_CMD_SITE_CREATE = exports.MAX_CMD_CERTIFICATIONS = exports.MAX_CMD_REGISTRATIONS = exports.MAX_BLOB_SIZE = void 0;
 // 0 means each blob contains only one file
-exports.MAX_BLOB_SIZE = 0;
+exports.MAX_BLOB_SIZE = 5 * 1024 * 1024; // 5MB
 // One registration requires 2 commands: reserve_space + register_blob
 exports.MAX_CMD_REGISTRATIONS = 200;
 // One certification requires 1 command

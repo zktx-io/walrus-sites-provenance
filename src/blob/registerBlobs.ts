@@ -3,8 +3,6 @@ import { SuiClient } from '@mysten/sui/client';
 import { Transaction, TransactionResult } from '@mysten/sui/transactions';
 import { Signer } from '@mysten/sui/cryptography';
 import { WalrusClient } from '@mysten/walrus';
-import { createHash } from 'crypto';
-import fs from 'fs';
 
 import { BlobDictionary, FileGroup, SiteConfig } from '../types';
 import { Blob } from '../utils/blob';
@@ -16,12 +14,6 @@ import { bcs } from '@mysten/sui/bcs';
 import { MAX_CMD_REGISTRATIONS } from '../utils/constants';
 import { convert } from '../utils/convert';
 import { getAllObjects } from '../utils/getAllObjects';
-
-const sha256ToU256LE = (buffer: Buffer): string => {
-  const hash = createHash('sha256').update(buffer).digest();
-  const reversed = Buffer.from(hash).reverse();
-  return BigInt('0x' + reversed.toString('hex')).toString();
-};
 
 const blobIdToInt = (blobId: string): bigint => {
   return BigInt(bcs.u256().fromBase64(blobId.replaceAll('-', '+').replaceAll('_', '/')));
@@ -68,10 +60,9 @@ export const registerBlobs = async ({
   for (let i = 0; i < groups.length; i++) {
     const { files } = groups[i];
 
-    const buffers: Buffer[] = [];
+    const buffers: Buffer[] = [Buffer.from([0xff])]; // dummy byte
     for (const file of files) {
-      const fileBuffer = fs.readFileSync(file.path);
-      buffers.push(fileBuffer);
+      buffers.push(file.buffer);
     }
 
     const combinedBuffer = Buffer.concat(buffers);
@@ -89,7 +80,6 @@ export const registerBlobs = async ({
       metadata,
       sliversByNode,
       rootHash,
-      blobHash: sha256ToU256LE(combinedBuffer),
     };
     registrations.push({
       groupId: groups[i].groupId,
