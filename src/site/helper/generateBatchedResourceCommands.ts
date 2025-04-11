@@ -1,7 +1,9 @@
 import { TransactionResult } from '@mysten/sui/transactions';
+
 import { BlobDictionary } from '../../types';
-import { RegisterResourcesOption } from './registerResources';
 import { MAX_CMD_SITE_CREATE } from '../../utils/constants';
+
+import { RegisterResourcesOption } from './registerResources';
 
 export function generateBatchedResourceCommands({
   blobs,
@@ -15,18 +17,17 @@ export function generateBatchedResourceCommands({
   const resourceCommands: RegisterResourcesOption[] = [];
 
   for (const [blobId, blob] of Object.entries(blobs)) {
-    let offset = 0;
+    let offset = 1;
     for (const file of blob.files) {
       const start = offset;
-      const end = start + file.size;
-      offset = end;
+      const end = start + (file.size - 1);
+      offset = end + 1;
 
       resourceCommands.push({
         packageId,
         site,
         file,
         blobId,
-        blob,
         rangeOption:
           blob.files.length === 1
             ? undefined

@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+
 import * as core from '@actions/core';
+
 import { SiteConfig } from '../types';
 
 export const getDefaultConfig = (): SiteConfig => ({

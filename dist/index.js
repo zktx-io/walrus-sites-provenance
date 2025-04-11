@@ -58829,10 +58829,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.groupFilesBySize = void 0;
+const crypto_1 = __nccwpck_require__(76982);
 const fs_1 = __importDefault(__nccwpck_require__(79896));
 const path_1 = __importDefault(__nccwpck_require__(16928));
-const glob_1 = __nccwpck_require__(21363);
 const core = __importStar(__nccwpck_require__(37484));
+const glob_1 = __nccwpck_require__(21363);
 const constants_1 = __nccwpck_require__(56156);
 const contentTypeMap = {
     aac: 'audio/aac',
@@ -58915,6 +58916,11 @@ const contentTypeMap = {
 const getContentTypeFromExtension = (ext) => {
     return contentTypeMap[ext.toLowerCase()];
 };
+const sha256ToU256LE = (buffer) => {
+    const hash = (0, crypto_1.createHash)('sha256').update(buffer).digest();
+    const reversed = Buffer.from(hash).reverse();
+    return BigInt('0x' + reversed.toString('hex')).toString();
+};
 const groupFilesBySize = (config) => {
     const siteRoot = path_1.default.resolve(process.cwd(), config.path);
     if (!fs_1.default.existsSync(siteRoot)) {
@@ -58923,13 +58929,15 @@ const groupFilesBySize = (config) => {
     }
     const files = glob_1.glob.sync('**/*.*', { cwd: siteRoot }).map(relativePath => {
         const fullPath = path_1.default.join(siteRoot, relativePath);
-        const { size } = fs_1.default.statSync(fullPath);
+        const fileBuffer = fs_1.default.readFileSync(fullPath);
         const ext = path_1.default.extname(relativePath).slice(1);
         const contentType = getContentTypeFromExtension(ext) ?? 'application/octet-stream';
         return {
             path: fullPath,
             name: `/${relativePath}`,
-            size,
+            size: fileBuffer.length,
+            hash: sha256ToU256LE(fileBuffer),
+            buffer: fileBuffer,
             headers: {
                 'Content-Type': contentType,
                 'Content-Encoding': 'identity',
@@ -59194,8 +59202,8 @@ exports.Committee = Committee;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getCommittee = void 0;
 const bcs_1 = __nccwpck_require__(88830);
-const contracts_1 = __nccwpck_require__(33196);
 const getAllObjects_1 = __nccwpck_require__(20108);
+const contracts_1 = __nccwpck_require__(33196);
 const getShardIndicesByNodeId = (committee) => {
     const shardIndicesByNodeId = new Map();
     for (const node of committee.pos0.contents) {
@@ -59406,29 +59414,19 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerBlobs = void 0;
 const core = __importStar(__nccwpck_require__(37484));
-const transactions_1 = __nccwpck_require__(59417);
-const crypto_1 = __nccwpck_require__(76982);
-const fs_1 = __importDefault(__nccwpck_require__(79896));
-const blob_1 = __nccwpck_require__(42458);
-const base64url_1 = __nccwpck_require__(50881);
-const getAllTokens_1 = __nccwpck_require__(18351);
-const encodedBlobLength_1 = __nccwpck_require__(12717);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
 const bcs_1 = __nccwpck_require__(56244);
+const transactions_1 = __nccwpck_require__(59417);
+const base64url_1 = __nccwpck_require__(50881);
+const blob_1 = __nccwpck_require__(42458);
 const constants_1 = __nccwpck_require__(56156);
 const convert_1 = __nccwpck_require__(31190);
 const getAllObjects_1 = __nccwpck_require__(20108);
-const sha256ToU256LE = (buffer) => {
-    const hash = (0, crypto_1.createHash)('sha256').update(buffer).digest();
-    const reversed = Buffer.from(hash).reverse();
-    return BigInt('0x' + reversed.toString('hex')).toString();
-};
+const getWalrusSystem_1 = __nccwpck_require__(40802);
+const encodedBlobLength_1 = __nccwpck_require__(12717);
+const getAllTokens_1 = __nccwpck_require__(18351);
 const blobIdToInt = (blobId) => {
     return BigInt(bcs_1.bcs.u256().fromBase64(blobId.replaceAll('-', '+').replaceAll('_', '/')));
 };
@@ -59441,10 +59439,9 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
     let totalCost = BigInt(0);
     for (let i = 0; i < groups.length; i++) {
         const { files } = groups[i];
-        const buffers = [];
+        const buffers = [Buffer.from([0xff])]; // dummy byte
         for (const file of files) {
-            const fileBuffer = fs_1.default.readFileSync(file.path);
-            buffers.push(fileBuffer);
+            buffers.push(file.buffer);
         }
         const combinedBuffer = Buffer.concat(buffers);
         const { blobId, metadata, sliversByNode, rootHash } = await walrusClient.encodeBlob(combinedBuffer);
@@ -59455,7 +59452,6 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
             metadata,
             sliversByNode,
             rootHash,
-            blobHash: sha256ToU256LE(combinedBuffer),
         };
         registrations.push({
             groupId: groups[i].groupId,
@@ -59577,8 +59573,8 @@ exports.registerBlobs = registerBlobs;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.writeBlobs = void 0;
-const writeBlobHelper_1 = __nccwpck_require__(42452);
 const getCommittee_1 = __nccwpck_require__(27026);
+const writeBlobHelper_1 = __nccwpck_require__(42452);
 const writeBlobs = async ({ retryLimit, suiClient, walrusClient, blobs, }) => {
     const systemState = await walrusClient.systemState();
     const stakingState = await walrusClient.stakingState();
@@ -59644,18 +59640,18 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(37484));
 const client_1 = __nccwpck_require__(70827);
 const walrus_1 = __nccwpck_require__(19044);
-const registerBlobs_1 = __nccwpck_require__(3964);
-const writeBlobs_1 = __nccwpck_require__(59338);
-const writeBlobHelper_1 = __nccwpck_require__(42452);
 const certifyBlobs_1 = __nccwpck_require__(21219);
 const groupFilesBySize_1 = __nccwpck_require__(77685);
+const writeBlobHelper_1 = __nccwpck_require__(42452);
+const registerBlobs_1 = __nccwpck_require__(3964);
+const writeBlobs_1 = __nccwpck_require__(59338);
 const createSite_1 = __nccwpck_require__(10308);
 const updateSite_1 = __nccwpck_require__(38713);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
 const accountState_1 = __nccwpck_require__(26417);
-const loadConfig_1 = __nccwpck_require__(75523);
-const getSigner_1 = __nccwpck_require__(73207);
 const failWithMessage_1 = __nccwpck_require__(60210);
+const getSigner_1 = __nccwpck_require__(73207);
+const getWalrusSystem_1 = __nccwpck_require__(40802);
+const loadConfig_1 = __nccwpck_require__(75523);
 const main = async () => {
     // Load configuration
     const config = (0, loadConfig_1.loadConfig)();
@@ -59779,13 +59775,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSite = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
+const failWithMessage_1 = __nccwpck_require__(60210);
+const getAllObjects_1 = __nccwpck_require__(20108);
+const getWalrusSystem_1 = __nccwpck_require__(40802);
 const hexToBase36_1 = __nccwpck_require__(88793);
-const registerResources_1 = __nccwpck_require__(12318);
 const addRoutes_1 = __nccwpck_require__(97989);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
-const getAllObjects_1 = __nccwpck_require__(20108);
-const failWithMessage_1 = __nccwpck_require__(60210);
+const registerResources_1 = __nccwpck_require__(12318);
 const createSite = async ({ config, suiClient, blobs, signer, }) => {
     const packageId = (0, getWalrusSystem_1.getSitePackageId)(config.network);
     const transaction = new transactions_1.Transaction();
@@ -59948,17 +59944,16 @@ const constants_1 = __nccwpck_require__(56156);
 function generateBatchedResourceCommands({ blobs, packageId, site, }) {
     const resourceCommands = [];
     for (const [blobId, blob] of Object.entries(blobs)) {
-        let offset = 0;
+        let offset = 1;
         for (const file of blob.files) {
             const start = offset;
-            const end = start + file.size;
-            offset = end;
+            const end = start + (file.size - 1);
+            offset = end + 1;
             resourceCommands.push({
                 packageId,
                 site,
                 file,
                 blobId,
-                blob,
                 rangeOption: blob.files.length === 1
                     ? undefined
                     : {
@@ -60063,9 +60058,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getUsedBlobIdsFromSite = void 0;
 const bcs_1 = __nccwpck_require__(56244);
 const utils_1 = __nccwpck_require__(33973);
-const getResourceObjects_1 = __nccwpck_require__(53098);
-const getAllObjects_1 = __nccwpck_require__(20108);
 const base64url_1 = __nccwpck_require__(50881);
+const getAllObjects_1 = __nccwpck_require__(20108);
+const getResourceObjects_1 = __nccwpck_require__(53098);
 const Address = bcs_1.bcs.bytes(32).transform({
     input: (id) => (0, utils_1.fromHex)(id),
     output: id => (0, utils_1.toHex)(id),
@@ -60122,7 +60117,7 @@ exports.getUsedBlobIdsFromSite = getUsedBlobIdsFromSite;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerResources = void 0;
 const base64url_1 = __nccwpck_require__(50881);
-const registerResources = ({ packageId, site, file, blobId, blob, rangeOption, }) => {
+const registerResources = ({ packageId, site, file, blobId, rangeOption, }) => {
     return (transaction) => {
         const range = transaction.moveCall({
             target: `${packageId}::site::new_range_option`,
@@ -60137,7 +60132,7 @@ const registerResources = ({ packageId, site, file, blobId, blob, rangeOption, }
             arguments: [
                 transaction.pure.string(file.name),
                 transaction.pure.u256(base64url_1.base64url.toNumber(blobId)),
-                transaction.pure.u256(blob.blobHash),
+                transaction.pure.u256(file.hash),
                 range,
             ],
         });
@@ -60211,14 +60206,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updateSite = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
+const getWalrusSystem_1 = __nccwpck_require__(40802);
 const hexToBase36_1 = __nccwpck_require__(88793);
-const registerResources_1 = __nccwpck_require__(12318);
 const addRoutes_1 = __nccwpck_require__(97989);
-const getResourceObjects_1 = __nccwpck_require__(53098);
+const deleteOldBlobs_1 = __nccwpck_require__(74450);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const getOldBlobObjects_1 = __nccwpck_require__(76178);
-const deleteOldBlobs_1 = __nccwpck_require__(74450);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
+const getResourceObjects_1 = __nccwpck_require__(53098);
+const registerResources_1 = __nccwpck_require__(12318);
 const updateSite = async ({ config, suiClient, walrusClient, blobPackageId, blobs, systemObjectId, siteObjectId, signer, }) => {
     const sitePackageId = (0, getWalrusSystem_1.getSitePackageId)(config.network);
     const transaction = new transactions_1.Transaction();
@@ -60518,7 +60513,7 @@ function Blob() {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_CMD_SITE_UPDATE = exports.MAX_CMD_SITE_CREATE = exports.MAX_CMD_CERTIFICATIONS = exports.MAX_CMD_REGISTRATIONS = exports.MAX_BLOB_SIZE = void 0;
 // 0 means each blob contains only one file
-exports.MAX_BLOB_SIZE = 0;
+exports.MAX_BLOB_SIZE = 5 * 1024 * 1024; // 5MB
 // One registration requires 2 commands: reserve_space + register_blob
 exports.MAX_CMD_REGISTRATIONS = 200;
 // One certification requires 1 command

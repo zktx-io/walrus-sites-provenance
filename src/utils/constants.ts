@@ -1,5 +1,5 @@
 // 0 means each blob contains only one file
-export const MAX_BLOB_SIZE = 0;
+export const MAX_BLOB_SIZE = 5 * 1024 * 1024; // 5MB
 
 // One registration requires 2 commands: reserve_space + register_blob
 export const MAX_CMD_REGISTRATIONS = 200;

@@ -4,6 +4,8 @@ export interface FileInfo {
   name: string;
   path: string;
   size: number;
+  hash: string;
+  buffer: Buffer;
   headers: {
     'Content-Type': string;
     'Content-Encoding': string;
@@ -51,7 +53,6 @@ export type StorageConfirmation = {
 export interface BlobData {
   files: FileInfo[];
   metadata: BlobMetadata;
-  blobHash: string;
   rootHash: Uint8Array<ArrayBufferLike>;
   sliversByNode: SliversForNode[];
   objectId: string;

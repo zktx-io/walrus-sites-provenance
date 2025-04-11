@@ -1,8 +1,10 @@
 import { SuiClient } from '@mysten/sui/client';
 import { WalrusClient } from '@mysten/walrus';
+
 import { BlobDictionary } from '../types';
-import { writeBlobHelper } from './helper/writeBlobHelper';
+
 import { getCommittee } from './helper/walrus/getCommittee';
+import { writeBlobHelper } from './helper/writeBlobHelper';
 
 export const writeBlobs = async ({
   retryLimit,

@@ -2,14 +2,16 @@ import * as core from '@actions/core';
 import { SuiClient } from '@mysten/sui/client';
 import { Signer } from '@mysten/sui/cryptography';
 import { Transaction } from '@mysten/sui/transactions';
+
 import { BlobDictionary, SiteConfig } from '../types';
+import { failWithMessage } from '../utils/failWithMessage';
+import { getAllObjects } from '../utils/getAllObjects';
+import { getSitePackageId } from '../utils/getWalrusSystem';
 import { hexToBase36 } from '../utils/hexToBase36';
-import { registerResources, RegisterResourcesOption } from './helper/registerResources';
+
 import { addRoutes } from './helper/addRoutes';
 import { generateBatchedResourceCommands } from './helper/generateBatchedResourceCommands';
-import { getSitePackageId } from '../utils/getWalrusSystem';
-import { getAllObjects } from '../utils/getAllObjects';
-import { failWithMessage } from '../utils/failWithMessage';
+import { registerResources, RegisterResourcesOption } from './helper/registerResources';
 
 export const createSite = async ({
   config,

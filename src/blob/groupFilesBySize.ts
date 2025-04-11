@@ -1,9 +1,11 @@
+import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { glob } from 'glob';
-import * as core from '@actions/core';
 
-import { FileGroup, SiteConfig } from '../types';
+import * as core from '@actions/core';
+import { glob } from 'glob';
+
+import { FileGroup, FileInfo, SiteConfig } from '../types';
 import { MAX_BLOB_SIZE } from '../utils/constants';
 
 const contentTypeMap: Record<string, string> = {
@@ -89,6 +91,12 @@ const getContentTypeFromExtension = (ext: string): string | undefined => {
   return contentTypeMap[ext.toLowerCase()];
 };
 
+const sha256ToU256LE = (buffer: Buffer): string => {
+  const hash = createHash('sha256').update(buffer).digest();
+  const reversed = Buffer.from(hash).reverse();
+  return BigInt('0x' + reversed.toString('hex')).toString();
+};
+
 export const groupFilesBySize = (config: SiteConfig): FileGroup[] => {
   const siteRoot = path.resolve(process.cwd(), config.path);
 
@@ -97,15 +105,18 @@ export const groupFilesBySize = (config: SiteConfig): FileGroup[] => {
     return [];
   }
 
-  const files = glob.sync('**/*.*', { cwd: siteRoot }).map(relativePath => {
+  const files: FileInfo[] = glob.sync('**/*.*', { cwd: siteRoot }).map(relativePath => {
     const fullPath = path.join(siteRoot, relativePath);
-    const { size } = fs.statSync(fullPath);
+    const fileBuffer = fs.readFileSync(fullPath);
     const ext = path.extname(relativePath).slice(1);
     const contentType = getContentTypeFromExtension(ext) ?? 'application/octet-stream';
+
     return {
       path: fullPath,
       name: `/${relativePath}`,
-      size,
+      size: fileBuffer.length,
+      hash: sha256ToU256LE(fileBuffer),
+      buffer: fileBuffer,
       headers: {
         'Content-Type': contentType,
         'Content-Encoding': 'identity',

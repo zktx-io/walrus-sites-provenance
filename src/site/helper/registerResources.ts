@@ -1,13 +1,13 @@
 import { Transaction, TransactionResult } from '@mysten/sui/transactions';
+
+import { FileInfo } from '../../types';
 import { base64url } from '../../utils/base64url';
-import { BlobData, FileInfo } from '../../types';
 
 export interface RegisterResourcesOption {
   packageId: string;
   site: TransactionResult | string;
   file: FileInfo;
   blobId: string;
-  blob: BlobData;
   rangeOption?: {
     start: number;
     end: number;
@@ -19,7 +19,6 @@ export const registerResources = ({
   site,
   file,
   blobId,
-  blob,
   rangeOption,
 }: RegisterResourcesOption): ((transaction: Transaction) => TransactionResult) => {
   return (transaction: Transaction) => {
@@ -37,7 +36,7 @@ export const registerResources = ({
       arguments: [
         transaction.pure.string(file.name),
         transaction.pure.u256(base64url.toNumber(blobId)),
-        transaction.pure.u256(blob.blobHash),
+        transaction.pure.u256(file.hash),
         range,
       ],
     });
