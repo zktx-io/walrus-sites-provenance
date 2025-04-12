@@ -58927,12 +58927,18 @@ const groupFilesBySize = (config) => {
         core.setFailed(`❌ Provided path "${siteRoot}" does not exist.`);
         return [];
     }
-    const files = glob_1.glob.sync('**/*.*', { cwd: siteRoot }).map(relativePath => {
+    const allFiles = glob_1.glob.sync('**/*.*', { cwd: siteRoot });
+    const wellKnownManifest = '.well-known/site_manifest.json';
+    const wellKnownProvenance = '.well-known/site-provenance.intoto.jsonl';
+    const isSpecialFile = (relativePath) => relativePath === wellKnownManifest || relativePath === wellKnownProvenance;
+    const specialFiles = [];
+    const normalFiles = [];
+    for (const relativePath of allFiles) {
         const fullPath = path_1.default.join(siteRoot, relativePath);
         const fileBuffer = fs_1.default.readFileSync(fullPath);
         const ext = path_1.default.extname(relativePath).slice(1);
         const contentType = getContentTypeFromExtension(ext) ?? 'application/octet-stream';
-        return {
+        const fileInfo = {
             path: fullPath,
             name: `/${relativePath}`,
             size: fileBuffer.length,
@@ -58943,10 +58949,23 @@ const groupFilesBySize = (config) => {
                 'Content-Encoding': 'identity',
             },
         };
-    });
+        if (isSpecialFile(relativePath)) {
+            specialFiles.push(fileInfo);
+        }
+        else {
+            normalFiles.push(fileInfo);
+        }
+    }
     const groups = [];
-    let currentGroup = { groupId: 0, files: [], size: 0 };
-    for (const file of files) {
+    specialFiles.forEach((file, index) => {
+        groups.push({
+            groupId: index,
+            files: [file],
+            size: file.size,
+        });
+    });
+    let currentGroup = { groupId: specialFiles.length, files: [], size: 0 };
+    for (const file of normalFiles) {
         if (currentGroup.size + file.size > constants_1.MAX_BLOB_SIZE && currentGroup.files.length > 0) {
             groups.push(currentGroup);
             currentGroup = { groupId: currentGroup.groupId + 1, files: [], size: 0 };
