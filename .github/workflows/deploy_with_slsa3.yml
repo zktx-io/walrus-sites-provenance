@@ -1,0 +1,128 @@
+name: Walrus Sites Provenance Full Workflow
+
+description: |
+  A reusable GitHub Actions workflow that builds a static site,
+  generates site manifest and provenance, and deploys to Walrus
+  with verified integrity.
+
+on:
+  workflow_call:
+    secrets:
+      ED25519_PRIVATE_KEY:
+        required: true
+
+jobs:
+  build-site:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      actions: read
+    outputs:
+      output_dir: ${{ steps.parse.outputs.output_dir }}
+      base64_hashes: ${{ steps.generate-manifest.outputs.base64_hashes }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Parse config
+        id: parse
+        run: |
+          CONFIG_PATH="./site.config.json"
+          OUTPUT_DIR=$(jq -r 'if has("path") then .path else error("Missing required field: path") end' "$CONFIG_PATH")
+          echo "output_dir=$OUTPUT_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Fail if output folder exists
+        run: |
+          if [ -d "${{ steps.parse.outputs.output_dir }}" ]; then
+            echo "Output folder ${{ steps.parse.outputs.output_dir }} already exists. Please delete it before running this workflow."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build site
+        run: npm run build
+
+      - name: Generate site manifest (dummy hashes)
+        id: generate-manifest
+        run: |
+          echo '{"resources":[{"path":"/index.html","blob_id":"dummy-blob-id","blob_hash":"dummy-hash"}]}' > site_manifest.json
+          HASHES=$(jq -r '[.resources[] | "\(.blob_hash)  \(.path)" ] | join("\n")' site_manifest.json | sha256sum | base64 -w0)
+          echo "base64_hashes=$HASHES" >> "$GITHUB_OUTPUT"
+
+      - name: Upload site config
+        uses: actions/upload-artifact@v4
+        with:
+          name: site.config.json
+          path: site.config.json
+
+      - name: Upload site manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: site_manifest.json
+          path: site_manifest.json
+
+      - name: Upload output directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-output
+          path: ${{ steps.parse.outputs.output_dir }}
+
+  provenance:
+    needs: build-site
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: ${{ needs.build-site.outputs.base64_hashes }}
+      upload-assets: false
+      provenance-name: 'site-provenance.intoto.jsonl'
+    permissions:
+      id-token: write
+      contents: write
+      actions: read
+
+  deploy:
+    needs: [build-site, provenance]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download site manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: site_manifest.json
+
+      - name: Download site config
+        uses: actions/download-artifact@v4
+        with:
+          name: site.config.json
+
+      - name: Download output directory
+        uses: actions/download-artifact@v4
+        with:
+          name: site-output
+          path: ${{ needs.build-site.outputs.output_dir }}
+
+      - name: Download provenance file
+        uses: actions/download-artifact@v4
+        with:
+          name: site-provenance.intoto.jsonl
+
+      - name: Prepare .well-known directory
+        run: |
+          mkdir -p ${{ needs.build-site.outputs.output_dir }}/.well-known
+          cp site_manifest.json ${{ needs.build-site.outputs.output_dir }}/.well-known/
+          cp site-provenance.intoto.jsonl ${{ needs.build-site.outputs.output_dir }}/.well-known/
+          ls
+
+      - name: Deploy to Walrus Sites
+        uses: zktx-io/walrus-sites-provenance@v0.0.12
+        with:
+          config-path: ./site.config.json
+        env:
+          ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
