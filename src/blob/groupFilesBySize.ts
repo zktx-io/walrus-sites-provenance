@@ -97,8 +97,8 @@ const sha256ToU256LE = (buffer: Buffer): string => {
   return BigInt('0x' + reversed.toString('hex')).toString();
 };
 
-export const groupFilesBySize = (config: SiteConfig): FileGroup[] => {
-  const siteRoot = path.resolve(process.cwd(), config.path);
+export const groupFilesBySize = (outputDir: string): FileGroup[] => {
+  const siteRoot = path.resolve(process.cwd(), outputDir);
 
   if (!fs.existsSync(siteRoot)) {
     core.setFailed(`❌ Provided path "${siteRoot}" does not exist.`);
@@ -155,7 +155,8 @@ export const groupFilesBySize = (config: SiteConfig): FileGroup[] => {
   });
 
   let currentGroup: FileGroup = { groupId: 1, files: [], size: 0 };
-  for (const file of normalFiles) {
+  const sortedNormalFiles = normalFiles.sort((a, b) => b.size - a.size);
+  for (const file of sortedNormalFiles) {
     if (currentGroup.size + file.size > MAX_BLOB_SIZE && currentGroup.files.length > 0) {
       groups.push(currentGroup);
       currentGroup = { groupId: currentGroup.groupId + 1, files: [], size: 0 };

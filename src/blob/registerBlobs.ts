@@ -16,8 +16,72 @@ import { WalrusSystem } from '../utils/loadWalrusSystem';
 import { encodedBlobLength } from './helper/encodedBlobLength';
 import { getAllTokens } from './helper/getAllTokens';
 
+interface Registrations {
+  groupId: number;
+  blobId: string;
+  rootHash: Uint8Array;
+  size: number;
+  epochs: number;
+  storageCost: bigint;
+  writeCost: bigint;
+  totalCost: bigint;
+}
+[] = [];
+
 const blobIdToInt = (blobId: string): bigint => {
   return BigInt(bcs.u256().fromBase64(blobId.replaceAll('-', '+').replaceAll('_', '/')));
+};
+
+export const buildRegistrations = async (
+  walrusClient: WalrusClient,
+  epochs: number,
+  groups: FileGroup[], // 1 group = 1 blob
+) => {
+  const blobs: BlobDictionary = {};
+  const registrations: Registrations[] = [];
+  let totalCost = BigInt(0);
+
+  for (let i = 0; i < groups.length; i++) {
+    const { files } = groups[i];
+
+    const buffers: Buffer[] = files.length > 1 ? [Buffer.from([0xff])] : []; // dummy byte for multiple files
+    for (const file of files) {
+      buffers.push(file.buffer);
+    }
+
+    const combinedBuffer = Buffer.concat(buffers);
+    const { blobId, metadata, sliversByNode, rootHash } =
+      await walrusClient.encodeBlob(combinedBuffer);
+    const {
+      storageCost,
+      writeCost,
+      totalCost: groupCost,
+    } = await walrusClient.storageCost(combinedBuffer.length, epochs);
+
+    blobs[blobId] = {
+      objectId: '',
+      files,
+      metadata,
+      sliversByNode,
+      rootHash,
+    };
+    registrations.push({
+      groupId: groups[i].groupId,
+      blobId,
+      rootHash,
+      size: combinedBuffer.length,
+      epochs,
+      storageCost,
+      writeCost,
+      totalCost: groupCost,
+    });
+    totalCost = totalCost + groupCost;
+  }
+  const sortedRegistrations = registrations
+    .filter(r => blobs[r.blobId])
+    .sort((a, b) => (a.groupId ?? 0) - (b.groupId ?? 0));
+
+  return { blobs, registrations: sortedRegistrations, totalCost };
 };
 
 export const registerBlobs = async ({
@@ -37,56 +101,13 @@ export const registerBlobs = async ({
   walBlance: bigint;
   signer: Signer;
 }) => {
-  const registrations: {
-    groupId: number;
-    blobId: string;
-    rootHash: Uint8Array;
-    size: number;
-    epochs: number;
-    storageCost: bigint;
-    writeCost: bigint;
-    totalCost: bigint;
-  }[] = [];
   const systemState = await walrusClient.systemState();
-  const blobs: BlobDictionary = {};
-  let totalCost: bigint = BigInt(0);
 
-  for (let i = 0; i < groups.length; i++) {
-    const { files } = groups[i];
-
-    const buffers: Buffer[] = files.length > 1 ? [Buffer.from([0xff])] : []; // dummy byte for multiple files
-    for (const file of files) {
-      buffers.push(file.buffer);
-    }
-
-    const combinedBuffer = Buffer.concat(buffers);
-    const { blobId, metadata, sliversByNode, rootHash } =
-      await walrusClient.encodeBlob(combinedBuffer);
-    const {
-      storageCost,
-      writeCost,
-      totalCost: groupCost,
-    } = await walrusClient.storageCost(combinedBuffer.length, config.epochs);
-
-    blobs[blobId] = {
-      objectId: '',
-      files,
-      metadata,
-      sliversByNode,
-      rootHash,
-    };
-    registrations.push({
-      groupId: groups[i].groupId,
-      blobId,
-      rootHash,
-      size: combinedBuffer.length,
-      epochs: config.epochs,
-      storageCost,
-      writeCost,
-      totalCost: groupCost,
-    });
-    totalCost = totalCost + groupCost;
-  }
+  const { blobs, registrations, totalCost } = await buildRegistrations(
+    walrusClient,
+    config.epochs,
+    groups,
+  );
 
   const decimals = 9;
   if (totalCost > walBlance) {
@@ -212,10 +233,7 @@ export const registerBlobs = async ({
         blobs[blobId].objectId = parsed.id.id;
       }
 
-      const sortedRegistrations = registrations
-        .filter(r => blobs[r.blobId])
-        .sort((a, b) => (a.groupId ?? 0) - (b.groupId ?? 0));
-      for (const { blobId, groupId } of sortedRegistrations) {
+      for (const { blobId, groupId } of registrations) {
         core.info(` + Blob ID: ${blobId} (Group ${groupId})`);
       }
     }
