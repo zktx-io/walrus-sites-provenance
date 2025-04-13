@@ -6,31 +6,32 @@ import { Transaction } from '@mysten/sui/transactions';
 import { BlobDictionary, SiteConfig } from '../types';
 import { failWithMessage } from '../utils/failWithMessage';
 import { getAllObjects } from '../utils/getAllObjects';
-import { getSitePackageId } from '../utils/getWalrusSystem';
 import { hexToBase36 } from '../utils/hexToBase36';
 
 import { addRoutes } from './helper/addRoutes';
 import { generateBatchedResourceCommands } from './helper/generateBatchedResourceCommands';
 import { registerResources, RegisterResourcesOption } from './helper/registerResources';
+import { WalrusSystem } from '../utils/loadWalrusSystem';
 
 export const createSite = async ({
   config,
   suiClient,
+  walrusSystem,
   blobs,
   signer,
 }: {
   config: SiteConfig;
   suiClient: SuiClient;
+  walrusSystem: WalrusSystem;
   blobs: BlobDictionary;
   signer: Signer;
 }) => {
-  const packageId = getSitePackageId(config.network);
   const transaction = new Transaction();
   transaction.setGasBudget(config.gas_budget);
 
   // Create metadata object
   const metadata = transaction.moveCall({
-    target: `${packageId}::metadata::new_metadata`,
+    target: `${walrusSystem.sitePackageId}::metadata::new_metadata`,
     arguments: [
       transaction.pure.option('string', config.metadata.link || null),
       transaction.pure.option('string', config.metadata.image_url || null),
@@ -42,14 +43,14 @@ export const createSite = async ({
 
   // Create site object
   const site = transaction.moveCall({
-    target: `${packageId}::site::new_site`,
+    target: `${walrusSystem.sitePackageId}::site::new_site`,
     arguments: [transaction.pure.string(config.site_name), metadata],
   });
 
   // Register resources for each file
   const batchedCommands: RegisterResourcesOption[][] = generateBatchedResourceCommands({
     blobs,
-    packageId,
+    packageId: walrusSystem.sitePackageId,
     site,
   });
 
@@ -59,7 +60,7 @@ export const createSite = async ({
 
   batchedCommands[0].forEach(option => transaction.add(registerResources(option)));
 
-  transaction.add(addRoutes({ packageId, site, blobs, isUpdate: false }));
+  transaction.add(addRoutes({ packageId: walrusSystem.sitePackageId, site, blobs, isUpdate: false }));
 
   // Transfer site to owner
   transaction.transferObjects([site], config.owner);
@@ -84,7 +85,7 @@ export const createSite = async ({
 
   const suiSiteObjects = createdObjects.filter(
     obj =>
-      obj.data?.type === `${packageId}::site::Site` && obj.data?.bcs?.dataType === 'moveObject',
+      obj.data?.type === `${walrusSystem.sitePackageId}::site::Site` && obj.data?.bcs?.dataType === 'moveObject',
   );
 
   // Log created site object IDs

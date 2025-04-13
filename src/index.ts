@@ -12,8 +12,8 @@ import { updateSite } from './site/updateSite';
 import { accountState } from './utils/accountState';
 import { failWithMessage } from './utils/failWithMessage';
 import { getSigner } from './utils/getSigner';
-import { getWalrusSystem } from './utils/getWalrusSystem';
 import { loadConfig } from './utils/loadConfig';
+import { loadWalrusSystem } from './utils/loadWalrusSystem';
 
 const main = async (): Promise<void> => {
   // Load configuration
@@ -27,15 +27,16 @@ const main = async (): Promise<void> => {
     suiClient,
   });
 
-  const { systemObjectId, blobPackageId, walCoinType } = await getWalrusSystem(
-    config.network,
-    suiClient,
-    walrusClient,
-  );
+  const walrusSystem = await loadWalrusSystem(config.network, suiClient, walrusClient);
 
   // Display owner address
   core.info('\nStarting Publish Walrus Site...\n');
-  const walBlance = await accountState(config.owner, config.network, suiClient, walCoinType);
+  const walBlance = await accountState(
+    config.owner,
+    config.network,
+    suiClient,
+    walrusSystem.walCoinType,
+  );
 
   // STEP 1: Load files from the specified directory
   core.info(`\n📦 Grouping files by size...`);
@@ -51,10 +52,8 @@ const main = async (): Promise<void> => {
     config,
     suiClient,
     walrusClient,
-    walCoinType,
+    walrusSystem,
     groups,
-    blobPackageId,
-    systemObjectId,
     walBlance,
     signer,
   });
@@ -88,9 +87,8 @@ const main = async (): Promise<void> => {
       config,
       suiClient,
       walrusClient,
-      blobPackageId,
+      walrusSystem,
       blobs,
-      systemObjectId,
       siteObjectId: config.object_id,
       signer,
     });
@@ -99,6 +97,7 @@ const main = async (): Promise<void> => {
     await createSite({
       config,
       suiClient,
+      walrusSystem,
       blobs: blobsWithNodes,
       signer,
     });
