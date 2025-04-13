@@ -5,8 +5,8 @@ import { Transaction } from '@mysten/sui/transactions';
 import { WalrusClient } from '@mysten/walrus';
 
 import { BlobDictionary, SiteConfig } from '../types';
-import { getSitePackageId } from '../utils/getWalrusSystem';
 import { hexToBase36 } from '../utils/hexToBase36';
+import { WalrusSystem } from '../utils/loadWalrusSystem';
 
 import { addRoutes } from './helper/addRoutes';
 import { deleteOldBlobs } from './helper/deleteOldBlobs';
@@ -19,28 +19,25 @@ export const updateSite = async ({
   config,
   suiClient,
   walrusClient,
-  blobPackageId,
+  walrusSystem,
   blobs,
-  systemObjectId,
   siteObjectId,
   signer,
 }: {
   config: SiteConfig;
   suiClient: SuiClient;
   walrusClient: WalrusClient;
-  blobPackageId: string;
+  walrusSystem: WalrusSystem;
   blobs: BlobDictionary;
-  systemObjectId: string;
   siteObjectId: string;
   signer: Signer;
 }) => {
-  const sitePackageId = getSitePackageId(config.network);
   const transaction = new Transaction();
   transaction.setGasBudget(config.gas_budget);
 
   // Get old blob object IDs
   const oldBlobObjects = await getOldBlobObjects({
-    packageId: blobPackageId,
+    packageId: walrusSystem.blobPackageId,
     config,
     suiClient,
     walrusClient,
@@ -54,7 +51,7 @@ export const updateSite = async ({
 
   for (const { path } of existingResources) {
     transaction.moveCall({
-      target: `${sitePackageId}::site::remove_resource_if_exists`,
+      target: `${walrusSystem.sitePackageId}::site::remove_resource_if_exists`,
       arguments: [transaction.object(siteObjectId), transaction.pure.string(path)],
     });
   }
@@ -62,7 +59,7 @@ export const updateSite = async ({
   // Register new resources
   const batchedCommands: RegisterResourcesOption[][] = generateBatchedResourceCommands({
     blobs,
-    packageId: sitePackageId,
+    packageId: walrusSystem.sitePackageId,
     site: siteObjectId,
   });
 
@@ -75,7 +72,7 @@ export const updateSite = async ({
   // Recreate routes
   transaction.add(
     addRoutes({
-      packageId: sitePackageId,
+      packageId: walrusSystem.sitePackageId,
       site: siteObjectId,
       blobs,
       isUpdate: true,
@@ -126,9 +123,9 @@ export const updateSite = async ({
     tx.add(
       deleteOldBlobs({
         owner: config.owner,
-        packageId: blobPackageId,
+        packageId: walrusSystem.blobPackageId,
         oldBlobObjects,
-        systemObjectId,
+        systemObjectId: walrusSystem.systemObjectId,
       }),
     );
     const { digest: digest3 } = await suiClient.signAndExecuteTransaction({

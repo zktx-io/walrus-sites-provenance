@@ -11,7 +11,7 @@ import { Blob } from '../utils/blob';
 import { MAX_CMD_REGISTRATIONS } from '../utils/constants';
 import { convert } from '../utils/convert';
 import { getAllObjects } from '../utils/getAllObjects';
-import { getSubsidiesObjectId, getSubsidiesPackageId } from '../utils/getWalrusSystem';
+import { WalrusSystem } from '../utils/loadWalrusSystem';
 
 import { encodedBlobLength } from './helper/encodedBlobLength';
 import { getAllTokens } from './helper/getAllTokens';
@@ -24,20 +24,16 @@ export const registerBlobs = async ({
   config,
   suiClient,
   walrusClient,
-  walCoinType,
+  walrusSystem,
   groups,
-  systemObjectId,
-  blobPackageId,
   walBlance,
   signer,
 }: {
   config: SiteConfig;
   suiClient: SuiClient;
   walrusClient: WalrusClient;
-  walCoinType: string;
+  walrusSystem: WalrusSystem;
   groups: FileGroup[];
-  systemObjectId: string;
-  blobPackageId: string;
   walBlance: bigint;
   signer: Signer;
 }) => {
@@ -52,9 +48,6 @@ export const registerBlobs = async ({
     totalCost: bigint;
   }[] = [];
   const systemState = await walrusClient.systemState();
-  const subsidiesObjectId: string = getSubsidiesObjectId(config.network);
-  const subsidiesPackageId: string = getSubsidiesPackageId(config.network);
-
   const blobs: BlobDictionary = {};
   let totalCost: bigint = BigInt(0);
 
@@ -109,14 +102,13 @@ export const registerBlobs = async ({
   const allWalTokenIds = await getAllTokens({
     suiClient,
     owner: config.owner,
-    coinType: walCoinType,
+    coinType: walrusSystem.walCoinType,
   });
 
   for (let i = 0; i < registrations.length; i += MAX_CMD_REGISTRATIONS) {
     const chunk = registrations.slice(i, i + MAX_CMD_REGISTRATIONS);
     const transaction = new Transaction();
-    const subsidiesObject = transaction.object(subsidiesObjectId);
-    const systemObject = transaction.object(systemObjectId);
+    const systemObject = transaction.object(walrusSystem.systemObjectId);
     transaction.setGasBudget(config.gas_budget);
 
     const coin = transaction.object(allWalTokenIds[0]);
@@ -142,24 +134,33 @@ export const registerBlobs = async ({
       amounts.map(a => a.storageCost),
     );
     const regisered: TransactionResult[] = [];
-    const returnCoins: {
-      $kind: 'NestedResult';
-      NestedResult: [number, number];
-    }[] = [];
+    const subsidiesObject = walrusSystem.subsidiesObjectId
+      ? transaction.object(walrusSystem.subsidiesObjectId)
+      : undefined;
     chunk.forEach((item, index) => {
-      const storage = transaction.moveCall({
-        target: `${subsidiesPackageId}::subsidies::reserve_space`,
-        arguments: [
-          subsidiesObject,
-          systemObject,
-          transaction.pure.u64(encodedBlobLength(item.size, systemState.committee.n_shards)),
-          transaction.pure.u32(item.epochs),
-          storageCoins[index],
-        ],
-      });
+      const storage = subsidiesObject
+        ? transaction.moveCall({
+            target: `${walrusSystem.subsidiesPackageId}::subsidies::reserve_space`,
+            arguments: [
+              subsidiesObject,
+              systemObject,
+              transaction.pure.u64(encodedBlobLength(item.size, systemState.committee.n_shards)),
+              transaction.pure.u32(item.epochs),
+              storageCoins[index],
+            ],
+          })
+        : transaction.moveCall({
+            target: `${walrusSystem.systemPackageId}::system::reserve_space`,
+            arguments: [
+              systemObject,
+              transaction.pure.u64(encodedBlobLength(item.size, systemState.committee.n_shards)),
+              transaction.pure.u32(item.epochs),
+              storageCoins[index],
+            ],
+          });
       regisered.push(
         transaction.moveCall({
-          target: `${blobPackageId}::system::register_blob`,
+          target: `${walrusSystem.blobPackageId}::system::register_blob`,
           arguments: [
             systemObject,
             storage,
@@ -199,7 +200,7 @@ export const registerBlobs = async ({
 
       const suiBlobObjects = createdObjects.filter(
         obj =>
-          obj.data?.type === `${blobPackageId}::blob::Blob` &&
+          obj.data?.type === `${walrusSystem.blobPackageId}::blob::Blob` &&
           obj.data?.bcs?.dataType === 'moveObject',
       );
 

@@ -105,7 +105,10 @@ export const groupFilesBySize = (config: SiteConfig): FileGroup[] => {
     return [];
   }
 
-  const allFiles = glob.sync('**/*.*', { cwd: siteRoot });
+  const allFiles = glob.sync(
+    ['**/*.*', '.well-known/site_manifest.json', '.well-known/site-provenance.intoto.jsonl'],
+    { cwd: siteRoot },
+  );
 
   const wellKnownManifest = '.well-known/site_manifest.json';
   const wellKnownProvenance = '.well-known/site-provenance.intoto.jsonl';

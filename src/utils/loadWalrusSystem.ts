@@ -9,7 +9,11 @@ import {
 export interface WalrusSystem {
   walCoinType: string;
   systemObjectId: string;
+  systemPackageId: string;
   blobPackageId: string;
+  subsidiesObjectId?: string;
+  subsidiesPackageId?: string;
+  sitePackageId: string;
 }
 
 const toTypeString = (type: SuiMoveNormalizedType): string => {
@@ -86,41 +90,59 @@ const getWalCoinType = async (suiClient: SuiClient, packageId: string): Promise<
   return normalizeStructTag(coinType);
 };
 
-export const getSubsidiesObjectId = (network: 'mainnet' | 'testnet') => {
-  return network === 'testnet'
-    ? TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId
-    : MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId;
+const getSubsidiesPackageId = async (
+  suiClient: SuiClient,
+  subsidiesObjectId: string,
+): Promise<string> => {
+  const subsidiesObject = await suiClient.getObject({
+    id: subsidiesObjectId,
+    options: { showType: true },
+  });
+  const subsidiesPackageId = parseStructTag(subsidiesObject.data?.type!).address;
+
+  return subsidiesPackageId;
 };
 
-export const getSitePackageId = (network: 'mainnet' | 'testnet') => {
-  return network === 'testnet'
-    ? '0xf99aee9f21493e1590e7e5a9aea6f343a1f381031a04a732724871fc294be799'
-    : '0x26eb7ee8688da02c5f671679524e379f0b837a12f1d1d799f255b7eea260ad27';
-};
-
-export const getSubsidiesPackageId = (network: 'mainnet' | 'testnet') => {
-  return network === 'testnet'
-    ? '0x015906b499d8cdc40f23ab94431bf3fe488a8548f8ae17199a72b2e9df341ca5'
-    : '0xd843c37d213ea683ec3519abe4646fd618f52d7fce1c4e9875a4144d53e21ebc';
-};
-
-export const getWalrusSystem = async (
+export const loadWalrusSystem = async (
   network: 'mainnet' | 'testnet',
   suiClient: SuiClient,
   walrusClient: WalrusClient,
 ): Promise<WalrusSystem> => {
   const system = await walrusClient.systemObject();
   const walCoinType = await getWalCoinType(suiClient, system.package_id);
+  let subsidiesPackageId: string | undefined = undefined;
+
+  if (
+    (network === 'testnet' && TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId) ||
+    (network === 'mainnet' && MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId)
+  ) {
+    const subsidiesObject = await suiClient.getObject({
+      id:
+        network === 'testnet'
+          ? TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId
+          : MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
+      options: { showType: true },
+    });
+    subsidiesPackageId = parseStructTag(subsidiesObject.data?.type!).address;
+  }
 
   return network === 'testnet'
     ? {
         walCoinType,
         systemObjectId: system.id.id,
+        systemPackageId: system.package_id,
         blobPackageId: system.package_id,
+        subsidiesObjectId: TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
+        subsidiesPackageId,
+        sitePackageId: '0xf99aee9f21493e1590e7e5a9aea6f343a1f381031a04a732724871fc294be799',
       }
     : {
         walCoinType,
         systemObjectId: system.id.id,
+        systemPackageId: system.package_id,
         blobPackageId: system.package_id,
+        subsidiesObjectId: MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
+        subsidiesPackageId,
+        sitePackageId: '0x26eb7ee8688da02c5f671679524e379f0b837a12f1d1d799f255b7eea260ad27',
       };
 };
