@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Deploy to Walrus Sites with SLSA
-        uses: zktx-io/walrus-sites-provenance@v0.1.4
+        uses: zktx-io/walrus-sites-provenance@v0.1.5
         with:
           config-path: './site.config.json'
         env:
@@ -155,7 +155,7 @@ permissions:
 
 jobs:
   deploy-with-provenance:
-    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.1.4
+    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.1.5
     secrets:
       ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
 ```
