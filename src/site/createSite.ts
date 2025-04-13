@@ -7,11 +7,11 @@ import { BlobDictionary, SiteConfig } from '../types';
 import { failWithMessage } from '../utils/failWithMessage';
 import { getAllObjects } from '../utils/getAllObjects';
 import { hexToBase36 } from '../utils/hexToBase36';
+import { WalrusSystem } from '../utils/loadWalrusSystem';
 
 import { addRoutes } from './helper/addRoutes';
 import { generateBatchedResourceCommands } from './helper/generateBatchedResourceCommands';
 import { registerResources, RegisterResourcesOption } from './helper/registerResources';
-import { WalrusSystem } from '../utils/loadWalrusSystem';
 
 export const createSite = async ({
   config,
@@ -60,7 +60,9 @@ export const createSite = async ({
 
   batchedCommands[0].forEach(option => transaction.add(registerResources(option)));
 
-  transaction.add(addRoutes({ packageId: walrusSystem.sitePackageId, site, blobs, isUpdate: false }));
+  transaction.add(
+    addRoutes({ packageId: walrusSystem.sitePackageId, site, blobs, isUpdate: false }),
+  );
 
   // Transfer site to owner
   transaction.transferObjects([site], config.owner);
@@ -85,7 +87,8 @@ export const createSite = async ({
 
   const suiSiteObjects = createdObjects.filter(
     obj =>
-      obj.data?.type === `${walrusSystem.sitePackageId}::site::Site` && obj.data?.bcs?.dataType === 'moveObject',
+      obj.data?.type === `${walrusSystem.sitePackageId}::site::Site` &&
+      obj.data?.bcs?.dataType === 'moveObject',
   );
 
   // Log created site object IDs

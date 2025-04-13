@@ -58927,7 +58927,7 @@ const groupFilesBySize = (config) => {
         core.setFailed(`❌ Provided path "${siteRoot}" does not exist.`);
         return [];
     }
-    const allFiles = glob_1.glob.sync('**/*.*', { cwd: siteRoot });
+    const allFiles = glob_1.glob.sync(['**/*.*', '.well-known/site_manifest.json', '.well-known/site-provenance.intoto.jsonl'], { cwd: siteRoot });
     const wellKnownManifest = '.well-known/site_manifest.json';
     const wellKnownProvenance = '.well-known/site-provenance.intoto.jsonl';
     const isSpecialFile = (relativePath) => relativePath === wellKnownManifest || relativePath === wellKnownProvenance;
@@ -59849,7 +59849,8 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, }) =
         ids: txCreatedIds,
         options: { showType: true, showBcs: true },
     });
-    const suiSiteObjects = createdObjects.filter(obj => obj.data?.type === `${walrusSystem.sitePackageId}::site::Site` && obj.data?.bcs?.dataType === 'moveObject');
+    const suiSiteObjects = createdObjects.filter(obj => obj.data?.type === `${walrusSystem.sitePackageId}::site::Site` &&
+        obj.data?.bcs?.dataType === 'moveObject');
     // Log created site object IDs
     let siteObjectId = '';
     if (receipt.errors || suiSiteObjects.length === 0) {
