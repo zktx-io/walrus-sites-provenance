@@ -33,7 +33,7 @@ const main = async () => {
     .forEach(blobId => {
       blobs[blobId].files.forEach(file => {
         resources.push({
-          path: file.path,
+          path: file.name,
           blob_id: blobId,
           blob_hash: file.hash,
         });
@@ -44,7 +44,7 @@ const main = async () => {
   fs.mkdirSync(outputPath, { recursive: true });
   fs.writeFileSync(
     path.join(outputPath, 'site_manifest.json'),
-    JSON.stringify({ resources }, null, 2),
+    JSON.stringify({ network: `sui::${network}`, resources }, null, 2),
   );
 };
 

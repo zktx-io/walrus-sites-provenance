@@ -36,7 +36,7 @@ jobs:
         with:
           repository: zktx-io/walrus-sites-provenance
           path: ${{ steps.tmpdir.outputs.dir }}
-          ref: v0.1.4
+          ref: v0.1.5
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -136,7 +136,7 @@ jobs:
           path: ${{ needs.build-site.outputs.output_dir }}/.well-known
 
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.1.4
+        uses: zktx-io/walrus-sites-provenance@v0.1.5
         with:
           config-path: ./site.config.json
         env:
