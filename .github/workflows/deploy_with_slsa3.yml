@@ -92,11 +92,6 @@ jobs:
     needs: [build-site, provenance]
     runs-on: ubuntu-latest
     steps:
-      - name: Download site manifest
-        uses: actions/download-artifact@v4
-        with:
-          name: site_manifest.json
-
       - name: Download site config
         uses: actions/download-artifact@v4
         with:
@@ -108,19 +103,20 @@ jobs:
           name: site-output
           path: ${{ needs.build-site.outputs.output_dir }}
 
+      - name: Download site manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: site_manifest.json
+          path: ${{ needs.build-site.outputs.output_dir }}/.well-known
+
       - name: Download provenance file
         uses: actions/download-artifact@v4
         with:
           name: site-provenance.intoto.jsonl
-
-      - name: Prepare .well-known directory
-        run: |
-          mkdir -p ${{ needs.build-site.outputs.output_dir }}/.well-known
-          cp site_manifest.json ${{ needs.build-site.outputs.output_dir }}/.well-known/
-          cp site-provenance.intoto.jsonl ${{ needs.build-site.outputs.output_dir }}/.well-known/
+          path: ${{ needs.build-site.outputs.output_dir }}/.well-known
 
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.0.12
+        uses: zktx-io/walrus-sites-provenance@v0.1.2
         with:
           config-path: ./site.config.json
         env:
