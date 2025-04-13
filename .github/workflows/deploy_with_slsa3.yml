@@ -118,7 +118,6 @@ jobs:
           mkdir -p ${{ needs.build-site.outputs.output_dir }}/.well-known
           cp site_manifest.json ${{ needs.build-site.outputs.output_dir }}/.well-known/
           cp site-provenance.intoto.jsonl ${{ needs.build-site.outputs.output_dir }}/.well-known/
-          ls
 
       - name: Deploy to Walrus Sites
         uses: zktx-io/walrus-sites-provenance@v0.0.12
