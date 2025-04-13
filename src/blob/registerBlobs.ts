@@ -54,7 +54,7 @@ export const registerBlobs = async ({
   for (let i = 0; i < groups.length; i++) {
     const { files } = groups[i];
 
-    const buffers: Buffer[] = [Buffer.from([0xff])]; // dummy byte
+    const buffers: Buffer[] = files.length > 1 ? [Buffer.from([0xff])] : []; // dummy byte for multiple files
     for (const file of files) {
       buffers.push(file.buffer);
     }
