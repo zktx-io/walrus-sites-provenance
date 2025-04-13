@@ -59443,17 +59443,14 @@ const blob_1 = __nccwpck_require__(42458);
 const constants_1 = __nccwpck_require__(56156);
 const convert_1 = __nccwpck_require__(31190);
 const getAllObjects_1 = __nccwpck_require__(20108);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
 const encodedBlobLength_1 = __nccwpck_require__(12717);
 const getAllTokens_1 = __nccwpck_require__(18351);
 const blobIdToInt = (blobId) => {
     return BigInt(bcs_1.bcs.u256().fromBase64(blobId.replaceAll('-', '+').replaceAll('_', '/')));
 };
-const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, groups, systemObjectId, blobPackageId, walBlance, signer, }) => {
+const registerBlobs = async ({ config, suiClient, walrusClient, walrusSystem, groups, walBlance, signer, }) => {
     const registrations = [];
     const systemState = await walrusClient.systemState();
-    const subsidiesObjectId = (0, getWalrusSystem_1.getSubsidiesObjectId)(config.network);
-    const subsidiesPackageId = (0, getWalrusSystem_1.getSubsidiesPackageId)(config.network);
     const blobs = {};
     let totalCost = BigInt(0);
     for (let i = 0; i < groups.length; i++) {
@@ -59495,13 +59492,12 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
     const allWalTokenIds = await (0, getAllTokens_1.getAllTokens)({
         suiClient,
         owner: config.owner,
-        coinType: walCoinType,
+        coinType: walrusSystem.walCoinType,
     });
     for (let i = 0; i < registrations.length; i += constants_1.MAX_CMD_REGISTRATIONS) {
         const chunk = registrations.slice(i, i + constants_1.MAX_CMD_REGISTRATIONS);
         const transaction = new transactions_1.Transaction();
-        const subsidiesObject = transaction.object(subsidiesObjectId);
-        const systemObject = transaction.object(systemObjectId);
+        const systemObject = transaction.object(walrusSystem.systemObjectId);
         transaction.setGasBudget(config.gas_budget);
         const coin = transaction.object(allWalTokenIds[0]);
         if (allWalTokenIds.length > 1) {
@@ -59513,20 +59509,32 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
         const [...writeCoins] = transaction.splitCoins(coin, amounts.map(a => a.writeCost));
         const [...storageCoins] = transaction.splitCoins(coin, amounts.map(a => a.storageCost));
         const regisered = [];
-        const returnCoins = [];
+        const subsidiesObject = walrusSystem.subsidiesObjectId
+            ? transaction.object(walrusSystem.subsidiesObjectId)
+            : undefined;
         chunk.forEach((item, index) => {
-            const storage = transaction.moveCall({
-                target: `${subsidiesPackageId}::subsidies::reserve_space`,
-                arguments: [
-                    subsidiesObject,
-                    systemObject,
-                    transaction.pure.u64((0, encodedBlobLength_1.encodedBlobLength)(item.size, systemState.committee.n_shards)),
-                    transaction.pure.u32(item.epochs),
-                    storageCoins[index],
-                ],
-            });
+            const storage = subsidiesObject
+                ? transaction.moveCall({
+                    target: `${walrusSystem.subsidiesPackageId}::subsidies::reserve_space`,
+                    arguments: [
+                        subsidiesObject,
+                        systemObject,
+                        transaction.pure.u64((0, encodedBlobLength_1.encodedBlobLength)(item.size, systemState.committee.n_shards)),
+                        transaction.pure.u32(item.epochs),
+                        storageCoins[index],
+                    ],
+                })
+                : transaction.moveCall({
+                    target: `${walrusSystem.systemPackageId}::system::reserve_space`,
+                    arguments: [
+                        systemObject,
+                        transaction.pure.u64((0, encodedBlobLength_1.encodedBlobLength)(item.size, systemState.committee.n_shards)),
+                        transaction.pure.u32(item.epochs),
+                        storageCoins[index],
+                    ],
+                });
             regisered.push(transaction.moveCall({
-                target: `${blobPackageId}::system::register_blob`,
+                target: `${walrusSystem.blobPackageId}::system::register_blob`,
                 arguments: [
                     systemObject,
                     storage,
@@ -59558,7 +59566,7 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walCoinType, gro
                 ids: txCreatedIds,
                 options: { showType: true, showBcs: true },
             });
-            const suiBlobObjects = createdObjects.filter(obj => obj.data?.type === `${blobPackageId}::blob::Blob` &&
+            const suiBlobObjects = createdObjects.filter(obj => obj.data?.type === `${walrusSystem.blobPackageId}::blob::Blob` &&
                 obj.data?.bcs?.dataType === 'moveObject');
             core.info(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
             txIndex++;
@@ -59595,7 +59603,7 @@ const writeBlobs = async ({ retryLimit, suiClient, walrusClient, blobs, }) => {
     const systemState = await walrusClient.systemState();
     const stakingState = await walrusClient.stakingState();
     const committee = await (0, getCommittee_1.getCommittee)(suiClient, stakingState.committee);
-    const quorum = systemState.committee.n_shards - Math.floor((systemState.committee.n_shards - 1) / 3);
+    const quorum = systemState.committee.n_shards - Math.floor((systemState.committee.n_shards - 1) / 4);
     for (const blobId of Object.keys(blobs)) {
         const blob = blobs[blobId];
         const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit + 1, quorum, committee, {
@@ -59666,8 +59674,8 @@ const updateSite_1 = __nccwpck_require__(38713);
 const accountState_1 = __nccwpck_require__(26417);
 const failWithMessage_1 = __nccwpck_require__(60210);
 const getSigner_1 = __nccwpck_require__(73207);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
 const loadConfig_1 = __nccwpck_require__(75523);
+const loadWalrusSystem_1 = __nccwpck_require__(21922);
 const main = async () => {
     // Load configuration
     const config = (0, loadConfig_1.loadConfig)();
@@ -59678,10 +59686,10 @@ const main = async () => {
         network: config.network,
         suiClient,
     });
-    const { systemObjectId, blobPackageId, walCoinType } = await (0, getWalrusSystem_1.getWalrusSystem)(config.network, suiClient, walrusClient);
+    const walrusSystem = await (0, loadWalrusSystem_1.loadWalrusSystem)(config.network, suiClient, walrusClient);
     // Display owner address
     core.info('\nStarting Publish Walrus Site...\n');
-    const walBlance = await (0, accountState_1.accountState)(config.owner, config.network, suiClient, walCoinType);
+    const walBlance = await (0, accountState_1.accountState)(config.owner, config.network, suiClient, walrusSystem.walCoinType);
     // STEP 1: Load files from the specified directory
     core.info(`\n📦 Grouping files by size...`);
     const groups = (0, groupFilesBySize_1.groupFilesBySize)(config);
@@ -59694,10 +59702,8 @@ const main = async () => {
         config,
         suiClient,
         walrusClient,
-        walCoinType,
+        walrusSystem,
         groups,
-        blobPackageId,
-        systemObjectId,
         walBlance,
         signer,
     });
@@ -59727,9 +59733,8 @@ const main = async () => {
             config,
             suiClient,
             walrusClient,
-            blobPackageId,
+            walrusSystem,
             blobs,
-            systemObjectId,
             siteObjectId: config.object_id,
             signer,
         });
@@ -59739,6 +59744,7 @@ const main = async () => {
         await (0, createSite_1.createSite)({
             config,
             suiClient,
+            walrusSystem,
             blobs: blobsWithNodes,
             signer,
         });
@@ -59793,18 +59799,16 @@ const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
 const failWithMessage_1 = __nccwpck_require__(60210);
 const getAllObjects_1 = __nccwpck_require__(20108);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
 const hexToBase36_1 = __nccwpck_require__(88793);
 const addRoutes_1 = __nccwpck_require__(97989);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const registerResources_1 = __nccwpck_require__(12318);
-const createSite = async ({ config, suiClient, blobs, signer, }) => {
-    const packageId = (0, getWalrusSystem_1.getSitePackageId)(config.network);
+const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, }) => {
     const transaction = new transactions_1.Transaction();
     transaction.setGasBudget(config.gas_budget);
     // Create metadata object
     const metadata = transaction.moveCall({
-        target: `${packageId}::metadata::new_metadata`,
+        target: `${walrusSystem.sitePackageId}::metadata::new_metadata`,
         arguments: [
             transaction.pure.option('string', config.metadata.link || null),
             transaction.pure.option('string', config.metadata.image_url || null),
@@ -59815,20 +59819,20 @@ const createSite = async ({ config, suiClient, blobs, signer, }) => {
     });
     // Create site object
     const site = transaction.moveCall({
-        target: `${packageId}::site::new_site`,
+        target: `${walrusSystem.sitePackageId}::site::new_site`,
         arguments: [transaction.pure.string(config.site_name), metadata],
     });
     // Register resources for each file
     const batchedCommands = (0, generateBatchedResourceCommands_1.generateBatchedResourceCommands)({
         blobs,
-        packageId,
+        packageId: walrusSystem.sitePackageId,
         site,
     });
     if (batchedCommands.length === 0) {
         throw new Error('No resources to register');
     }
     batchedCommands[0].forEach(option => transaction.add((0, registerResources_1.registerResources)(option)));
-    transaction.add((0, addRoutes_1.addRoutes)({ packageId, site, blobs, isUpdate: false }));
+    transaction.add((0, addRoutes_1.addRoutes)({ packageId: walrusSystem.sitePackageId, site, blobs, isUpdate: false }));
     // Transfer site to owner
     transaction.transferObjects([site], config.owner);
     // Execute transaction
@@ -59845,7 +59849,7 @@ const createSite = async ({ config, suiClient, blobs, signer, }) => {
         ids: txCreatedIds,
         options: { showType: true, showBcs: true },
     });
-    const suiSiteObjects = createdObjects.filter(obj => obj.data?.type === `${packageId}::site::Site` && obj.data?.bcs?.dataType === 'moveObject');
+    const suiSiteObjects = createdObjects.filter(obj => obj.data?.type === `${walrusSystem.sitePackageId}::site::Site` && obj.data?.bcs?.dataType === 'moveObject');
     // Log created site object IDs
     let siteObjectId = '';
     if (receipt.errors || suiSiteObjects.length === 0) {
@@ -60222,7 +60226,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updateSite = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
-const getWalrusSystem_1 = __nccwpck_require__(40802);
 const hexToBase36_1 = __nccwpck_require__(88793);
 const addRoutes_1 = __nccwpck_require__(97989);
 const deleteOldBlobs_1 = __nccwpck_require__(74450);
@@ -60230,13 +60233,12 @@ const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const getOldBlobObjects_1 = __nccwpck_require__(76178);
 const getResourceObjects_1 = __nccwpck_require__(53098);
 const registerResources_1 = __nccwpck_require__(12318);
-const updateSite = async ({ config, suiClient, walrusClient, blobPackageId, blobs, systemObjectId, siteObjectId, signer, }) => {
-    const sitePackageId = (0, getWalrusSystem_1.getSitePackageId)(config.network);
+const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs, siteObjectId, signer, }) => {
     const transaction = new transactions_1.Transaction();
     transaction.setGasBudget(config.gas_budget);
     // Get old blob object IDs
     const oldBlobObjects = await (0, getOldBlobObjects_1.getOldBlobObjects)({
-        packageId: blobPackageId,
+        packageId: walrusSystem.blobPackageId,
         config,
         suiClient,
         walrusClient,
@@ -60248,14 +60250,14 @@ const updateSite = async ({ config, suiClient, walrusClient, blobPackageId, blob
     });
     for (const { path } of existingResources) {
         transaction.moveCall({
-            target: `${sitePackageId}::site::remove_resource_if_exists`,
+            target: `${walrusSystem.sitePackageId}::site::remove_resource_if_exists`,
             arguments: [transaction.object(siteObjectId), transaction.pure.string(path)],
         });
     }
     // Register new resources
     const batchedCommands = (0, generateBatchedResourceCommands_1.generateBatchedResourceCommands)({
         blobs,
-        packageId: sitePackageId,
+        packageId: walrusSystem.sitePackageId,
         site: siteObjectId,
     });
     if (batchedCommands.length === 0) {
@@ -60264,7 +60266,7 @@ const updateSite = async ({ config, suiClient, walrusClient, blobPackageId, blob
     batchedCommands[0].forEach(option => transaction.add((0, registerResources_1.registerResources)(option)));
     // Recreate routes
     transaction.add((0, addRoutes_1.addRoutes)({
-        packageId: sitePackageId,
+        packageId: walrusSystem.sitePackageId,
         site: siteObjectId,
         blobs,
         isUpdate: true,
@@ -60307,9 +60309,9 @@ const updateSite = async ({ config, suiClient, walrusClient, blobPackageId, blob
         tx.setGasBudget(config.gas_budget);
         tx.add((0, deleteOldBlobs_1.deleteOldBlobs)({
             owner: config.owner,
-            packageId: blobPackageId,
+            packageId: walrusSystem.blobPackageId,
             oldBlobObjects,
-            systemObjectId,
+            systemObjectId: walrusSystem.systemObjectId,
         }));
         const { digest: digest3 } = await suiClient.signAndExecuteTransaction({
             signer,
@@ -60700,115 +60702,6 @@ exports.getSigner = getSigner;
 
 /***/ }),
 
-/***/ 40802:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getWalrusSystem = exports.getSubsidiesPackageId = exports.getSitePackageId = exports.getSubsidiesObjectId = void 0;
-const utils_1 = __nccwpck_require__(33973);
-const walrus_1 = __nccwpck_require__(19044);
-const toTypeString = (type) => {
-    if (typeof type === 'string') {
-        switch (type) {
-            case 'Address':
-                return 'address';
-            case 'Bool':
-                return 'bool';
-            case 'U8':
-                return 'u8';
-            case 'U16':
-                return 'u16';
-            case 'U32':
-                return 'u32';
-            case 'U64':
-                return 'u64';
-            case 'U128':
-                return 'u128';
-            case 'U256':
-                return 'u256';
-            default:
-                throw new Error(`Unexpected type ${type}`);
-        }
-    }
-    if ('Vector' in type) {
-        return `vector<${toTypeString(type.Vector)}>`;
-    }
-    if ('Struct' in type) {
-        if (type.Struct.typeArguments.length > 0) {
-            return `${type.Struct.address}::${type.Struct.module}::${type.Struct.name}<${type.Struct.typeArguments.map(toTypeString).join(',')}>`;
-        }
-        else {
-            return `${type.Struct.address}::${type.Struct.module}::${type.Struct.name}`;
-        }
-    }
-    if ('TypeParameter' in type) {
-        throw new Error(`Type parameters can't be converted to type strings`);
-    }
-    if ('Reference' in type) {
-        return toTypeString(type.Reference);
-    }
-    if ('MutableReference' in type) {
-        return toTypeString(type.MutableReference);
-    }
-    throw new Error(`Unexpected type ${JSON.stringify(type)}`);
-};
-const getWalCoinType = async (suiClient, packageId) => {
-    const stakedWal = await suiClient.getNormalizedMoveStruct({
-        package: packageId,
-        module: 'staked_wal',
-        struct: 'StakedWal',
-    });
-    const balanceType = stakedWal.fields.find(field => field.name === 'principal')?.type;
-    if (!balanceType) {
-        throw new Error('WAL type not found');
-    }
-    const parsed = (0, utils_1.parseStructTag)(toTypeString(balanceType));
-    const coinType = parsed.typeParams[0];
-    if (!coinType) {
-        throw new Error('WAL type not found');
-    }
-    return (0, utils_1.normalizeStructTag)(coinType);
-};
-const getSubsidiesObjectId = (network) => {
-    return network === 'testnet'
-        ? walrus_1.TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId
-        : walrus_1.MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId;
-};
-exports.getSubsidiesObjectId = getSubsidiesObjectId;
-const getSitePackageId = (network) => {
-    return network === 'testnet'
-        ? '0xf99aee9f21493e1590e7e5a9aea6f343a1f381031a04a732724871fc294be799'
-        : '0x26eb7ee8688da02c5f671679524e379f0b837a12f1d1d799f255b7eea260ad27';
-};
-exports.getSitePackageId = getSitePackageId;
-const getSubsidiesPackageId = (network) => {
-    return network === 'testnet'
-        ? '0x015906b499d8cdc40f23ab94431bf3fe488a8548f8ae17199a72b2e9df341ca5'
-        : '0xd843c37d213ea683ec3519abe4646fd618f52d7fce1c4e9875a4144d53e21ebc';
-};
-exports.getSubsidiesPackageId = getSubsidiesPackageId;
-const getWalrusSystem = async (network, suiClient, walrusClient) => {
-    const system = await walrusClient.systemObject();
-    const walCoinType = await getWalCoinType(suiClient, system.package_id);
-    return network === 'testnet'
-        ? {
-            walCoinType,
-            systemObjectId: system.id.id,
-            blobPackageId: system.package_id,
-        }
-        : {
-            walCoinType,
-            systemObjectId: system.id.id,
-            blobPackageId: system.package_id,
-        };
-};
-exports.getWalrusSystem = getWalrusSystem;
-
-
-/***/ }),
-
 /***/ 88793:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -60917,6 +60810,124 @@ const loadConfig = () => {
     }
 };
 exports.loadConfig = loadConfig;
+
+
+/***/ }),
+
+/***/ 21922:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.loadWalrusSystem = void 0;
+const utils_1 = __nccwpck_require__(33973);
+const walrus_1 = __nccwpck_require__(19044);
+const toTypeString = (type) => {
+    if (typeof type === 'string') {
+        switch (type) {
+            case 'Address':
+                return 'address';
+            case 'Bool':
+                return 'bool';
+            case 'U8':
+                return 'u8';
+            case 'U16':
+                return 'u16';
+            case 'U32':
+                return 'u32';
+            case 'U64':
+                return 'u64';
+            case 'U128':
+                return 'u128';
+            case 'U256':
+                return 'u256';
+            default:
+                throw new Error(`Unexpected type ${type}`);
+        }
+    }
+    if ('Vector' in type) {
+        return `vector<${toTypeString(type.Vector)}>`;
+    }
+    if ('Struct' in type) {
+        if (type.Struct.typeArguments.length > 0) {
+            return `${type.Struct.address}::${type.Struct.module}::${type.Struct.name}<${type.Struct.typeArguments.map(toTypeString).join(',')}>`;
+        }
+        else {
+            return `${type.Struct.address}::${type.Struct.module}::${type.Struct.name}`;
+        }
+    }
+    if ('TypeParameter' in type) {
+        throw new Error(`Type parameters can't be converted to type strings`);
+    }
+    if ('Reference' in type) {
+        return toTypeString(type.Reference);
+    }
+    if ('MutableReference' in type) {
+        return toTypeString(type.MutableReference);
+    }
+    throw new Error(`Unexpected type ${JSON.stringify(type)}`);
+};
+const getWalCoinType = async (suiClient, packageId) => {
+    const stakedWal = await suiClient.getNormalizedMoveStruct({
+        package: packageId,
+        module: 'staked_wal',
+        struct: 'StakedWal',
+    });
+    const balanceType = stakedWal.fields.find(field => field.name === 'principal')?.type;
+    if (!balanceType) {
+        throw new Error('WAL type not found');
+    }
+    const parsed = (0, utils_1.parseStructTag)(toTypeString(balanceType));
+    const coinType = parsed.typeParams[0];
+    if (!coinType) {
+        throw new Error('WAL type not found');
+    }
+    return (0, utils_1.normalizeStructTag)(coinType);
+};
+const getSubsidiesPackageId = async (suiClient, subsidiesObjectId) => {
+    const subsidiesObject = await suiClient.getObject({
+        id: subsidiesObjectId,
+        options: { showType: true },
+    });
+    const subsidiesPackageId = (0, utils_1.parseStructTag)(subsidiesObject.data?.type).address;
+    return subsidiesPackageId;
+};
+const loadWalrusSystem = async (network, suiClient, walrusClient) => {
+    const system = await walrusClient.systemObject();
+    const walCoinType = await getWalCoinType(suiClient, system.package_id);
+    let subsidiesPackageId = undefined;
+    if ((network === 'testnet' && walrus_1.TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId) ||
+        (network === 'mainnet' && walrus_1.MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId)) {
+        const subsidiesObject = await suiClient.getObject({
+            id: network === 'testnet'
+                ? walrus_1.TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId
+                : walrus_1.MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
+            options: { showType: true },
+        });
+        subsidiesPackageId = (0, utils_1.parseStructTag)(subsidiesObject.data?.type).address;
+    }
+    return network === 'testnet'
+        ? {
+            walCoinType,
+            systemObjectId: system.id.id,
+            systemPackageId: system.package_id,
+            blobPackageId: system.package_id,
+            subsidiesObjectId: walrus_1.TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
+            subsidiesPackageId,
+            sitePackageId: '0xf99aee9f21493e1590e7e5a9aea6f343a1f381031a04a732724871fc294be799',
+        }
+        : {
+            walCoinType,
+            systemObjectId: system.id.id,
+            systemPackageId: system.package_id,
+            blobPackageId: system.package_id,
+            subsidiesObjectId: walrus_1.MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
+            subsidiesPackageId,
+            sitePackageId: '0x26eb7ee8688da02c5f671679524e379f0b837a12f1d1d799f255b7eea260ad27',
+        };
+};
+exports.loadWalrusSystem = loadWalrusSystem;
 
 
 /***/ }),
@@ -64419,10 +64430,10 @@ const Owner = import_bcs.bcs.enum("Owner", {
   }),
   Immutable: null,
   ConsensusV2: import_bcs.bcs.struct("ConsensusV2", {
-    authenticator: import_bcs.bcs.struct("Authenticator", {
-      SingleOwner: import_bcs.bcs.string()
+    authenticator: import_bcs.bcs.enum("Authenticator", {
+      SingleOwner: Address
     }),
-    startVersion: import_bcs.bcs.string()
+    startVersion: import_bcs.bcs.u64()
   })
 });
 const CallArg = import_bcs.bcs.enum("CallArg", {
@@ -64904,6 +64915,7 @@ const suiBcs = {
   AppId: import_bcs2.AppId,
   Argument: import_bcs2.Argument,
   CallArg: import_bcs2.CallArg,
+  Command: import_bcs2.Command,
   CompressedSignature: import_bcs2.CompressedSignature,
   GasData: import_bcs2.GasData,
   Intent: import_bcs2.Intent,
@@ -64916,6 +64928,7 @@ const suiBcs = {
   ObjectArg: import_bcs2.ObjectArg,
   ObjectDigest: import_bcs2.ObjectDigest,
   Owner: import_bcs2.Owner,
+  PasskeyAuthenticator: import_bcs2.PasskeyAuthenticator,
   ProgrammableMoveCall: import_bcs2.ProgrammableMoveCall,
   ProgrammableTransaction: import_bcs2.ProgrammableTransaction,
   PublicKey: import_bcs2.PublicKey,
@@ -64924,14 +64937,12 @@ const suiBcs = {
   SharedObjectRef: import_bcs2.SharedObjectRef,
   StructTag: import_bcs2.StructTag,
   SuiObjectRef: import_bcs2.SuiObjectRef,
-  Command: import_bcs2.Command,
   TransactionData: import_bcs2.TransactionData,
   TransactionDataV1: import_bcs2.TransactionDataV1,
+  TransactionEffects: import_effects.TransactionEffects,
   TransactionExpiration: import_bcs2.TransactionExpiration,
   TransactionKind: import_bcs2.TransactionKind,
-  TypeTag: import_bcs2.TypeTag,
-  TransactionEffects: import_effects.TransactionEffects,
-  PasskeyAuthenticator: import_bcs2.PasskeyAuthenticator
+  TypeTag: import_bcs2.TypeTag
 };
 //# sourceMappingURL=index.js.map
 
@@ -65165,7 +65176,7 @@ const SUI_CLIENT_BRAND = Symbol.for("@mysten/SuiClient");
 function isSuiClient(client) {
   return typeof client === "object" && client !== null && client[SUI_CLIENT_BRAND] === true;
 }
-class SuiClient extends import_client.Experimental_SuiClient {
+class SuiClient extends import_client.Experimental_BaseClient {
   /**
    * Establish a connection to a Sui RPC endpoint
    *
@@ -65174,15 +65185,17 @@ class SuiClient extends import_client.Experimental_SuiClient {
   constructor(options) {
     super({ network: options.network ?? "unknown" });
     this.core = new import_jsonRPC.JSONRpcTransport(this);
+    this.jsonRpc = this;
     this.transport = options.transport ?? new import_http_transport.SuiHTTPTransport({ url: options.url });
   }
   get [SUI_CLIENT_BRAND]() {
     return true;
   }
-  async getRpcApiVersion() {
+  async getRpcApiVersion({ signal } = {}) {
     const resp = await this.transport.request({
       method: "rpc.discover",
-      params: []
+      params: [],
+      signal
     });
     return resp.info.version;
   }
@@ -65195,7 +65208,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
     }
     return await this.transport.request({
       method: "suix_getCoins",
-      params: [input.owner, input.coinType, input.cursor, input.limit]
+      params: [input.owner, input.coinType, input.cursor, input.limit],
+      signal: input.signal
     });
   }
   /**
@@ -65207,7 +65221,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
     }
     return await this.transport.request({
       method: "suix_getAllCoins",
-      params: [input.owner, input.cursor, input.limit]
+      params: [input.owner, input.cursor, input.limit],
+      signal: input.signal
     });
   }
   /**
@@ -65219,7 +65234,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
     }
     return await this.transport.request({
       method: "suix_getBalance",
-      params: [input.owner, input.coinType]
+      params: [input.owner, input.coinType],
+      signal: input.signal
     });
   }
   /**
@@ -65229,7 +65245,11 @@ class SuiClient extends import_client.Experimental_SuiClient {
     if (!input.owner || !(0, import_sui_types.isValidSuiAddress)((0, import_sui_types.normalizeSuiAddress)(input.owner))) {
       throw new Error("Invalid Sui address");
     }
-    return await this.transport.request({ method: "suix_getAllBalances", params: [input.owner] });
+    return await this.transport.request({
+      method: "suix_getAllBalances",
+      params: [input.owner],
+      signal: input.signal
+    });
   }
   /**
    * Fetch CoinMetadata for a given coin type
@@ -65237,7 +65257,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getCoinMetadata(input) {
     return await this.transport.request({
       method: "suix_getCoinMetadata",
-      params: [input.coinType]
+      params: [input.coinType],
+      signal: input.signal
     });
   }
   /**
@@ -65246,7 +65267,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getTotalSupply(input) {
     return await this.transport.request({
       method: "suix_getTotalSupply",
-      params: [input.coinType]
+      params: [input.coinType],
+      signal: input.signal
     });
   }
   /**
@@ -65254,8 +65276,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
    * @param method the method to be invoked
    * @param args the arguments to be passed to the RPC request
    */
-  async call(method, params) {
-    return await this.transport.request({ method, params });
+  async call(method, params, { signal } = {}) {
+    return await this.transport.request({ method, params, signal });
   }
   /**
    * Get Move function argument types like read, write and full access
@@ -65263,7 +65285,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getMoveFunctionArgTypes(input) {
     return await this.transport.request({
       method: "sui_getMoveFunctionArgTypes",
-      params: [input.package, input.module, input.function]
+      params: [input.package, input.module, input.function],
+      signal: input.signal
     });
   }
   /**
@@ -65273,7 +65296,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getNormalizedMoveModulesByPackage(input) {
     return await this.transport.request({
       method: "sui_getNormalizedMoveModulesByPackage",
-      params: [input.package]
+      params: [input.package],
+      signal: input.signal
     });
   }
   /**
@@ -65282,7 +65306,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getNormalizedMoveModule(input) {
     return await this.transport.request({
       method: "sui_getNormalizedMoveModule",
-      params: [input.package, input.module]
+      params: [input.package, input.module],
+      signal: input.signal
     });
   }
   /**
@@ -65291,7 +65316,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getNormalizedMoveFunction(input) {
     return await this.transport.request({
       method: "sui_getNormalizedMoveFunction",
-      params: [input.package, input.module, input.function]
+      params: [input.package, input.module, input.function],
+      signal: input.signal
     });
   }
   /**
@@ -65300,7 +65326,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getNormalizedMoveStruct(input) {
     return await this.transport.request({
       method: "sui_getNormalizedMoveStruct",
-      params: [input.package, input.module, input.struct]
+      params: [input.package, input.module, input.struct],
+      signal: input.signal
     });
   }
   /**
@@ -65320,7 +65347,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
         },
         input.cursor,
         input.limit
-      ]
+      ],
+      signal: input.signal
     });
   }
   /**
@@ -65332,13 +65360,15 @@ class SuiClient extends import_client.Experimental_SuiClient {
     }
     return await this.transport.request({
       method: "sui_getObject",
-      params: [input.id, input.options]
+      params: [input.id, input.options],
+      signal: input.signal
     });
   }
   async tryGetPastObject(input) {
     return await this.transport.request({
       method: "sui_tryGetPastObject",
-      params: [input.id, input.version, input.options]
+      params: [input.id, input.version, input.options],
+      signal: input.signal
     });
   }
   /**
@@ -65356,7 +65386,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
     }
     return await this.transport.request({
       method: "sui_multiGetObjects",
-      params: [input.ids, input.options]
+      params: [input.ids, input.options],
+      signal: input.signal
     });
   }
   /**
@@ -65373,7 +65404,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
         input.cursor,
         input.limit,
         (input.order || "descending") === "descending"
-      ]
+      ],
+      signal: input.signal
     });
   }
   async getTransactionBlock(input) {
@@ -65382,7 +65414,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
     }
     return await this.transport.request({
       method: "sui_getTransactionBlock",
-      params: [input.digest, input.options]
+      params: [input.digest, input.options],
+      signal: input.signal
     });
   }
   async multiGetTransactionBlocks(input) {
@@ -65397,14 +65430,16 @@ class SuiClient extends import_client.Experimental_SuiClient {
     }
     return await this.transport.request({
       method: "sui_multiGetTransactionBlocks",
-      params: [input.digests, input.options]
+      params: [input.digests, input.options],
+      signal: input.signal
     });
   }
   async executeTransactionBlock({
     transactionBlock,
     signature,
     options,
-    requestType
+    requestType,
+    signal
   }) {
     const result = await this.transport.request({
       method: "sui_executeTransactionBlock",
@@ -65412,7 +65447,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
         typeof transactionBlock === "string" ? transactionBlock : (0, import_bcs.toBase64)(transactionBlock),
         Array.isArray(signature) ? signature : [signature],
         options
-      ]
+      ],
+      signal
     });
     if (requestType === "WaitForLocalExecution") {
       try {
@@ -65446,20 +65482,22 @@ class SuiClient extends import_client.Experimental_SuiClient {
   /**
    * Get total number of transactions
    */
-  async getTotalTransactionBlocks() {
+  async getTotalTransactionBlocks({ signal } = {}) {
     const resp = await this.transport.request({
       method: "sui_getTotalTransactionBlocks",
-      params: []
+      params: [],
+      signal
     });
     return BigInt(resp);
   }
   /**
    * Getting the reference gas price for the network
    */
-  async getReferenceGasPrice() {
+  async getReferenceGasPrice({ signal } = {}) {
     const resp = await this.transport.request({
       method: "suix_getReferenceGasPrice",
-      params: []
+      params: [],
+      signal
     });
     return BigInt(resp);
   }
@@ -65470,7 +65508,11 @@ class SuiClient extends import_client.Experimental_SuiClient {
     if (!input.owner || !(0, import_sui_types.isValidSuiAddress)((0, import_sui_types.normalizeSuiAddress)(input.owner))) {
       throw new Error("Invalid Sui address");
     }
-    return await this.transport.request({ method: "suix_getStakes", params: [input.owner] });
+    return await this.transport.request({
+      method: "suix_getStakes",
+      params: [input.owner],
+      signal: input.signal
+    });
   }
   /**
    * Return the delegated stakes queried by id.
@@ -65483,14 +65525,21 @@ class SuiClient extends import_client.Experimental_SuiClient {
     });
     return await this.transport.request({
       method: "suix_getStakesByIds",
-      params: [input.stakedSuiIds]
+      params: [input.stakedSuiIds],
+      signal: input.signal
     });
   }
   /**
    * Return the latest system state content.
    */
-  async getLatestSuiSystemState() {
-    return await this.transport.request({ method: "suix_getLatestSuiSystemState", params: [] });
+  async getLatestSuiSystemState({
+    signal
+  } = {}) {
+    return await this.transport.request({
+      method: "suix_getLatestSuiSystemState",
+      params: [],
+      signal
+    });
   }
   /**
    * Get events for a given query criteria
@@ -65503,7 +65552,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
         input.cursor,
         input.limit,
         (input.order || "descending") === "descending"
-      ]
+      ],
+      signal: input.signal
     });
   }
   /**
@@ -65516,7 +65566,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
       method: "suix_subscribeEvent",
       unsubscribe: "suix_unsubscribeEvent",
       params: [input.filter],
-      onMessage: input.onMessage
+      onMessage: input.onMessage,
+      signal: input.signal
     });
   }
   /**
@@ -65527,7 +65578,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
       method: "suix_subscribeTransaction",
       unsubscribe: "suix_unsubscribeTransaction",
       params: [input.filter],
-      onMessage: input.onMessage
+      onMessage: input.onMessage,
+      signal: input.signal
     });
   }
   /**
@@ -65552,9 +65604,11 @@ class SuiClient extends import_client.Experimental_SuiClient {
     } else {
       throw new Error("Unknown transaction block format.");
     }
+    input.signal?.throwIfAborted();
     return await this.transport.request({
       method: "sui_devInspectTransactionBlock",
-      params: [input.sender, devInspectTxBytes, input.gasPrice?.toString(), input.epoch]
+      params: [input.sender, devInspectTxBytes, input.gasPrice?.toString(), input.epoch],
+      signal: input.signal
     });
   }
   /**
@@ -65577,7 +65631,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
     }
     return await this.transport.request({
       method: "suix_getDynamicFields",
-      params: [input.parentId, input.cursor, input.limit]
+      params: [input.parentId, input.cursor, input.limit],
+      signal: input.signal
     });
   }
   /**
@@ -65586,16 +65641,20 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getDynamicFieldObject(input) {
     return await this.transport.request({
       method: "suix_getDynamicFieldObject",
-      params: [input.parentId, input.name]
+      params: [input.parentId, input.name],
+      signal: input.signal
     });
   }
   /**
    * Get the sequence number of the latest checkpoint that has been executed
    */
-  async getLatestCheckpointSequenceNumber() {
+  async getLatestCheckpointSequenceNumber({
+    signal
+  } = {}) {
     const resp = await this.transport.request({
       method: "sui_getLatestCheckpointSequenceNumber",
-      params: []
+      params: [],
+      signal
     });
     return String(resp);
   }
@@ -65603,7 +65662,11 @@ class SuiClient extends import_client.Experimental_SuiClient {
    * Returns information about a given checkpoint
    */
   async getCheckpoint(input) {
-    return await this.transport.request({ method: "sui_getCheckpoint", params: [input.id] });
+    return await this.transport.request({
+      method: "sui_getCheckpoint",
+      params: [input.id],
+      signal: input.signal
+    });
   }
   /**
    * Returns historical checkpoints paginated
@@ -65611,7 +65674,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getCheckpoints(input) {
     return await this.transport.request({
       method: "sui_getCheckpoints",
-      params: [input.cursor, input?.limit, input.descendingOrder]
+      params: [input.cursor, input?.limit, input.descendingOrder],
+      signal: input.signal
     });
   }
   /**
@@ -65620,25 +65684,36 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getCommitteeInfo(input) {
     return await this.transport.request({
       method: "suix_getCommitteeInfo",
-      params: [input?.epoch]
+      params: [input?.epoch],
+      signal: input?.signal
     });
   }
-  async getNetworkMetrics() {
-    return await this.transport.request({ method: "suix_getNetworkMetrics", params: [] });
+  async getNetworkMetrics({ signal } = {}) {
+    return await this.transport.request({
+      method: "suix_getNetworkMetrics",
+      params: [],
+      signal
+    });
   }
-  async getAddressMetrics() {
-    return await this.transport.request({ method: "suix_getLatestAddressMetrics", params: [] });
+  async getAddressMetrics({ signal } = {}) {
+    return await this.transport.request({
+      method: "suix_getLatestAddressMetrics",
+      params: [],
+      signal
+    });
   }
   async getEpochMetrics(input) {
     return await this.transport.request({
       method: "suix_getEpochMetrics",
-      params: [input?.cursor, input?.limit, input?.descendingOrder]
+      params: [input?.cursor, input?.limit, input?.descendingOrder],
+      signal: input?.signal
     });
   }
   async getAllEpochAddressMetrics(input) {
     return await this.transport.request({
       method: "suix_getAllEpochAddressMetrics",
-      params: [input?.descendingOrder]
+      params: [input?.descendingOrder],
+      signal: input?.signal
     });
   }
   /**
@@ -65647,37 +65722,51 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getEpochs(input) {
     return await this.transport.request({
       method: "suix_getEpochs",
-      params: [input?.cursor, input?.limit, input?.descendingOrder]
+      params: [input?.cursor, input?.limit, input?.descendingOrder],
+      signal: input?.signal
     });
   }
   /**
    * Returns list of top move calls by usage
    */
-  async getMoveCallMetrics() {
-    return await this.transport.request({ method: "suix_getMoveCallMetrics", params: [] });
+  async getMoveCallMetrics({ signal } = {}) {
+    return await this.transport.request({
+      method: "suix_getMoveCallMetrics",
+      params: [],
+      signal
+    });
   }
   /**
    * Return the committee information for the asked epoch
    */
-  async getCurrentEpoch() {
-    return await this.transport.request({ method: "suix_getCurrentEpoch", params: [] });
+  async getCurrentEpoch({ signal } = {}) {
+    return await this.transport.request({
+      method: "suix_getCurrentEpoch",
+      params: [],
+      signal
+    });
   }
   /**
    * Return the Validators APYs
    */
-  async getValidatorsApy() {
-    return await this.transport.request({ method: "suix_getValidatorsApy", params: [] });
+  async getValidatorsApy({ signal } = {}) {
+    return await this.transport.request({
+      method: "suix_getValidatorsApy",
+      params: [],
+      signal
+    });
   }
   // TODO: Migrate this to `sui_getChainIdentifier` once it is widely available.
-  async getChainIdentifier() {
-    const checkpoint = await this.getCheckpoint({ id: "0" });
+  async getChainIdentifier({ signal } = {}) {
+    const checkpoint = await this.getCheckpoint({ id: "0", signal });
     const bytes = (0, import_bcs.fromBase58)(checkpoint.digest);
     return (0, import_bcs.toHex)(bytes.slice(0, 4));
   }
   async resolveNameServiceAddress(input) {
     return await this.transport.request({
       method: "suix_resolveNameServiceAddress",
-      params: [input.name]
+      params: [input.name],
+      signal: input.signal
     });
   }
   async resolveNameServiceNames({
@@ -65686,7 +65775,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
   }) {
     const { nextCursor, hasNextPage, data } = await this.transport.request({
       method: "suix_resolveNameServiceNames",
-      params: [input.address, input.cursor, input.limit]
+      params: [input.address, input.cursor, input.limit],
+      signal: input.signal
     });
     return {
       hasNextPage,
@@ -65697,7 +65787,8 @@ class SuiClient extends import_client.Experimental_SuiClient {
   async getProtocolConfig(input) {
     return await this.transport.request({
       method: "sui_getProtocolConfig",
-      params: [input?.version]
+      params: [input?.version],
+      signal: input?.signal
     });
   }
   /**
@@ -65874,6 +65965,7 @@ class SuiHTTPTransport {
     __privateSet(this, _requestId, __privateGet(this, _requestId) + 1);
     const res = await this.fetch(__privateGet(this, _options).rpc?.url ?? __privateGet(this, _options).url, {
       method: "POST",
+      signal: input.signal,
       headers: {
         "Content-Type": "application/json",
         "Client-Sdk-Type": "typescript",
@@ -65904,6 +65996,12 @@ class SuiHTTPTransport {
   }
   async subscribe(input) {
     const unsubscribe = await __privateMethod(this, _SuiHTTPTransport_instances, getWebsocketClient_fn).call(this).subscribe(input);
+    if (input.signal) {
+      input.signal.throwIfAborted();
+      input.signal.addEventListener("abort", () => {
+        unsubscribe();
+      });
+    }
     return async () => !!await unsubscribe();
   }
 }
@@ -66100,7 +66198,7 @@ class WebsocketClient {
       this.endpoint = getWebsocketUrl(this.endpoint);
     }
   }
-  async makeRequest(method, params) {
+  async makeRequest(method, params, signal) {
     const webSocket = await __privateMethod(this, _WebsocketClient_instances, setupWebSocket_fn).call(this);
     return new Promise((resolve, reject) => {
       __privateSet(this, _requestId, __privateGet(this, _requestId) + 1);
@@ -66111,6 +66209,10 @@ class WebsocketClient {
           __privateGet(this, _pendingRequests).delete(__privateGet(this, _requestId));
           reject(new Error(`Request timeout: ${method}`));
         }, this.options.callTimeout)
+      });
+      signal?.addEventListener("abort", () => {
+        __privateGet(this, _pendingRequests).delete(__privateGet(this, _requestId));
+        reject(signal.reason);
       });
       webSocket.send(JSON.stringify({ jsonrpc: "2.0", id: __privateGet(this, _requestId), method, params }));
     }).then(({ error, result }) => {
@@ -66209,7 +66311,8 @@ class RpcSubscription {
     this.subscribed = true;
     const newSubscriptionId = await client.makeRequest(
       this.input.method,
-      this.input.params
+      this.input.params,
+      this.input.signal
     );
     if (this.subscribed) {
       this.subscriptionId = newSubscriptionId;
@@ -66896,8 +66999,95 @@ function parseSerializedSignature(serializedSignature) {
 
 /***/ }),
 
-/***/ 51795:
+/***/ 9420:
 /***/ ((module) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var cache_exports = {};
+__export(cache_exports, {
+  ClientCache: () => ClientCache
+});
+module.exports = __toCommonJS(cache_exports);
+var _prefix, _cache;
+const _ClientCache = class _ClientCache {
+  constructor({ prefix, cache } = {}) {
+    __privateAdd(this, _prefix);
+    __privateAdd(this, _cache);
+    __privateSet(this, _prefix, prefix ?? []);
+    __privateSet(this, _cache, cache ?? /* @__PURE__ */ new Map());
+  }
+  read(key, load) {
+    const cacheKey = [__privateGet(this, _prefix), ...key].join(":");
+    if (__privateGet(this, _cache).has(cacheKey)) {
+      return __privateGet(this, _cache).get(cacheKey);
+    }
+    const result = load();
+    __privateGet(this, _cache).set(cacheKey, result);
+    if (typeof result === "object" && result !== null && "then" in result) {
+      return Promise.resolve(result).then((v) => {
+        __privateGet(this, _cache).set(cacheKey, v);
+        return v;
+      }).catch((err) => {
+        __privateGet(this, _cache).delete(cacheKey);
+        throw err;
+      });
+    }
+    return result;
+  }
+  clear(prefix) {
+    const prefixKey = [...__privateGet(this, _prefix), ...prefix ?? []].join(":");
+    if (!prefixKey) {
+      __privateGet(this, _cache).clear();
+      return;
+    }
+    for (const key of __privateGet(this, _cache).keys()) {
+      if (key.startsWith(prefixKey)) {
+        __privateGet(this, _cache).delete(key);
+      }
+    }
+  }
+  scope(prefix) {
+    return new _ClientCache({
+      prefix: [...__privateGet(this, _prefix), ...Array.isArray(prefix) ? prefix : [prefix]],
+      cache: __privateGet(this, _cache)
+    });
+  }
+};
+_prefix = new WeakMap();
+_cache = new WeakMap();
+let ClientCache = _ClientCache;
+//# sourceMappingURL=cache.js.map
+
+
+/***/ }),
+
+/***/ 51795:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -66920,11 +67110,13 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var client_exports = {};
 __export(client_exports, {
-  Experimental_SuiClient: () => Experimental_SuiClient
+  Experimental_BaseClient: () => Experimental_BaseClient
 });
 module.exports = __toCommonJS(client_exports);
-class Experimental_SuiClient {
+var import_cache = __nccwpck_require__(9420);
+class Experimental_BaseClient {
   constructor({ network }) {
+    this.cache = new import_cache.ClientCache();
     this.network = network;
   }
   $extend(...registrations) {
@@ -66974,11 +67166,69 @@ __export(core_exports, {
   Experimental_CoreClient: () => Experimental_CoreClient
 });
 module.exports = __toCommonJS(core_exports);
+var import_type_tag_serializer = __nccwpck_require__(41020);
+var import_dynamic_fields = __nccwpck_require__(33100);
+var import_sui_types = __nccwpck_require__(24818);
 var import_client = __nccwpck_require__(51795);
-class Experimental_CoreClient extends import_client.Experimental_SuiClient {
+class Experimental_CoreClient extends import_client.Experimental_BaseClient {
   constructor() {
     super(...arguments);
     this.core = this;
+  }
+  async getDynamicField(options) {
+    const fieldId = (0, import_dynamic_fields.deriveDynamicFieldID)(
+      options.parentId,
+      import_type_tag_serializer.TypeTagSerializer.parseFromStr(options.name.type),
+      options.name.bcs
+    );
+    const {
+      objects: [fieldObject]
+    } = await this.getObjects({
+      objectIds: [fieldId]
+    });
+    if (fieldObject instanceof Error) {
+      throw fieldObject;
+    }
+    const fieldType = (0, import_sui_types.parseStructTag)(fieldObject.type);
+    return {
+      dynamicField: {
+        id: fieldObject.id,
+        digest: fieldObject.digest,
+        version: fieldObject.version,
+        type: fieldObject.type,
+        name: {
+          type: typeof fieldType.typeParams[0] === "string" ? fieldType.typeParams[0] : (0, import_sui_types.normalizeStructTag)(fieldType.typeParams[0]),
+          bcs: options.name.bcs
+        },
+        value: {
+          type: typeof fieldType.typeParams[1] === "string" ? fieldType.typeParams[1] : (0, import_sui_types.normalizeStructTag)(fieldType.typeParams[1]),
+          bcs: fieldObject.content.slice(import_sui_types.SUI_ADDRESS_LENGTH + options.name.bcs.length)
+        }
+      }
+    };
+  }
+  async waitForTransaction({
+    signal,
+    timeout = 60 * 1e3,
+    ...input
+  }) {
+    const abortSignal = signal ? AbortSignal.any([AbortSignal.timeout(timeout), signal]) : AbortSignal.timeout(timeout);
+    const abortPromise = new Promise((_, reject) => {
+      abortSignal.addEventListener("abort", () => reject(abortSignal.reason));
+    });
+    abortPromise.catch(() => {
+    });
+    while (true) {
+      abortSignal.throwIfAborted();
+      try {
+        return await this.getTransaction({
+          ...input,
+          signal: abortSignal
+        });
+      } catch (e) {
+        await Promise.race([new Promise((resolve) => setTimeout(resolve, 2e3)), abortPromise]);
+      }
+    }
   }
 }
 //# sourceMappingURL=core.js.map
@@ -67086,6 +67336,7 @@ var import_bcs = __nccwpck_require__(88830);
 var import_bcs2 = __nccwpck_require__(56244);
 var import_utils = __nccwpck_require__(31767);
 var import_Transaction = __nccwpck_require__(22545);
+var import_sui_types = __nccwpck_require__(24818);
 var import_core = __nccwpck_require__(57151);
 var import_errors = __nccwpck_require__(4399);
 var _jsonRpcClient;
@@ -67103,7 +67354,8 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
         ids: batch2,
         options: {
           showOwner: true,
-          showType: true
+          showType: true,
+          showBcs: true
         }
       });
       for (const [idx, object] of objects.entries()) {
@@ -67122,7 +67374,12 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
     const objects = await __privateGet(this, _jsonRpcClient).getOwnedObjects({
       owner: options.address,
       limit: options.limit,
-      cursor: options.cursor
+      cursor: options.cursor,
+      options: {
+        showOwner: true,
+        showType: true,
+        showBcs: true
+      }
     });
     return {
       objects: objects.data.map((result) => {
@@ -67146,7 +67403,7 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
           id: coin.coinObjectId,
           version: coin.version,
           digest: coin.digest,
-          balance: BigInt(coin.balance),
+          balance: coin.balance,
           type: `0x2::coin::Coin<${coin.coinType}>`,
           content: Coin.serialize({
             id: coin.coinObjectId,
@@ -67172,7 +67429,7 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
     return {
       balance: {
         coinType: balance.coinType,
-        balance: BigInt(balance.totalBalance)
+        balance: balance.totalBalance
       }
     };
   }
@@ -67183,7 +67440,7 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
     return {
       balances: balances.map((balance) => ({
         coinType: balance.coinType,
-        balance: BigInt(balance.totalBalance)
+        balance: balance.totalBalance
       })),
       hasNextPage: false,
       cursor: null
@@ -67208,8 +67465,10 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
       transactionBlock: options.transaction,
       signature: options.signatures,
       options: {
-        showEffects: true,
-        showEvents: true
+        showRawEffects: true,
+        showEvents: true,
+        showObjectChanges: true,
+        showRawInput: true
       }
     });
     return {
@@ -67224,8 +67483,10 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
     return {
       transaction: {
         digest: await tx.getDigest(),
-        // TODO: Effects aren't returned as bcs from dryRun, once we define structured effects we can return those instead
-        effects: result.effects,
+        effects: parseTransactionEffectsJson({
+          effects: result.effects,
+          objectChanges: result.objectChanges
+        }),
         signatures: [],
         bcs: options.transaction
       }
@@ -67234,7 +67495,28 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
   async getReferenceGasPrice() {
     const referenceGasPrice = await __privateGet(this, _jsonRpcClient).getReferenceGasPrice();
     return {
-      referenceGasPrice
+      referenceGasPrice: String(referenceGasPrice)
+    };
+  }
+  async getDynamicFields(options) {
+    const dynamicFields = await __privateGet(this, _jsonRpcClient).getDynamicFields({
+      parentId: options.parentId,
+      limit: options.limit,
+      cursor: options.cursor
+    });
+    return {
+      dynamicFields: dynamicFields.data.map((dynamicField) => ({
+        id: dynamicField.objectId,
+        version: dynamicField.version,
+        digest: dynamicField.digest,
+        type: dynamicField.objectType,
+        name: {
+          type: dynamicField.name.type,
+          bcs: (0, import_bcs.fromBase64)(dynamicField.bcsName)
+        }
+      })),
+      hasNextPage: dynamicFields.hasNextPage,
+      cursor: dynamicFields.nextCursor
     };
   }
 }
@@ -67259,7 +67541,7 @@ function parseOwner(owner) {
   if ("ConsensusV2" in owner) {
     return {
       $kind: "ConsensusV2",
-      ConsensusV2Owner: {
+      ConsensusV2: {
         authenticator: {
           $kind: "SingleOwner",
           SingleOwner: owner.ConsensusV2.authenticator.SingleOwner
@@ -67294,9 +67576,235 @@ function parseTransaction(transaction) {
   const parsedTx = import_bcs2.bcs.SenderSignedData.parse((0, import_bcs.fromBase64)(transaction.rawTransaction))[0];
   return {
     digest: transaction.digest,
-    effects: new Uint8Array(transaction.rawEffects),
+    effects: parseTransactionEffects({
+      effects: new Uint8Array(transaction.rawEffects),
+      objectChanges: transaction.objectChanges ?? null
+    }),
     bcs: import_bcs2.bcs.TransactionData.serialize(parsedTx.intentMessage.value).toBytes(),
     signatures: parsedTx.txSignatures
+  };
+}
+function parseTransactionEffects({
+  effects,
+  epoch,
+  objectChanges
+}) {
+  const parsed = import_bcs2.bcs.TransactionEffects.parse(effects);
+  const objectTypes = {};
+  objectChanges?.forEach((change) => {
+    if (change.type !== "published") {
+      objectTypes[change.objectId] = change.objectType;
+    }
+  });
+  switch (parsed.$kind) {
+    case "V1":
+      return parseTransactionEffectsV1({ bytes: effects, effects: parsed.V1, epoch, objectTypes });
+    case "V2":
+      return parseTransactionEffectsV2({ bytes: effects, effects: parsed.V2, epoch, objectTypes });
+    default:
+      throw new Error(
+        `Unknown transaction effects version: ${parsed.$kind}`
+      );
+  }
+}
+function parseTransactionEffectsV1(_) {
+  throw new Error("V1 effects are not supported yet");
+}
+function parseTransactionEffectsV2({
+  bytes,
+  effects,
+  epoch,
+  objectTypes
+}) {
+  const changedObjects = effects.changedObjects.map(
+    ([id, change]) => {
+      return {
+        id,
+        inputState: change.inputState.$kind === "Exist" ? "Exists" : "DoesNotExist",
+        inputVersion: change.inputState.Exist?.[0][0] ?? null,
+        inputDigest: change.inputState.Exist?.[0][1] ?? null,
+        inputOwner: change.inputState.Exist?.[1] ?? null,
+        outputState: change.outputState.$kind === "NotExist" ? "DoesNotExist" : change.outputState.$kind,
+        outputVersion: change.outputState.$kind === "PackageWrite" ? change.outputState.PackageWrite?.[0] : change.outputState.ObjectWrite ? effects.lamportVersion : null,
+        outputDigest: change.outputState.$kind === "PackageWrite" ? change.outputState.PackageWrite?.[1] : change.outputState.ObjectWrite?.[0] ?? null,
+        outputOwner: change.outputState.ObjectWrite ? change.outputState.ObjectWrite[1] : null,
+        idOperation: change.idOperation.$kind,
+        objectType: objectTypes[id] ?? null
+      };
+    }
+  );
+  return {
+    bcs: bytes,
+    digest: effects.transactionDigest,
+    version: 2,
+    status: effects.status.$kind === "Success" ? {
+      success: true,
+      error: null
+    } : {
+      success: false,
+      // TODO: add command
+      error: effects.status.Failed.error.$kind
+    },
+    epoch: epoch ?? null,
+    gasUsed: effects.gasUsed,
+    transactionDigest: effects.transactionDigest,
+    gasObject: effects.gasObjectIndex === null ? null : changedObjects[effects.gasObjectIndex] ?? null,
+    eventsDigest: effects.eventsDigest,
+    dependencies: effects.dependencies,
+    lamportVersion: effects.lamportVersion,
+    changedObjects,
+    unchangedSharedObjects: effects.unchangedSharedObjects.map(
+      ([objectId, object]) => {
+        return {
+          kind: object.$kind,
+          objectId,
+          version: object.$kind === "ReadOnlyRoot" ? object.ReadOnlyRoot[0] : object[object.$kind],
+          digest: object.$kind === "ReadOnlyRoot" ? object.ReadOnlyRoot[1] : null,
+          objectType: objectTypes[objectId] ?? null
+        };
+      }
+    ),
+    auxiliaryDataDigest: effects.auxDataDigest
+  };
+}
+function parseTransactionEffectsJson({
+  bytes,
+  effects,
+  epoch,
+  objectChanges
+}) {
+  const changedObjects = [];
+  const unchangedSharedObjects = [];
+  objectChanges?.forEach((change) => {
+    switch (change.type) {
+      case "published":
+        changedObjects.push({
+          id: change.packageId,
+          inputState: "DoesNotExist",
+          inputVersion: null,
+          inputDigest: null,
+          inputOwner: null,
+          outputState: "PackageWrite",
+          outputVersion: change.version,
+          outputDigest: change.digest,
+          outputOwner: null,
+          idOperation: "Created",
+          objectType: null
+        });
+        break;
+      case "transferred":
+        changedObjects.push({
+          id: change.objectId,
+          inputState: "Exists",
+          inputVersion: change.version,
+          inputDigest: change.digest,
+          inputOwner: {
+            $kind: "AddressOwner",
+            AddressOwner: change.sender
+          },
+          outputState: "ObjectWrite",
+          outputVersion: change.version,
+          outputDigest: change.digest,
+          outputOwner: parseOwner(change.recipient),
+          idOperation: "None",
+          objectType: change.objectType
+        });
+        break;
+      case "mutated":
+        changedObjects.push({
+          id: change.objectId,
+          inputState: "Exists",
+          inputVersion: change.previousVersion,
+          inputDigest: null,
+          inputOwner: parseOwner(change.owner),
+          outputState: "ObjectWrite",
+          outputVersion: change.version,
+          outputDigest: change.digest,
+          outputOwner: parseOwner(change.owner),
+          idOperation: "None",
+          objectType: change.objectType
+        });
+        break;
+      case "deleted":
+        changedObjects.push({
+          id: change.objectId,
+          inputState: "Exists",
+          inputVersion: change.version,
+          inputDigest: effects.deleted?.find((d) => d.objectId === change.objectId)?.digest ?? null,
+          inputOwner: null,
+          outputState: "DoesNotExist",
+          outputVersion: null,
+          outputDigest: null,
+          outputOwner: null,
+          idOperation: "Deleted",
+          objectType: change.objectType
+        });
+        break;
+      case "wrapped":
+        changedObjects.push({
+          id: change.objectId,
+          inputState: "Exists",
+          inputVersion: change.version,
+          inputDigest: null,
+          inputOwner: {
+            $kind: "AddressOwner",
+            AddressOwner: change.sender
+          },
+          outputState: "ObjectWrite",
+          outputVersion: change.version,
+          outputDigest: effects.wrapped?.find((w) => w.objectId === change.objectId)?.digest ?? null,
+          outputOwner: {
+            $kind: "ObjectOwner",
+            ObjectOwner: change.sender
+          },
+          idOperation: "None",
+          objectType: change.objectType
+        });
+        break;
+      case "created":
+        changedObjects.push({
+          id: change.objectId,
+          inputState: "DoesNotExist",
+          inputVersion: null,
+          inputDigest: null,
+          inputOwner: null,
+          outputState: "ObjectWrite",
+          outputVersion: change.version,
+          outputDigest: change.digest,
+          outputOwner: parseOwner(change.owner),
+          idOperation: "Created",
+          objectType: change.objectType
+        });
+        break;
+    }
+  });
+  return {
+    bcs: bytes ?? null,
+    digest: effects.transactionDigest,
+    version: 2,
+    status: effects.status.status === "success" ? { success: true, error: null } : { success: false, error: effects.status.error },
+    epoch: epoch ?? null,
+    gasUsed: effects.gasUsed,
+    transactionDigest: effects.transactionDigest,
+    gasObject: {
+      id: effects.gasObject?.reference.objectId,
+      inputState: "Exists",
+      inputVersion: null,
+      inputDigest: null,
+      inputOwner: null,
+      outputState: "ObjectWrite",
+      outputVersion: effects.gasObject.reference.version,
+      outputDigest: effects.gasObject.reference.digest,
+      outputOwner: parseOwner(effects.gasObject.owner),
+      idOperation: "None",
+      objectType: (0, import_sui_types.normalizeStructTag)("0x2::coin::Coin<0x2::sui::SUI>")
+    },
+    eventsDigest: effects.eventsDigest ?? null,
+    dependencies: effects.dependencies ?? [],
+    lamportVersion: effects.gasObject.reference.version,
+    changedObjects,
+    unchangedSharedObjects,
+    auxiliaryDataDigest: null
   };
 }
 const Balance = import_bcs2.bcs.struct("Balance", {
@@ -71784,7 +72292,7 @@ function getFirstLevelNamedTypes(types) {
 function findMvrNames(type) {
   const types = /* @__PURE__ */ new Set();
   if (typeof type === "string" && !hasMvrName(type)) return types;
-  let tag = isStructTag(type) ? type : (0, import_sui_types.parseStructTag)(type);
+  const tag = isStructTag(type) ? type : (0, import_sui_types.parseStructTag)(type);
   if (hasMvrName(tag.address)) types.add(`${tag.address}::${tag.module}::${tag.name}`);
   for (const param of tag.typeParams) {
     findMvrNames(param).forEach((name) => types.add(name));
@@ -71801,7 +72309,7 @@ function populateNamedTypesFromCache(types, typeCache) {
 }
 function findAndReplaceCachedTypes(tag, typeCache) {
   const type = isStructTag(tag) ? tag : (0, import_sui_types.parseStructTag)(tag);
-  let typeTag = `${type.address}::${type.module}::${type.name}`;
+  const typeTag = `${type.address}::${type.module}::${type.name}`;
   const cacheHit = typeCache[typeTag];
   return {
     ...type,
@@ -72660,7 +73168,7 @@ __export(version_exports, {
   TARGETED_RPC_VERSION: () => TARGETED_RPC_VERSION
 });
 module.exports = __toCommonJS(version_exports);
-const PACKAGE_VERSION = "1.26.1";
+const PACKAGE_VERSION = "1.27.0";
 const TARGETED_RPC_VERSION = "1.47.0";
 //# sourceMappingURL=version.js.map
 
@@ -73479,12 +73987,11 @@ var import_client2 = __nccwpck_require__(958);
 var import_error2 = __nccwpck_require__(98831);
 var import_bcs2 = __nccwpck_require__(2246);
 var import_utils2 = __nccwpck_require__(7062);
-var import_memo = __nccwpck_require__(75746);
 var import_object_loader = __nccwpck_require__(17639);
 var import_randomness = __nccwpck_require__(13344);
 var import_wasm = __nccwpck_require__(60418);
-var _storageNodeClient, _wasmUrl, _packageConfig, _suiClient, _objectLoader, _blobMetadataConcurrencyLimit, _readCommittee, _memo, _walType, _getPackageId, _getSystemContract, _getSubsidiesContract, _getBlobContract, _getMetadataContract, _wasmBindings, _WalrusClient_instances, internalReadBlob_fn, getCertificationEpoch_fn, getReadCommittee_fn, forceGetReadCommittee_fn, withWal_fn, writeBlobAttributesForRef_fn, executeTransaction_fn, getCommittee_fn, _getActiveCommittee, stakingPool_fn, getNodeByShardIndex_fn, retryOnPossibleEpochChange_fn;
-class WalrusClient {
+var _storageNodeClient, _wasmUrl, _packageConfig, _suiClient, _objectLoader, _blobMetadataConcurrencyLimit, _readCommittee, _cache, _WalrusClient_instances, walType_fn, getPackageId_fn, getSystemContract_fn, getSubsidiesContract_fn, getBlobContract_fn, getMetadataContract_fn, wasmBindings_fn, internalReadBlob_fn, getCertificationEpoch_fn, getReadCommittee_fn, forceGetReadCommittee_fn, withWal_fn, writeBlobAttributesForRef_fn, executeTransaction_fn, getCommittee_fn, getActiveCommittee_fn, stakingPool_fn, getNodeByShardIndex_fn, retryOnPossibleEpochChange_fn;
+const _WalrusClient = class _WalrusClient {
   constructor(config) {
     __privateAdd(this, _WalrusClient_instances);
     __privateAdd(this, _storageNodeClient);
@@ -73494,62 +74001,9 @@ class WalrusClient {
     __privateAdd(this, _objectLoader);
     __privateAdd(this, _blobMetadataConcurrencyLimit, 10);
     __privateAdd(this, _readCommittee);
-    __privateAdd(this, _memo, new import_memo.MemoCache());
-    /** The Move type for a WAL coin */
-    __privateAdd(this, _walType, __privateGet(this, _memo).create("walType", async () => {
-      const stakedWal = await __privateGet(this, _suiClient).getNormalizedMoveStruct({
-        package: await __privateGet(this, _getPackageId).call(this),
-        module: "staked_wal",
-        struct: "StakedWal"
-      });
-      const balanceType = stakedWal.fields.find((field) => field.name === "principal")?.type;
-      if (!balanceType) {
-        throw new import_error.WalrusClientError("WAL type not found");
-      }
-      const parsed = (0, import_utils.parseStructTag)((0, import_utils2.toTypeString)(balanceType));
-      const coinType = parsed.typeParams[0];
-      if (!coinType) {
-        throw new import_error.WalrusClientError("WAL type not found");
-      }
-      return (0, import_utils.normalizeStructTag)(coinType);
-    }));
-    __privateAdd(this, _getPackageId, __privateGet(this, _memo).create("getPackageId", async () => {
-      const system = await __privateGet(this, _objectLoader).load(__privateGet(this, _packageConfig).systemObjectId);
-      return (0, import_utils.parseStructTag)(system.type).address;
-    }));
-    /** The Move type for a Blob object */
-    this.getBlobType = __privateGet(this, _memo).create("getBlobType", async () => {
-      return `${await __privateGet(this, _getPackageId).call(this)}::blob::Blob`;
-    });
-    __privateAdd(this, _getSystemContract, __privateGet(this, _memo).create("getSystemContract", async () => {
-      const { package_id } = await this.systemObject();
-      return (0, import_system.init)(package_id);
-    }));
-    __privateAdd(this, _getSubsidiesContract, __privateGet(this, _memo).create("getSubsidiesContract", async () => {
-      if (!__privateGet(this, _packageConfig).subsidiesObjectId) {
-        throw new import_error.WalrusClientError("Subsidies object ID not defined in package config");
-      }
-      const subsidiesObject = await __privateGet(this, _objectLoader).load(__privateGet(this, _packageConfig).subsidiesObjectId);
-      const packageId = (0, import_utils.parseStructTag)(subsidiesObject.type).address;
-      return (0, import_subsidies.init)(packageId);
-    }));
-    __privateAdd(this, _getBlobContract, __privateGet(this, _memo).create("getBlobContract", async () => {
-      const { package_id } = await this.systemObject();
-      return (0, import_blob.init)(package_id);
-    }));
-    __privateAdd(this, _getMetadataContract, __privateGet(this, _memo).create("getMetadataContract", async () => {
-      const { package_id } = await this.systemObject();
-      return (0, import_metadata.init)(package_id);
-    }));
-    __privateAdd(this, _wasmBindings, __privateGet(this, _memo).create("wasmBindings", async () => {
-      return (0, import_wasm.getWasmBindings)(__privateGet(this, _wasmUrl));
-    }));
+    __privateAdd(this, _cache);
     /** Read a blob from the storage nodes */
     this.readBlob = __privateMethod(this, _WalrusClient_instances, retryOnPossibleEpochChange_fn).call(this, __privateMethod(this, _WalrusClient_instances, internalReadBlob_fn));
-    __privateAdd(this, _getActiveCommittee, __privateGet(this, _memo).create("getActiveCommittee", async () => {
-      const stakingState = await this.stakingState();
-      return __privateMethod(this, _WalrusClient_instances, getCommittee_fn).call(this, stakingState.committee);
-    }));
     if (config.network && !config.packageConfig) {
       const network = config.network;
       switch (network) {
@@ -73571,6 +74025,39 @@ class WalrusClient {
     }));
     __privateSet(this, _storageNodeClient, new import_client2.StorageNodeClient(config.storageNodeClientOptions));
     __privateSet(this, _objectLoader, new import_object_loader.SuiObjectDataLoader(__privateGet(this, _suiClient)));
+    __privateSet(this, _cache, __privateGet(this, _suiClient).cache.scope("@mysten/walrus"));
+  }
+  static experimental_asClientExtension({
+    packageConfig,
+    network,
+    ...options
+  } = {}) {
+    return {
+      name: "walrus",
+      register: (client) => {
+        const walrusNetwork = network || client.network;
+        if (walrusNetwork !== "mainnet" && walrusNetwork !== "testnet") {
+          throw new import_error.WalrusClientError("Walrus client only supports mainnet and testnet");
+        }
+        return new _WalrusClient(
+          packageConfig ? {
+            packageConfig,
+            suiClient: client,
+            ...options
+          } : {
+            network: walrusNetwork,
+            suiClient: client,
+            ...options
+          }
+        );
+      }
+    };
+  }
+  /** The Move type for a Blob object */
+  getBlobType() {
+    return __privateGet(this, _cache).read(["getBlobType"], async () => {
+      return `${await __privateMethod(this, _WalrusClient_instances, getPackageId_fn).call(this)}::blob::Blob`;
+    });
   }
   /** The cached system object for the walrus package */
   systemObject() {
@@ -73746,7 +74233,7 @@ class WalrusClient {
    * Gets the blob status from multiple storage nodes and returns the latest status that can be verified.
    */
   async getVerifiedBlobStatus({ blobId, signal }) {
-    const committee = await __privateGet(this, _getActiveCommittee).call(this);
+    const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
     const stakingState = await this.stakingState();
     const numShards = stakingState.n_shards;
     const controller = new AbortController();
@@ -73846,8 +74333,8 @@ class WalrusClient {
     const systemState = await this.systemState();
     const encodedSize = (0, import_utils2.encodedBlobLength)(size, systemState.committee.n_shards);
     const { storageCost } = await this.storageCost(size, epochs);
-    const systemContract = await __privateGet(this, _getSystemContract).call(this);
-    const subsidiesContract = __privateGet(this, _packageConfig).subsidiesObjectId ? await __privateGet(this, _getSubsidiesContract).call(this) : null;
+    const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
+    const subsidiesContract = __privateGet(this, _packageConfig).subsidiesObjectId ? await __privateMethod(this, _WalrusClient_instances, getSubsidiesContract_fn).call(this) : null;
     return __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, storageCost, owner, walCoin ?? null, subsidiesContract !== null, (coin, tx) => {
       return tx.add(
         subsidiesContract ? subsidiesContract.reserve_space({
@@ -73899,21 +74386,19 @@ class WalrusClient {
     });
     const blobType = await this.getBlobType();
     const { digest, effects } = await __privateMethod(this, _WalrusClient_instances, executeTransaction_fn).call(this, transaction, signer, "create storage");
-    const createdObjectIds = effects?.created?.map((effect) => effect.reference.objectId) ?? [];
-    const createdObjects = await __privateGet(this, _suiClient).multiGetObjects({
-      ids: createdObjectIds,
-      options: {
-        showType: true,
-        showBcs: true
-      }
+    const createdObjectIds = effects?.changedObjects.filter((object) => object.idOperation === "Created").map((object) => object.id);
+    const createdObjects = await __privateGet(this, _suiClient).core.getObjects({
+      objectIds: createdObjectIds
     });
-    const suiBlobObject = createdObjects.find((object) => object.data?.type === blobType);
-    if (!suiBlobObject || suiBlobObject.data?.bcs?.dataType !== "moveObject") {
+    const suiBlobObject = createdObjects.objects.find(
+      (object) => !(object instanceof Error) && object.type === blobType
+    );
+    if (suiBlobObject instanceof Error || !suiBlobObject) {
       throw new import_error.WalrusClientError("Storage object not found in transaction effects");
     }
     return {
       digest,
-      storage: (0, import_storage_resource.Storage)().fromBase64(suiBlobObject.data.bcs.bcsBytes)
+      storage: (0, import_storage_resource.Storage)().parse(suiBlobObject.content)
     };
   }
   /**
@@ -73936,7 +74421,7 @@ class WalrusClient {
   }) {
     const storage = await this.createStorage({ size, epochs, walCoin, owner });
     const { writeCost } = await this.storageCost(size, epochs);
-    const systemContract = await __privateGet(this, _getSystemContract).call(this);
+    const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
     const writeAttributes = attributes ? await __privateMethod(this, _WalrusClient_instances, writeBlobAttributesForRef_fn).call(this, {
       attributes,
       existingAttributes: null
@@ -73996,21 +74481,19 @@ class WalrusClient {
     });
     const blobType = await this.getBlobType();
     const { digest, effects } = await __privateMethod(this, _WalrusClient_instances, executeTransaction_fn).call(this, transaction, signer, "register blob");
-    const createdObjectIds = effects?.created?.map((effect) => effect.reference.objectId) ?? [];
-    const createdObjects = await __privateGet(this, _suiClient).multiGetObjects({
-      ids: createdObjectIds,
-      options: {
-        showType: true,
-        showBcs: true
-      }
+    const createdObjectIds = effects?.changedObjects.filter((object) => object.idOperation === "Created").map((object) => object.id);
+    const createdObjects = await __privateGet(this, _suiClient).core.getObjects({
+      objectIds: createdObjectIds
     });
-    const suiBlobObject = createdObjects.find((object) => object.data?.type === blobType);
-    if (!suiBlobObject || suiBlobObject.data?.bcs?.dataType !== "moveObject") {
+    const suiBlobObject = createdObjects.objects.find(
+      (object) => !(object instanceof Error) && object.type === blobType
+    );
+    if (suiBlobObject instanceof Error || !suiBlobObject) {
       throw new import_error.WalrusClientError("Blob object not found in transaction effects");
     }
     return {
       digest,
-      blob: (0, import_blob.Blob)().fromBase64(suiBlobObject.data.bcs.bcsBytes)
+      blob: (0, import_blob.Blob)().parse(suiBlobObject.content)
     };
   }
   /**
@@ -74023,7 +74506,7 @@ class WalrusClient {
    */
   async certifyBlob({ blobId, blobObjectId, confirmations, deletable }) {
     const systemState = await this.systemState();
-    const committee = await __privateGet(this, _getActiveCommittee).call(this);
+    const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
     if (confirmations.length !== systemState.committee.members.length) {
       throw new import_error.WalrusClientError(
         "Invalid number of confirmations. Confirmations array must contain an entry for each node"
@@ -74043,7 +74526,7 @@ class WalrusClient {
         }
       }
     }).toBase64();
-    const bindings = await __privateGet(this, _wasmBindings).call(this);
+    const bindings = await __privateMethod(this, _WalrusClient_instances, wasmBindings_fn).call(this);
     const verifySignature = bindings.getVerifySignature();
     const filteredConfirmations = confirmations.map((confirmation, index) => {
       const isValid = confirmation?.serializedMessage === confirmationMessage && verifySignature(
@@ -74064,7 +74547,7 @@ class WalrusClient {
       filteredConfirmations,
       filteredConfirmations.map(({ index }) => index)
     );
-    const systemContract = await __privateGet(this, _getSystemContract).call(this);
+    const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
     return (tx) => {
       tx.add(
         systemContract.certify_blob({
@@ -74126,7 +74609,7 @@ class WalrusClient {
    * ```
    */
   async deleteBlob({ blobObjectId }) {
-    const systemContract = await __privateGet(this, _getSystemContract).call(this);
+    const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
     return (tx) => {
       const storage = tx.add(
         systemContract.delete_blob({
@@ -74189,8 +74672,8 @@ class WalrusClient {
       };
     }
     const { storageCost } = await this.storageCost(Number(blob.storage.storage_size), numEpochs);
-    const systemContract = await __privateGet(this, _getSystemContract).call(this);
-    const subsidiesContract = __privateGet(this, _packageConfig).subsidiesObjectId ? await __privateGet(this, _getSubsidiesContract).call(this) : null;
+    const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
+    const subsidiesContract = __privateGet(this, _packageConfig).subsidiesObjectId ? await __privateMethod(this, _WalrusClient_instances, getSubsidiesContract_fn).call(this) : null;
     return __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, storageCost, owner, walCoin ?? null, subsidiesContract !== null, (coin, tx) => {
       tx.add(
         subsidiesContract ? subsidiesContract.extend_blob({
@@ -74240,23 +74723,15 @@ class WalrusClient {
   async readBlobAttributes({
     blobObjectId
   }) {
-    const response = await __privateGet(this, _suiClient).getDynamicFieldObject({
+    const response = await __privateGet(this, _suiClient).core.getDynamicField({
       parentId: blobObjectId,
       name: {
         type: "vector<u8>",
-        value: [...new TextEncoder().encode("metadata")]
+        bcs: import_bcs.bcs.string().serialize("metadata").toBytes()
       }
     });
-    if (response.error?.code === "dynamicFieldNotFound") {
-      return null;
-    }
-    if (response.error || !response.data) {
-      throw new import_error.WalrusClientError(
-        `Failed to fetch metadata for object ${blobObjectId}: ${response.error}`
-      );
-    }
-    const metadata = response.data.content.fields.value.fields.metadata.fields.contents;
-    return Object.fromEntries(metadata.map(({ fields: { key, value } }) => [key, value]));
+    const metadata = (0, import_metadata.Metadata)().parse(response.dynamicField.value.bcs);
+    return Object.fromEntries(metadata.metadata.contents.map(({ key, value }) => [key, value]));
   }
   /**
    * Write attributes to a blob
@@ -74326,7 +74801,7 @@ class WalrusClient {
    */
   async writeSliver({ blobId, sliverPairIndex, sliverType, sliver, signal }) {
     const systemState = await this.systemState();
-    const committee = await __privateGet(this, _getActiveCommittee).call(this);
+    const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
     const shardIndex = (0, import_utils2.toShardIndex)(sliverPairIndex, blobId, systemState.committee.n_shards);
     const node = await __privateMethod(this, _WalrusClient_instances, getNodeByShardIndex_fn).call(this, committee, shardIndex);
     return await __privateGet(this, _storageNodeClient).storeSliver(
@@ -74343,7 +74818,7 @@ class WalrusClient {
    * ```
    */
   async writeMetadataToNode({ nodeIndex, blobId, metadata, signal }) {
-    const committee = await __privateGet(this, _getActiveCommittee).call(this);
+    const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
     const node = committee.nodes[nodeIndex];
     return await __privateGet(this, _storageNodeClient).storeBlobMetadata(
       { blobId, metadata },
@@ -74365,7 +74840,7 @@ class WalrusClient {
     objectId,
     signal
   }) {
-    const committee = await __privateGet(this, _getActiveCommittee).call(this);
+    const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
     const node = committee.nodes[nodeIndex];
     const result = deletable ? await __privateGet(this, _storageNodeClient).getDeletableBlobConfirmation(
       { blobId, objectId },
@@ -74386,9 +74861,9 @@ class WalrusClient {
    */
   async encodeBlob(blob) {
     const systemState = await this.systemState();
-    const committee = await __privateGet(this, _getActiveCommittee).call(this);
+    const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
     const numShards = systemState.committee.n_shards;
-    const bindings = await __privateGet(this, _wasmBindings).call(this);
+    const bindings = await __privateMethod(this, _WalrusClient_instances, wasmBindings_fn).call(this);
     const { blobId, metadata, sliverPairs, rootHash } = bindings.encodeBlob(numShards, blob);
     const sliversByNodeMap = /* @__PURE__ */ new Map();
     while (sliverPairs.length > 0) {
@@ -74468,7 +74943,7 @@ class WalrusClient {
     ...options
   }) {
     const systemState = await this.systemState();
-    const committee = await __privateGet(this, _getActiveCommittee).call(this);
+    const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
     const controller = new AbortController();
     let failures = 0;
     const confirmations = await Promise.all(
@@ -74582,10 +75057,9 @@ class WalrusClient {
    */
   reset() {
     __privateGet(this, _objectLoader).clearAll();
-    __privateSet(this, _readCommittee, null);
-    __privateGet(this, _memo).reset();
+    __privateGet(this, _cache).clear();
   }
-}
+};
 _storageNodeClient = new WeakMap();
 _wasmUrl = new WeakMap();
 _packageConfig = new WeakMap();
@@ -74593,21 +75067,73 @@ _suiClient = new WeakMap();
 _objectLoader = new WeakMap();
 _blobMetadataConcurrencyLimit = new WeakMap();
 _readCommittee = new WeakMap();
-_memo = new WeakMap();
-_walType = new WeakMap();
-_getPackageId = new WeakMap();
-_getSystemContract = new WeakMap();
-_getSubsidiesContract = new WeakMap();
-_getBlobContract = new WeakMap();
-_getMetadataContract = new WeakMap();
-_wasmBindings = new WeakMap();
+_cache = new WeakMap();
 _WalrusClient_instances = new WeakSet();
+/** The Move type for a WAL coin */
+walType_fn = function() {
+  return __privateGet(this, _cache).read(["walType"], async () => {
+    const stakedWal = await __privateGet(this, _suiClient).jsonRpc.getNormalizedMoveStruct({
+      package: await __privateMethod(this, _WalrusClient_instances, getPackageId_fn).call(this),
+      module: "staked_wal",
+      struct: "StakedWal"
+    });
+    const balanceType = stakedWal.fields.find((field) => field.name === "principal")?.type;
+    if (!balanceType) {
+      throw new import_error.WalrusClientError("WAL type not found");
+    }
+    const parsed = (0, import_utils.parseStructTag)((0, import_utils2.toTypeString)(balanceType));
+    const coinType = parsed.typeParams[0];
+    if (!coinType) {
+      throw new import_error.WalrusClientError("WAL type not found");
+    }
+    return (0, import_utils.normalizeStructTag)(coinType);
+  });
+};
+getPackageId_fn = function() {
+  return __privateGet(this, _cache).read(["getPackageId"], async () => {
+    const system = await __privateGet(this, _objectLoader).load(__privateGet(this, _packageConfig).systemObjectId);
+    return (0, import_utils.parseStructTag)(system.type).address;
+  });
+};
+getSystemContract_fn = function() {
+  return __privateGet(this, _cache).read(["getSystemContract"], async () => {
+    const { package_id } = await this.systemObject();
+    return (0, import_system.init)(package_id);
+  });
+};
+getSubsidiesContract_fn = function() {
+  return __privateGet(this, _cache).read(["getSubsidiesContract"], async () => {
+    if (!__privateGet(this, _packageConfig).subsidiesObjectId) {
+      throw new import_error.WalrusClientError("Subsidies object ID not defined in package config");
+    }
+    const subsidiesObject = await __privateGet(this, _objectLoader).load(__privateGet(this, _packageConfig).subsidiesObjectId);
+    const packageId = (0, import_utils.parseStructTag)(subsidiesObject.type).address;
+    return (0, import_subsidies.init)(packageId);
+  });
+};
+getBlobContract_fn = function() {
+  return __privateGet(this, _cache).read(["getBlobContract"], async () => {
+    const { package_id } = await this.systemObject();
+    return (0, import_blob.init)(package_id);
+  });
+};
+getMetadataContract_fn = function() {
+  return __privateGet(this, _cache).read(["getMetadataContract"], async () => {
+    const { package_id } = await this.systemObject();
+    return (0, import_metadata.init)(package_id);
+  });
+};
+wasmBindings_fn = function() {
+  return __privateGet(this, _cache).read(["wasmBindings"], async () => {
+    return (0, import_wasm.getWasmBindings)(__privateGet(this, _wasmUrl));
+  });
+};
 internalReadBlob_fn = async function({ blobId, signal }) {
   const systemState = await this.systemState();
   const numShards = systemState.committee.n_shards;
   const blobMetadata = await this.getBlobMetadata({ blobId, signal });
   const slivers = await this.getSlivers({ blobId, signal });
-  const bindings = await __privateGet(this, _wasmBindings).call(this);
+  const bindings = await __privateMethod(this, _WalrusClient_instances, wasmBindings_fn).call(this);
   const blobBytes = bindings.decodePrimarySlivers(
     blobId,
     numShards,
@@ -74656,10 +75182,10 @@ forceGetReadCommittee_fn = async function({ blobId, signal }) {
   if (isTransitioning && certificationEpoch < stakingState.epoch) {
     return await __privateMethod(this, _WalrusClient_instances, getCommittee_fn).call(this, stakingState.previous_committee);
   }
-  return await __privateGet(this, _getActiveCommittee).call(this);
+  return await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
 };
 withWal_fn = async function(amount, owner, source, withSubsidies, fn) {
-  const walType = await __privateGet(this, _walType).call(this);
+  const walType = await __privateMethod(this, _WalrusClient_instances, walType_fn).call(this);
   return (tx) => {
     const coin = source ? tx.splitCoins(source, [amount])[0] : tx.add(
       (0, import_transactions.coinWithBalance)({
@@ -74688,8 +75214,8 @@ writeBlobAttributesForRef_fn = async function({
   attributes,
   existingAttributes
 }) {
-  const blobContract = await __privateGet(this, _getBlobContract).call(this);
-  const metadataContract = await __privateGet(this, _getMetadataContract).call(this);
+  const blobContract = await __privateMethod(this, _WalrusClient_instances, getBlobContract_fn).call(this);
+  const metadataContract = await __privateMethod(this, _WalrusClient_instances, getMetadataContract_fn).call(this);
   return (tx, blob) => {
     if (!existingAttributes) {
       tx.add(
@@ -74724,17 +75250,19 @@ writeBlobAttributesForRef_fn = async function({
   };
 };
 executeTransaction_fn = async function(transaction, signer, action) {
-  const { digest, effects } = await __privateGet(this, _suiClient).signAndExecuteTransaction({
-    transaction,
-    signer,
-    options: {
-      showEffects: true
-    }
+  transaction.setSenderIfNotSet(signer.toSuiAddress());
+  const bytes = await transaction.build({ client: __privateGet(this, _suiClient).jsonRpc });
+  const { signature } = await signer.signTransaction(bytes);
+  const {
+    transaction: { digest, effects }
+  } = await __privateGet(this, _suiClient).core.executeTransaction({
+    transaction: bytes,
+    signatures: [signature]
   });
-  if (effects?.status.status !== "success") {
+  if (effects?.status.error) {
     throw new import_error.WalrusClientError(`Failed to ${action}: ${effects?.status.error}`);
   }
-  await __privateGet(this, _suiClient).waitForTransaction({
+  await __privateGet(this, _suiClient).core.waitForTransaction({
     digest
   });
   return { digest, effects };
@@ -74762,7 +75290,12 @@ getCommittee_fn = async function(committee) {
     nodes
   };
 };
-_getActiveCommittee = new WeakMap();
+getActiveCommittee_fn = function() {
+  return __privateGet(this, _cache).read(["getActiveCommittee"], async () => {
+    const stakingState = await this.stakingState();
+    return __privateMethod(this, _WalrusClient_instances, getCommittee_fn).call(this, stakingState.committee);
+  });
+};
 stakingPool_fn = async function(committee) {
   const nodeIds = committee.pos0.contents.map((node) => node.key);
   return __privateGet(this, _objectLoader).loadManyOrThrow(nodeIds, (0, import_staking_pool.StakingPool)());
@@ -74787,6 +75320,7 @@ retryOnPossibleEpochChange_fn = function(fn) {
     }
   };
 };
+let WalrusClient = _WalrusClient;
 //# sourceMappingURL=client.js.map
 
 
@@ -81098,73 +81632,6 @@ function toTypeString(type) {
 
 /***/ }),
 
-/***/ 75746:
-/***/ ((module) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __typeError = (msg) => {
-  throw TypeError(msg);
-};
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
-var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
-var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
-var memo_exports = {};
-__export(memo_exports, {
-  MemoCache: () => MemoCache
-});
-module.exports = __toCommonJS(memo_exports);
-var _methods, _cache;
-class MemoCache {
-  constructor() {
-    __privateAdd(this, _methods, /* @__PURE__ */ new Set());
-    __privateAdd(this, _cache, /* @__PURE__ */ new Map());
-  }
-  create(key, fn) {
-    if (__privateGet(this, _methods).has(key)) {
-      throw new Error(`Method ${key} already exists`);
-    }
-    __privateGet(this, _methods).add(key);
-    return () => {
-      if (__privateGet(this, _cache).has(key)) {
-        return __privateGet(this, _cache).get(key);
-      }
-      const promise = fn();
-      __privateGet(this, _cache).set(key, promise);
-      promise.then((val) => __privateGet(this, _cache).set(key, val)).catch(() => {
-        __privateGet(this, _cache).delete(key);
-      });
-      return promise;
-    };
-  }
-  reset() {
-    __privateGet(this, _cache).clear();
-  }
-}
-_methods = new WeakMap();
-_cache = new WeakMap();
-//# sourceMappingURL=memo.js.map
-
-
-/***/ }),
-
 /***/ 17639:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -81203,7 +81670,6 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
 var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
 var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
-var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
 var object_loader_exports = {};
 __export(object_loader_exports, {
   SuiObjectDataLoader: () => SuiObjectDataLoader
@@ -81213,36 +81679,21 @@ var import_bcs = __nccwpck_require__(56244);
 var import_utils = __nccwpck_require__(33973);
 var import_dataloader = __toESM(__nccwpck_require__(52139));
 var import_dynamic_field = __nccwpck_require__(99200);
-var _dynamicFieldCache, _SuiObjectDataLoader_instances, getObjectFromResponse_fn;
+var _dynamicFieldCache;
 class SuiObjectDataLoader extends import_dataloader.default {
   constructor(suiClient) {
-    super(
-      async (ids) => {
-        const objects = await suiClient.multiGetObjects({
-          ids,
-          options: {
-            showType: true,
-            showBcs: true
-          }
-        });
-        return objects.map((object, i) => {
-          return __privateMethod(this, _SuiObjectDataLoader_instances, getObjectFromResponse_fn).call(this, ids[i], object);
-        });
-      },
-      {
-        maxBatchSize: 50
-      }
-    );
-    __privateAdd(this, _SuiObjectDataLoader_instances);
+    super(async (ids) => {
+      const { objects } = await suiClient.core.getObjects({
+        objectIds: ids
+      });
+      return objects;
+    });
     __privateAdd(this, _dynamicFieldCache, /* @__PURE__ */ new Map());
   }
   async load(id, schema) {
     const data = await super.load(id);
     if (schema) {
-      if (data.bcs?.dataType !== "moveObject") {
-        throw new Error(`Object ${id} is not a move object`);
-      }
-      return schema.fromBase64(data.bcs.bcsBytes);
+      return schema.parse(data.content);
     }
     return data;
   }
@@ -81251,14 +81702,11 @@ class SuiObjectDataLoader extends import_dataloader.default {
     if (!schema) {
       return data;
     }
-    return data.map((d, i) => {
+    return data.map((d) => {
       if (d instanceof Error) {
         return d;
       }
-      if (d.bcs?.dataType !== "moveObject") {
-        return new Error(`Object ${ids[i]} is not a move object`);
-      }
-      return schema.fromBase64(d.bcs.bcsBytes);
+      return schema.parse(d.content);
     });
   }
   async loadManyOrThrow(ids, schema) {
@@ -81285,13 +81733,6 @@ class SuiObjectDataLoader extends import_dataloader.default {
   }
 }
 _dynamicFieldCache = new WeakMap();
-_SuiObjectDataLoader_instances = new WeakSet();
-getObjectFromResponse_fn = function(id, response) {
-  if (response.error || !response.data) {
-    throw new Error(`Failed to fetch object ${id}: ${response.error}`);
-  }
-  return response.data;
-};
 //# sourceMappingURL=object-loader.js.map
 
 
