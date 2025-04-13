@@ -59455,7 +59455,7 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walrusSystem, gr
     let totalCost = BigInt(0);
     for (let i = 0; i < groups.length; i++) {
         const { files } = groups[i];
-        const buffers = [Buffer.from([0xff])]; // dummy byte
+        const buffers = files.length > 1 ? [Buffer.from([0xff])] : []; // dummy byte for multiple files
         for (const file of files) {
             buffers.push(file.buffer);
         }
