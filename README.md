@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Deploy to Walrus Sites with SLSA
-        uses: zktx-io/walrus-sites-provenance@v1
+        uses: zktx-io/walrus-sites-provenance@v0.1.2
         with:
           config-path: './site.config.json'
         env:
@@ -123,3 +123,76 @@ Metadata fields describe your site and help users understand and discover it. Th
 | `description` | `string?` | Short summary of what your site does                               |
 | `project_url` | `string?` | Link to your source code repository                                |
 | `creator`     | `string?` | Name, alias, or address of the creator or organization             |
+
+## 🛡️ Deploy with Provenance (SLSA)
+
+To **secure your Walrus Site with verifiable provenance**, use the full reusable GitHub Actions workflow provided in this repository.
+
+This workflow:
+
+1. Builds your static site
+2. Generates a `site_manifest.json` with deterministic file metadata
+3. Attests the build using [SLSA](https://slsa.dev) provenance via [Sigstore](https://www.sigstore.dev/)
+4. Embeds these into a `.well-known` directory in your output
+5. Deploys the site to Walrus using the Walrus CLI
+
+### ✅ Usage
+
+Create a GitHub Actions workflow in your project:
+
+```yaml
+name: Deploy My Static Site to Walrus with Provenance
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: write
+  actions: read
+
+jobs:
+  deploy-with-provenance:
+    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.1.2
+    secrets:
+      ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
+```
+
+### 📁 `site.config.json` Requirements
+
+The full provenance workflow uses your existing `site.config.json` file — the same as in standard Walrus deployments.
+
+Only one field is **strictly required for provenance**:
+
+| Field  | Required | Purpose                                                                                                                               |
+| ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `path` | ✅       | Must specify the output directory (e.g. `"./dist"` or `"./build"`), which will contain the `.well-known` folder with signed metadata. |
+
+> 💡 All other fields (`network`, `owner`, etc.) are used as-is by the Walrus Sites deploy step.  
+> The file must be located at the project root (`./site.config.json`).
+
+Example:
+
+```json
+{
+  "path": "./build"
+}
+```
+
+### 🧪 What Happens Under the Hood
+
+- A site manifest is generated, listing the SHA256 hashes of all files
+- The manifest is hashed and passed to [SLSA GitHub Generator](https://github.com/slsa-framework/slsa-github-generator)
+- A signed `site-provenance.intoto.jsonl` file is created
+- Both files are added to `.well-known/` in your output directory
+- Final contents are deployed using `walrus-sites`
+
+### 🎯 Why Use Provenance?
+
+Embedding provenance data ensures:
+
+- 🔍 Transparency: Know what was built and how
+- 🔏 Integrity: Trace back to specific commits and configurations
+- ✅ Auditability: Verifiable chain-of-trust for secure deployments
