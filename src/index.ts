@@ -40,7 +40,7 @@ const main = async (): Promise<void> => {
 
   // STEP 1: Load files from the specified directory
   core.info(`\n📦 Grouping files by size...`);
-  const groups = groupFilesBySize(config);
+  const groups = groupFilesBySize(config.path);
 
   if (groups.length === 0) {
     failWithMessage('🚫 No files found to upload.');
