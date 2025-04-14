@@ -20,23 +20,11 @@ jobs:
       actions: read
     outputs:
       output_dir: ${{ steps.parse.outputs.output_dir }}
-      base64_hashes: ${{ steps.generate-manifest.outputs.base64_hashes }}
+      base64_hashes: ${{ steps.generate-resources-hashes.outputs.base64_hashes }}
 
     steps:
-      - name: Create temporary directory
-        id: tmpdir
-        run: |
-          echo "dir=tmp/provenance-scripts" >> "$GITHUB_OUTPUT"
-
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Checkout provenance scripts
-        uses: actions/checkout@v4
-        with:
-          repository: zktx-io/walrus-sites-provenance
-          path: ${{ steps.tmpdir.outputs.dir }}
-          ref: v0.1.5
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -67,12 +55,19 @@ jobs:
       - name: Build site
         run: npm run build
 
-      - name: Generate site manifest
-        id: generate-manifest
+      - name: Generate site resource hashes
+        id: generate-resources-hashes
         run: |
-          node "${{ steps.tmpdir.outputs.dir }}/dist/manifest/index.js"
-          HASHES=$(jq -r '[.resources[] | "\(.blob_hash)  \(.path)" ] | join("\n")' "${{ steps.parse.outputs.output_dir }}/.well-known/site_manifest.json" | sha256sum | base64 -w0)
-          echo "base64_hashes=$HASHES" >> "$GITHUB_OUTPUT"
+          OUTPUT_DIR="${{ steps.parse.outputs.output_dir }}"
+          HASHES=""
+
+          while IFS= read -r -d '' file; do
+            FILE_HASH=$(sha256sum "$file" | cut -d ' ' -f 1)
+            REL_PATH="${file#${OUTPUT_DIR}/}"  # Remove 'build/' prefix
+            HASHES+="${FILE_HASH}  ${REL_PATH}"$'\n'
+          done < <(find "$OUTPUT_DIR" -type f -print0)
+
+          echo "base64_hashes=$(echo -n "$HASHES" | base64 -w0)" >> "$GITHUB_OUTPUT"
         env:
           NETWORK: ${{ steps.parse.outputs.network }}
           EPOCHS: ${{ steps.parse.outputs.epochs }}
@@ -83,12 +78,6 @@ jobs:
         with:
           name: site.config.json
           path: site.config.json
-
-      - name: Upload site manifest
-        uses: actions/upload-artifact@v4
-        with:
-          name: site_manifest.json
-          path: ${{ steps.parse.outputs.output_dir }}/.well-known/site_manifest.json
 
       - name: Upload output directory
         uses: actions/upload-artifact@v4
@@ -102,14 +91,52 @@ jobs:
     with:
       base64-subjects: ${{ needs.build-site.outputs.base64_hashes }}
       upload-assets: false
-      provenance-name: 'site-provenance.intoto.jsonl'
+      provenance-name: 'walrus-sites.intoto.jsonl'
     permissions:
       id-token: write
       contents: write
       actions: read
 
-  deploy:
+  verification:
     needs: [build-site, provenance]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download provenance file
+        uses: actions/download-artifact@v4
+        with:
+          name: walrus-sites.intoto.jsonl
+
+      - name: Download site output files
+        uses: actions/download-artifact@v4
+        with:
+          name: site-output
+          path: ${{ needs.build-site.outputs.output_dir }}
+
+      - name: Install slsa-verifier
+        run: |
+          curl -sSfL https://github.com/slsa-framework/slsa-verifier/releases/latest/download/slsa-verifier-linux-amd64 -o slsa-verifier
+          chmod +x slsa-verifier
+          sudo mv slsa-verifier /usr/local/bin/
+
+      - name: Verify All Files via SLSA Provenance
+        run: |
+          PROVENANCE_PATH="walrus-sites.intoto.jsonl"
+          OUTPUT_DIR="${{ needs.build-site.outputs.output_dir }}"
+
+          while IFS= read -r -d '' file; do
+            REL_PATH="${file#${OUTPUT_DIR}/}"
+            echo "🔍 Verifying $REL_PATH..."
+            slsa-verifier verify-artifact "$file" \
+              --provenance-path "$PROVENANCE_PATH" \
+              --source-uri github.com/zktx-io/walrus-sites-ga-example \
+              &> /dev/null || {
+                echo "::error::❌ Verification failed for $REL_PATH"
+                exit 1
+              }
+          done < <(find "$OUTPUT_DIR" -type f -print0)
+
+  deploy:
+    needs: [build-site, provenance, verification]
     runs-on: ubuntu-latest
     steps:
       - name: Download site config
@@ -123,20 +150,14 @@ jobs:
           name: site-output
           path: ${{ needs.build-site.outputs.output_dir }}
 
-      - name: Download site manifest
-        uses: actions/download-artifact@v4
-        with:
-          name: site_manifest.json
-          path: ${{ needs.build-site.outputs.output_dir }}/.well-known
-
       - name: Download provenance file
         uses: actions/download-artifact@v4
         with:
-          name: site-provenance.intoto.jsonl
+          name: walrus-sites.intoto.jsonl
           path: ${{ needs.build-site.outputs.output_dir }}/.well-known
 
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.1.5
+        uses: zktx-io/walrus-sites-provenance@v0.1.6
         with:
           config-path: ./site.config.json
         env:

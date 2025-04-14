@@ -32,7 +32,7 @@ const blobIdToInt = (blobId: string): bigint => {
   return BigInt(bcs.u256().fromBase64(blobId.replaceAll('-', '+').replaceAll('_', '/')));
 };
 
-export const buildRegistrations = async (
+const buildRegistrations = async (
   walrusClient: WalrusClient,
   epochs: number,
   groups: FileGroup[], // 1 group = 1 blob
