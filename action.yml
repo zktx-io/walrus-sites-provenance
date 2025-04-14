@@ -18,4 +18,4 @@ env:
 
 runs:
   using: 'node20'
-  main: 'dist/deploy/index.js'
+  main: 'dist/index.js'
