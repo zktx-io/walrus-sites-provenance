@@ -22,10 +22,9 @@
   "license": "ISC",
   "author": "daoauth",
   "type": "commonjs",
-  "main": "dist/deploy/index.js",
+  "main": "dist/index.js",
   "exports": {
-    ".": "./dist/deploy/index.js",
-    "./manifest": "./dist/manifest/index.js"
+    ".": "./dist/index.js"
   },
   "engines": {
     "node": ">=20"
@@ -38,9 +37,7 @@
     "test": "jest",
     "ci-test": "jest",
     "coverage": "jest --coverage",
-    "build:deploy": "npx ncc build src/index.ts -o dist/deploy --source-map --license licenses.txt",
-    "build:manifest": "npx ncc build src/manifest.ts -o dist/manifest --source-map --license licenses.txt",
-    "build": "rimraf dist && npm run build:deploy && npm run build:manifest"
+    "build": "rimraf dist && npx ncc build src/index.ts -o dist --source-map --license licenses.txt"
   },
   "dependencies": {
     "@actions/core": "^1.11.1",

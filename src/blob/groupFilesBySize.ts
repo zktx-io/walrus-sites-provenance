@@ -5,7 +5,7 @@ import path from 'path';
 import * as core from '@actions/core';
 import { glob } from 'glob';
 
-import { FileGroup, FileInfo, SiteConfig } from '../types';
+import { FileGroup, FileInfo } from '../types';
 import { MAX_BLOB_SIZE } from '../utils/constants';
 
 const contentTypeMap: Record<string, string> = {
@@ -105,16 +105,9 @@ export const groupFilesBySize = (outputDir: string): FileGroup[] => {
     return [];
   }
 
-  const allFiles = glob.sync(
-    ['**/*.*', '.well-known/site_manifest.json', '.well-known/site-provenance.intoto.jsonl'],
-    { cwd: siteRoot },
-  );
-
-  const wellKnownManifest = '.well-known/site_manifest.json';
-  const wellKnownProvenance = '.well-known/site-provenance.intoto.jsonl';
-
-  const isSpecialFile = (relativePath: string) =>
-    relativePath === wellKnownManifest || relativePath === wellKnownProvenance;
+  const wellKnown = ['.well-known/walrus-sites.intoto.jsonl'];
+  const allFiles = glob.sync(['**/*.*', ...wellKnown], { cwd: siteRoot });
+  const isSpecialFile = (relativePath: string) => wellKnown.includes(relativePath);
 
   const normalFiles: FileInfo[] = [];
   const specialFiles: FileInfo[] = [];
