@@ -128,7 +128,7 @@ jobs:
             echo "🔍 Verifying $REL_PATH..."
             slsa-verifier verify-artifact "$file" \
               --provenance-path "$PROVENANCE_PATH" \
-              --source-uri github.com/zktx-io/walrus-sites-ga-example \
+              --source-uri "github.com/${{ github.repository }}" \
               &> /dev/null || {
                 echo "::error::❌ Verification failed for $REL_PATH"
                 exit 1
@@ -157,7 +157,7 @@ jobs:
           path: ${{ needs.build-site.outputs.output_dir }}/.well-known
 
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.1.8
+        uses: zktx-io/walrus-sites-provenance@v0.1.9
         with:
           config-path: ./site.config.json
         env:
