@@ -59884,11 +59884,11 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, }) =
     const b36 = (0, hexToBase36_1.hexToBase36)(siteObjectId);
     core.info(`\n📦 Site object ID: ${siteObjectId}`);
     if (config.network === 'mainnet') {
-        core.info(`🌐 https://${b36}.wal.app/`);
+        core.info(`🌐 https://${b36}.wal.app`);
         core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
     }
     else {
-        core.info(`🌐 http://${b36}.localhost:3000/`);
+        core.info(`🌐 http://${b36}.localhost:3000`);
         core.info(`👉 You can test this Walrus Site locally.`);
     }
 };
@@ -60338,11 +60338,11 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
     const b36 = (0, hexToBase36_1.hexToBase36)(siteObjectId);
     core.info(`\n📦 Site object ID: ${siteObjectId}`);
     if (config.network === 'mainnet') {
-        core.info(`🌐 https://${b36}.wal.app/`);
+        core.info(`🌐 https://${b36}.wal.app`);
         core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
     }
     else {
-        core.info(`🌐 http://${b36}.localhost:3000/`);
+        core.info(`🌐 http://${b36}.localhost:3000`);
         core.info(`👉 You can test this Walrus Site locally.`);
     }
 };
@@ -60463,7 +60463,7 @@ exports.base64url = {
         const bytes = [];
         for (let i = 0; i < base64.length; i += 4) {
             const chunk = base64.slice(i, i + 4);
-            const vals = chunk.split('').map(c => (c === '=' ? 0 : base64chars.indexOf(c))); // ✅ 고침
+            const vals = chunk.split('').map(c => (c === '=' ? 0 : base64chars.indexOf(c)));
             const triplet = (vals[0] << 18) | (vals[1] << 12) | ((vals[2] ?? 0) << 6) | (vals[3] ?? 0);
             if (chunk[1] !== '=')
                 bytes.push((triplet >> 16) & 0xff);
