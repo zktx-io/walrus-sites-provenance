@@ -35,7 +35,7 @@ export const base64url = {
     const bytes: number[] = [];
     for (let i = 0; i < base64.length; i += 4) {
       const chunk = base64.slice(i, i + 4);
-      const vals = chunk.split('').map(c => (c === '=' ? 0 : base64chars.indexOf(c))); // ✅ 고침
+      const vals = chunk.split('').map(c => (c === '=' ? 0 : base64chars.indexOf(c)));
 
       const triplet = (vals[0] << 18) | (vals[1] << 12) | ((vals[2] ?? 0) << 6) | (vals[3] ?? 0);
 

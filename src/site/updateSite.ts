@@ -147,10 +147,10 @@ export const updateSite = async ({
   const b36 = hexToBase36(siteObjectId);
   core.info(`\n📦 Site object ID: ${siteObjectId}`);
   if (config.network === 'mainnet') {
-    core.info(`🌐 https://${b36}.wal.app/`);
+    core.info(`🌐 https://${b36}.wal.app`);
     core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
   } else {
-    core.info(`🌐 http://${b36}.localhost:3000/`);
+    core.info(`🌐 http://${b36}.localhost:3000`);
     core.info(`👉 You can test this Walrus Site locally.`);
   }
 };
