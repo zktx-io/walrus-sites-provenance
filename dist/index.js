@@ -61465,7 +61465,6 @@ const deriveKey = async (pin, salt) => {
     }, keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 };
 const encryptBytes = async (message, pin) => {
-    const encoder = new TextEncoder();
     const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
     const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
     const key = await deriveKey(pin, salt);

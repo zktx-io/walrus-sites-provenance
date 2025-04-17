@@ -46,7 +46,6 @@ const deriveKey = async (pin: string, salt: Uint8Array): Promise<CryptoKey> => {
 };
 
 const encryptBytes = async (message: Uint8Array, pin: string): Promise<string> => {
-  const encoder = new TextEncoder();
   const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
   const key = await deriveKey(pin, salt);
