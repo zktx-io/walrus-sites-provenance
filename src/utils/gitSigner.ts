@@ -242,7 +242,9 @@ export class GitSigner extends Keypair {
           Array.isArray(tx.inputs[0].value)
         ) {
           const decrypted = await decryptBytes(new Uint8Array(tx.inputs[0].value), this.#pin);
-          const received = JSON.parse(new TextDecoder().decode(decrypted));
+          const received: { intent: IntentScope; signature: string } = JSON.parse(
+            new TextDecoder().decode(decrypted),
+          );
           if (received.intent !== payload.intent) {
             throw new Error(
               `Unexpected intent: received ${received.intent}, expected ${payload.intent}`,
