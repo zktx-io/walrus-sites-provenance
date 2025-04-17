@@ -61578,14 +61578,8 @@ class GitSigner extends cryptography_1.Keypair {
             return false;
         }
     }
-    async #sendRequest(bytes, intent) {
-        const payload = JSON.stringify({
-            intent,
-            network: this.#network,
-            address: this.#realAddress,
-            bytes: (0, utils_1.toBase64)(bytes),
-        });
-        const encrypted = await encryptBytes(new TextEncoder().encode(payload), this.#pin);
+    async #sendRequest(payload) {
+        const encrypted = await encryptBytes(new TextEncoder().encode(JSON.stringify(payload)), this.#pin);
         const ephemeralAddress = this.#ephemeralKeypair.getPublicKey().toSuiAddress();
         const tx = new transactions_1.Transaction();
         tx.setSender(ephemeralAddress);
@@ -61614,15 +61608,15 @@ class GitSigner extends cryptography_1.Keypair {
                     Array.isArray(tx.inputs[0].value)) {
                     const decrypted = await decryptBytes(new Uint8Array(tx.inputs[0].value), this.#pin);
                     const received = JSON.parse(new TextDecoder().decode(decrypted));
-                    if (received.intent !== intent) {
-                        throw new Error(`Unexpected intent: received ${received.intent}, expected ${intent}`);
+                    if (received.intent !== payload.intent) {
+                        throw new Error(`Unexpected intent: received ${received.intent}, expected ${payload.intent}`);
                     }
-                    const verify = await this.#verifySignature(bytes, received.signature);
+                    const verify = await this.#verifySignature((0, utils_1.fromBase64)(payload.bytes), received.signature);
                     if (!verify) {
                         throw new Error(`Signature verification failed for address ${this.#realAddress}`);
                     }
                     return {
-                        bytes: (0, utils_1.toBase64)(bytes),
+                        bytes: payload.bytes,
                         signature: received.signature,
                     };
                 }
@@ -61638,10 +61632,20 @@ class GitSigner extends cryptography_1.Keypair {
         return this.#realAddress;
     }
     async signTransaction(bytes) {
-        return this.#sendRequest(bytes, 'TransactionData');
+        return this.#sendRequest({
+            intent: 'TransactionData',
+            network: this.#network,
+            address: this.#realAddress,
+            bytes: (0, utils_1.toBase64)(bytes),
+        });
     }
     async signPersonalMessage(bytes) {
-        return this.#sendRequest(bytes, 'PersonalMessage');
+        return this.#sendRequest({
+            intent: 'PersonalMessage',
+            network: this.#network,
+            address: this.#realAddress,
+            bytes: (0, utils_1.toBase64)(bytes),
+        });
     }
 }
 exports.GitSigner = GitSigner;

@@ -13,13 +13,20 @@ import { PasskeyPublicKey } from '@mysten/sui/keypairs/passkey';
 import { Secp256k1PublicKey } from '@mysten/sui/keypairs/secp256k1';
 import { Secp256r1PublicKey } from '@mysten/sui/keypairs/secp256r1';
 import { Transaction } from '@mysten/sui/transactions';
-import { toBase64 } from '@mysten/sui/utils';
+import { fromBase64, toBase64 } from '@mysten/sui/utils';
 
 import { sleep } from '../blob/helper/writeBlobHelper';
 
 const NETWORK = 'devnet';
 const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
+
+interface Payload {
+  intent: IntentScope;
+  network: 'testnet' | 'mainnet';
+  address: string;
+  bytes: string;
+}
 
 const deriveKey = async (pin: string, salt: Uint8Array): Promise<CryptoKey> => {
   const encoder = new TextEncoder();
@@ -200,14 +207,11 @@ export class GitSigner extends Keypair {
     }
   }
 
-  async #sendRequest(bytes: Uint8Array, intent: IntentScope): Promise<SignatureWithBytes> {
-    const payload = JSON.stringify({
-      intent,
-      network: this.#network,
-      address: this.#realAddress,
-      bytes: toBase64(bytes),
-    });
-    const encrypted = await encryptBytes(new TextEncoder().encode(payload), this.#pin);
+  async #sendRequest(payload: Payload): Promise<SignatureWithBytes> {
+    const encrypted = await encryptBytes(
+      new TextEncoder().encode(JSON.stringify(payload)),
+      this.#pin,
+    );
     const ephemeralAddress = this.#ephemeralKeypair.getPublicKey().toSuiAddress();
     const tx = new Transaction();
     tx.setSender(ephemeralAddress);
@@ -239,15 +243,17 @@ export class GitSigner extends Keypair {
         ) {
           const decrypted = await decryptBytes(new Uint8Array(tx.inputs[0].value), this.#pin);
           const received = JSON.parse(new TextDecoder().decode(decrypted));
-          if (received.intent !== intent) {
-            throw new Error(`Unexpected intent: received ${received.intent}, expected ${intent}`);
+          if (received.intent !== payload.intent) {
+            throw new Error(
+              `Unexpected intent: received ${received.intent}, expected ${payload.intent}`,
+            );
           }
-          const verify = await this.#verifySignature(bytes, received.signature);
+          const verify = await this.#verifySignature(fromBase64(payload.bytes), received.signature);
           if (!verify) {
             throw new Error(`Signature verification failed for address ${this.#realAddress}`);
           }
           return {
-            bytes: toBase64(bytes),
+            bytes: payload.bytes,
             signature: received.signature,
           };
         } else {
@@ -264,10 +270,20 @@ export class GitSigner extends Keypair {
   }
 
   async signTransaction(bytes: Uint8Array): Promise<SignatureWithBytes> {
-    return this.#sendRequest(bytes, 'TransactionData');
+    return this.#sendRequest({
+      intent: 'TransactionData',
+      network: this.#network,
+      address: this.#realAddress,
+      bytes: toBase64(bytes),
+    });
   }
 
   async signPersonalMessage(bytes: Uint8Array): Promise<SignatureWithBytes> {
-    return this.#sendRequest(bytes, 'PersonalMessage');
+    return this.#sendRequest({
+      intent: 'PersonalMessage',
+      network: this.#network,
+      address: this.#realAddress,
+      bytes: toBase64(bytes),
+    });
   }
 }
