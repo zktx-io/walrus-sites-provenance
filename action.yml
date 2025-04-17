@@ -1,5 +1,5 @@
 name: 'Walrus Sites Provenance'
-description: 'Deploy Walrus Sites with end-to-end verifiable provenance using SLSA and onchain signing. Supports remote signing via encrypted GitHub Action requests.'
+description: 'Deploy Walrus Sites with verifiable SLSA provenance and optional remote signer support.'
 author: 'zktx.io'
 branding:
   icon: 'shield'
