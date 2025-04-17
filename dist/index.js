@@ -61583,6 +61583,7 @@ class GitSigner extends cryptography_1.Keypair {
         const payload = JSON.stringify({
             intent,
             network: this.#network,
+            address: this.#realAddress,
             bytes: (0, utils_1.toBase64)(bytes),
         });
         const encrypted = await encryptBytes(new TextEncoder().encode(payload), this.#pin);
