@@ -1,5 +1,5 @@
 name: 'Walrus Sites Provenance'
-description: 'Securely deploy Walrus Sites with verifiable SLSA provenance and tamper-proof signatures.'
+description: 'Deploy Walrus Sites with end-to-end verifiable provenance using SLSA and onchain signing. Supports remote signing via encrypted GitHub Action requests.'
 author: 'zktx.io'
 branding:
   icon: 'shield'
@@ -7,13 +7,16 @@ branding:
 
 inputs:
   config-path:
-    description: 'Path to site config JSON file'
+    description: 'Path to the Walrus Site configuration JSON file.'
     required: false
     default: './site.config.json'
 
 env:
+  GIT_SIGNER_PIN:
+    description: 'PIN used to decrypt the signing key, shared with the remote signer UI.'
+    required: false
   ED25519_PRIVATE_KEY:
-    description: 'Private key in Sui format (starts with "suiprivkey")'
+    description: 'Fallback private key in Sui format (e.g., suiprivkey...), used when remote signing is not enabled.'
     required: true
 
 runs:
