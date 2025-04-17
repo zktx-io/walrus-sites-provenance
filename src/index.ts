@@ -18,7 +18,7 @@ import { loadWalrusSystem } from './utils/loadWalrusSystem';
 const main = async (): Promise<void> => {
   // Load configuration
   const config = loadConfig();
-  const signer = getSigner();
+  const signer = await getSigner(config);
 
   // Initialize Sui and Walrus clients
   const suiClient = new SuiClient({ url: getFullnodeUrl(config.network) });
