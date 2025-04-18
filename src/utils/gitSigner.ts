@@ -228,6 +228,7 @@ export class GitSigner extends Keypair {
     let retry = 20;
     const sleepTime = 5000;
     while (retry-- > 0) {
+      core.info('Wating for response...');
       const { data } = await this.#client.queryTransactionBlocks({
         filter: { FromAddress: ephemeralAddress },
         order: 'descending',
@@ -253,12 +254,12 @@ export class GitSigner extends Keypair {
             core.setFailed(
               `Unexpected intent: received ${received.intent}, expected ${payload.intent}`,
             );
-            throw new Error('Process will be terminated.');
+            throw new Error('Process will be terminated. (Unexpected intent)');
           }
           const verify = await this.#verifySignature(fromBase64(payload.bytes), received.signature);
           if (!verify) {
             core.setFailed(`Signature verification failed for address ${this.#realAddress}`);
-            throw new Error('Process will be terminated.');
+            throw new Error('Process will be terminated. (Signature verification failed)');
           }
           return {
             bytes: payload.bytes,
@@ -266,13 +267,13 @@ export class GitSigner extends Keypair {
           };
         } else {
           core.setFailed(`Invalid tx type or structure: ${JSON.stringify(tx)}`);
-          throw new Error('Process will be terminated.');
+          throw new Error('Process will be terminated. (Invalid tx type or structure)');
         }
       }
       await sleep(sleepTime);
     }
     core.setFailed('Timeout: transaction not found');
-    throw new Error('Process will be terminated.');
+    throw new Error('Process will be terminated. (Timeout)');
   }
 
   toSuiAddress(): string {
