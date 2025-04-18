@@ -18,7 +18,7 @@ import { loadWalrusSystem } from './utils/loadWalrusSystem';
 const main = async (): Promise<void> => {
   // Load configuration
   const config = loadConfig();
-  const signer = await getSigner(config);
+  const { signer, isGitSigner } = await getSigner(config);
 
   // Initialize Sui and Walrus clients
   const suiClient = new SuiClient({ url: getFullnodeUrl(config.network) });
@@ -100,6 +100,7 @@ const main = async (): Promise<void> => {
       walrusSystem,
       blobs: blobsWithNodes,
       signer,
+      isGitSigner,
     });
   }
 };

@@ -19,12 +19,14 @@ export const createSite = async ({
   walrusSystem,
   blobs,
   signer,
+  isGitSigner,
 }: {
   config: SiteConfig;
   suiClient: SuiClient;
   walrusSystem: WalrusSystem;
   blobs: BlobDictionary;
   signer: Signer;
+  isGitSigner: boolean;
 }) => {
   const transaction = new Transaction();
   transaction.setGasBudget(config.gas_budget);
@@ -122,10 +124,20 @@ export const createSite = async ({
   const b36 = hexToBase36(siteObjectId);
   core.info(`\n📦 Site object ID: ${siteObjectId}`);
   if (config.network === 'mainnet') {
-    core.info(`🌐 https://${b36}.wal.app`);
+    const url = `🌐 https://${b36}.wal.app`;
+    core.info(url);
     core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
+    if (isGitSigner) {
+      const message = new TextEncoder().encode(JSON.stringify({ url }));
+      await signer.signPersonalMessage(message);
+    }
   } else {
-    core.info(`🌐 http://${b36}.localhost:3000`);
+    const url = `🌐 http://${b36}.localhost:3000`;
+    core.info(url);
     core.info(`👉 You can test this Walrus Site locally.`);
+    if (isGitSigner) {
+      const message = new TextEncoder().encode(JSON.stringify({ url }));
+      await signer.signPersonalMessage(message);
+    }
   }
 };
