@@ -16,6 +16,7 @@ import { Secp256k1PublicKey } from '@mysten/sui/keypairs/secp256k1';
 import { Secp256r1PublicKey } from '@mysten/sui/keypairs/secp256r1';
 import { Transaction } from '@mysten/sui/transactions';
 import { fromBase64, toBase64 } from '@mysten/sui/utils';
+import { verifyPersonalMessageSignature, verifyTransactionSignature } from '@mysten/sui/verify';
 
 import { sleep } from '../blob/helper/writeBlobHelper';
 
@@ -178,31 +179,21 @@ export class GitSigner extends Keypair {
     this.#client = client;
   }
 
-  async #verifySignature(bytes: Uint8Array, serializedSignature: string): Promise<boolean> {
+  async #verifySignature(payload: Payload, signature: string): Promise<boolean> {
     try {
-      const parsed = parseSerializedSignature(serializedSignature);
-      let publickey: PublicKey | undefined = undefined;
-
-      switch (parsed.signatureScheme) {
-        case 'ED25519':
-          publickey = new Ed25519PublicKey(parsed.publicKey);
-          break;
-        case 'Secp256k1':
-          publickey = new Secp256k1PublicKey(parsed.publicKey);
-          break;
-        case 'Secp256r1':
-          publickey = new Secp256r1PublicKey(parsed.publicKey);
-          break;
-        case 'Passkey':
-          publickey = new PasskeyPublicKey(parsed.publicKey);
-          break;
+      switch (payload.intent) {
+        case 'TransactionData': {
+          const pubKey = await verifyTransactionSignature(fromBase64(payload.bytes), signature);
+          return pubKey.toSuiAddress() === this.#realAddress;
+        }
+        case 'PersonalMessage': {
+          const pubKey = await verifyPersonalMessageSignature(fromBase64(payload.bytes), signature);
+          return pubKey.toSuiAddress() === this.#realAddress;
+        }
+        default:
+          core.setFailed(`Unknown intent: ${payload.intent}`);
+          return false;
       }
-
-      if (!publickey || publickey.toSuiAddress() !== this.#realAddress || !parsed.signature) {
-        return false;
-      }
-
-      return publickey.verify(bytes, parsed.signature);
     } catch {
       return false;
     }
@@ -228,7 +219,7 @@ export class GitSigner extends Keypair {
     let retry = 20;
     const sleepTime = 5000;
     while (retry-- > 0) {
-      core.info('Wating for response...');
+      core.info(`⏳ Waiting for response... (${retry} retries left)`);
       const { data } = await this.#client.queryTransactionBlocks({
         filter: { FromAddress: ephemeralAddress },
         order: 'descending',
@@ -254,12 +245,12 @@ export class GitSigner extends Keypair {
             core.setFailed(
               `Unexpected intent: received ${received.intent}, expected ${payload.intent}`,
             );
-            throw new Error('Process will be terminated. (Unexpected intent)');
+            throw new Error('Process will be terminated.');
           }
-          const verify = await this.#verifySignature(fromBase64(payload.bytes), received.signature);
+          const verify = await this.#verifySignature(payload, received.signature);
           if (!verify) {
             core.setFailed(`Signature verification failed for address ${this.#realAddress}`);
-            throw new Error('Process will be terminated. (Signature verification failed)');
+            throw new Error('Process will be terminated.');
           }
           return {
             bytes: payload.bytes,
@@ -267,13 +258,13 @@ export class GitSigner extends Keypair {
           };
         } else {
           core.setFailed(`Invalid tx type or structure: ${JSON.stringify(tx)}`);
-          throw new Error('Process will be terminated. (Invalid tx type or structure)');
+          throw new Error('Process will be terminated.');
         }
       }
       await sleep(sleepTime);
     }
     core.setFailed('Timeout: transaction not found');
-    throw new Error('Process will be terminated. (Timeout)');
+    throw new Error('Process will be terminated.');
   }
 
   toSuiAddress(): string {
