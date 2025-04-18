@@ -60036,6 +60036,7 @@ const main = async () => {
             blobs,
             siteObjectId: config.object_id,
             signer,
+            isGitSigner,
         });
     }
     else {
@@ -60179,8 +60180,8 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
     const b36 = (0, hexToBase36_1.hexToBase36)(siteObjectId);
     core.info(`\n📦 Site object ID: ${siteObjectId}`);
     if (config.network === 'mainnet') {
-        const url = `🌐 https://${b36}.wal.app`;
-        core.info(url);
+        const url = `http://${b36}.localhost:3000`;
+        core.info(`🌐 ${url}`);
         core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
         if (isGitSigner) {
             const message = new TextEncoder().encode(JSON.stringify({ url }));
@@ -60188,8 +60189,8 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
         }
     }
     else {
-        const url = `🌐 http://${b36}.localhost:3000`;
-        core.info(url);
+        const url = `http://${b36}.localhost:3000`;
+        core.info(`🌐 ${url}`);
         core.info(`👉 You can test this Walrus Site locally.`);
         if (isGitSigner) {
             const message = new TextEncoder().encode(JSON.stringify({ url }));
@@ -60544,7 +60545,7 @@ const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const getOldBlobObjects_1 = __nccwpck_require__(76178);
 const getResourceObjects_1 = __nccwpck_require__(53098);
 const registerResources_1 = __nccwpck_require__(12318);
-const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs, siteObjectId, signer, }) => {
+const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs, siteObjectId, signer, isGitSigner, }) => {
     const transaction = new transactions_1.Transaction();
     transaction.setGasBudget(config.gas_budget);
     // Get old blob object IDs
@@ -60643,12 +60644,22 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
     const b36 = (0, hexToBase36_1.hexToBase36)(siteObjectId);
     core.info(`\n📦 Site object ID: ${siteObjectId}`);
     if (config.network === 'mainnet') {
-        core.info(`🌐 https://${b36}.wal.app`);
+        const url = `https://${b36}.wal.app`;
+        core.info(`🌐 ${url}`);
         core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
+        if (isGitSigner) {
+            const message = new TextEncoder().encode(JSON.stringify({ url }));
+            await signer.signPersonalMessage(message);
+        }
     }
     else {
-        core.info(`🌐 http://${b36}.localhost:3000`);
+        const url = `http://${b36}.localhost:3000`;
+        core.info(`🌐 ${url}`);
         core.info(`👉 You can test this Walrus Site locally.`);
+        if (isGitSigner) {
+            const message = new TextEncoder().encode(JSON.stringify({ url }));
+            await signer.signPersonalMessage(message);
+        }
     }
 };
 exports.updateSite = updateSite;
