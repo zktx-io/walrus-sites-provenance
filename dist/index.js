@@ -61441,6 +61441,7 @@ exports.getSigner = getSigner;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitSigner = void 0;
+const bcs_1 = __nccwpck_require__(56244);
 const client_1 = __nccwpck_require__(70827);
 const cryptography_1 = __nccwpck_require__(51250);
 const faucet_1 = __nccwpck_require__(78612);
@@ -61476,7 +61477,6 @@ const encryptBytes = async (message, pin) => {
     return (0, utils_1.toBase64)(result);
 };
 const decryptBytes = async (encrypted, pin) => {
-    const decoder = new TextDecoder();
     const salt = encrypted.slice(0, SALT_LENGTH);
     const iv = encrypted.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
     const data = encrypted.slice(SALT_LENGTH + IV_LENGTH);
@@ -61583,8 +61583,8 @@ class GitSigner extends cryptography_1.Keypair {
         const ephemeralAddress = this.#ephemeralKeypair.getPublicKey().toSuiAddress();
         const tx = new transactions_1.Transaction();
         tx.setSender(ephemeralAddress);
-        tx.setGasBudget(1000000);
-        tx.pure.string(encrypted);
+        tx.setGasBudget(10000000);
+        tx.pure.vector('u8', (0, utils_1.fromBase64)(encrypted));
         tx.transferObjects([tx.gas], ephemeralAddress);
         const { digest: request } = await this.#client.signAndExecuteTransaction({
             transaction: tx,
@@ -61606,7 +61606,7 @@ class GitSigner extends cryptography_1.Keypair {
                     tx.inputs.length > 0 &&
                     tx.inputs[0].type === 'pure' &&
                     Array.isArray(tx.inputs[0].value)) {
-                    const decrypted = await decryptBytes(new Uint8Array(tx.inputs[0].value), this.#pin);
+                    const decrypted = await decryptBytes(new Uint8Array(bcs_1.bcs.vector(bcs_1.bcs.u8()).parse(new Uint8Array(tx.inputs[0].value))), this.#pin);
                     const received = JSON.parse(new TextDecoder().decode(decrypted));
                     if (received.intent !== payload.intent) {
                         throw new Error(`Unexpected intent: received ${received.intent}, expected ${payload.intent}`);

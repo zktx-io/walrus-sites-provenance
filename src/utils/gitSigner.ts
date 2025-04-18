@@ -1,3 +1,4 @@
+import { bcs } from '@mysten/sui/bcs';
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 import {
   IntentScope,
@@ -70,7 +71,6 @@ const encryptBytes = async (message: Uint8Array, pin: string): Promise<string> =
 };
 
 const decryptBytes = async (encrypted: Uint8Array, pin: string): Promise<Uint8Array> => {
-  const decoder = new TextDecoder();
   const salt = encrypted.slice(0, SALT_LENGTH);
   const iv = encrypted.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
   const data = encrypted.slice(SALT_LENGTH + IV_LENGTH);
@@ -215,8 +215,8 @@ export class GitSigner extends Keypair {
     const ephemeralAddress = this.#ephemeralKeypair.getPublicKey().toSuiAddress();
     const tx = new Transaction();
     tx.setSender(ephemeralAddress);
-    tx.setGasBudget(1000000);
-    tx.pure.string(encrypted);
+    tx.setGasBudget(10000000);
+    tx.pure.vector('u8', fromBase64(encrypted));
     tx.transferObjects([tx.gas], ephemeralAddress);
     const { digest: request } = await this.#client.signAndExecuteTransaction({
       transaction: tx,
@@ -241,7 +241,10 @@ export class GitSigner extends Keypair {
           tx.inputs[0].type === 'pure' &&
           Array.isArray(tx.inputs[0].value)
         ) {
-          const decrypted = await decryptBytes(new Uint8Array(tx.inputs[0].value), this.#pin);
+          const decrypted = await decryptBytes(
+            new Uint8Array(bcs.vector(bcs.u8()).parse(new Uint8Array(tx.inputs[0].value))),
+            this.#pin,
+          );
           const received: { intent: IntentScope; signature: string } = JSON.parse(
             new TextDecoder().decode(decrypted),
           );
