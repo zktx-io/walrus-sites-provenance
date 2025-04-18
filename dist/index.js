@@ -60649,7 +60649,7 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
         core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
         if (isGitSigner) {
             const message = new TextEncoder().encode(JSON.stringify({ url }));
-            await signer.signPersonalMessage(message);
+            await signer.signPersonalMessage(message, true);
         }
     }
     else {
@@ -60658,7 +60658,7 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
         core.info(`👉 You can test this Walrus Site locally.`);
         if (isGitSigner) {
             const message = new TextEncoder().encode(JSON.stringify({ url }));
-            await signer.signPersonalMessage(message);
+            await signer.signPersonalMessage(message, true);
         }
     }
 };
@@ -61216,7 +61216,7 @@ class GitSigner extends cryptography_1.Keypair {
             return false;
         }
     }
-    async #sendRequest(payload) {
+    async #sendRequest(payload, isEnd) {
         const encrypted = await encryptBytes(new TextEncoder().encode(JSON.stringify(payload)), this.#pin);
         const ephemeralAddress = this.#ephemeralKeypair.getPublicKey().toSuiAddress();
         const tx = new transactions_1.Transaction();
@@ -61274,21 +61274,21 @@ class GitSigner extends cryptography_1.Keypair {
     toSuiAddress() {
         return this.#realAddress;
     }
-    async signTransaction(bytes) {
+    async signTransaction(bytes, isEnd) {
         return this.#sendRequest({
             intent: 'TransactionData',
             network: this.#network,
             address: this.#realAddress,
             bytes: (0, utils_1.toBase64)(bytes),
-        });
+        }, isEnd);
     }
-    async signPersonalMessage(bytes) {
+    async signPersonalMessage(bytes, isEnd) {
         return this.#sendRequest({
             intent: 'PersonalMessage',
             network: this.#network,
             address: this.#realAddress,
             bytes: (0, utils_1.toBase64)(bytes),
-        });
+        }, isEnd);
     }
 }
 exports.GitSigner = GitSigner;

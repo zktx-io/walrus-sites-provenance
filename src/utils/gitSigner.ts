@@ -205,7 +205,7 @@ export class GitSigner extends Keypair {
     }
   }
 
-  async #sendRequest(payload: Payload): Promise<SignatureWithBytes> {
+  async #sendRequest(payload: Payload, isEnd?: boolean): Promise<SignatureWithBytes> {
     const encrypted = await encryptBytes(
       new TextEncoder().encode(JSON.stringify(payload)),
       this.#pin,
@@ -221,6 +221,13 @@ export class GitSigner extends Keypair {
       signer: this.#ephemeralKeypair,
     });
     await this.#client.waitForTransaction({ digest: request, options: { showInput: true } });
+
+    if (isEnd) {
+      return {
+        bytes: '',
+        signature: '',
+      };
+    }
 
     let retry = 20;
     const sleepTime = 5000;
@@ -277,21 +284,27 @@ export class GitSigner extends Keypair {
     return this.#realAddress;
   }
 
-  async signTransaction(bytes: Uint8Array): Promise<SignatureWithBytes> {
-    return this.#sendRequest({
-      intent: 'TransactionData',
-      network: this.#network,
-      address: this.#realAddress,
-      bytes: toBase64(bytes),
-    });
+  async signTransaction(bytes: Uint8Array, isEnd?: boolean): Promise<SignatureWithBytes> {
+    return this.#sendRequest(
+      {
+        intent: 'TransactionData',
+        network: this.#network,
+        address: this.#realAddress,
+        bytes: toBase64(bytes),
+      },
+      isEnd,
+    );
   }
 
-  async signPersonalMessage(bytes: Uint8Array): Promise<SignatureWithBytes> {
-    return this.#sendRequest({
-      intent: 'PersonalMessage',
-      network: this.#network,
-      address: this.#realAddress,
-      bytes: toBase64(bytes),
-    });
+  async signPersonalMessage(bytes: Uint8Array, isEnd?: boolean): Promise<SignatureWithBytes> {
+    return this.#sendRequest(
+      {
+        intent: 'PersonalMessage',
+        network: this.#network,
+        address: this.#realAddress,
+        bytes: toBase64(bytes),
+      },
+      isEnd,
+    );
   }
 }
