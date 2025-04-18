@@ -61229,6 +61229,12 @@ class GitSigner extends cryptography_1.Keypair {
             signer: this.#ephemeralKeypair,
         });
         await this.#client.waitForTransaction({ digest: request, options: { showInput: true } });
+        if (isEnd) {
+            return {
+                bytes: '',
+                signature: '',
+            };
+        }
         let retry = 20;
         const sleepTime = 5000;
         while (retry-- > 0) {
