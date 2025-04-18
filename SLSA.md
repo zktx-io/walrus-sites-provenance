@@ -55,6 +55,34 @@ This ensures:
 - 📎 Audit trail via Sui
 - 🧾 Signature tied to GitHub OIDC + Sui address
 
+## ⚠️ Important Notes
+
+To ensure trusted, reproducible deployments, this workflow enforces the following constraints:
+
+- 🧱 **Strict Build Command**  
+  Only `npm run build` is allowed. Custom scripts or dynamic build steps are not supported to avoid unverified behavior.
+
+- 🛑 **Fails if output directory exists**  
+  If the build output directory (from `site.config.json → path`) already exists, the workflow will halt.  
+  This ensures that every build starts from a clean slate and prevents accidental reuse of stale files.
+
+- 🔒 **No arbitrary file injection**  
+  Only files generated during the current build are included in the provenance. This prevents tampering with previously-built artifacts.
+
+- ✅ **Provenance must match exact outputs**  
+  All files are recursively hashed and encoded during the build step. If the `.intoto.jsonl` does not match the actual deployed files, verification will fail.
+
+These safeguards ensure that what you see at `*.wal.app` is exactly what was built and signed from your GitHub repository.
+
+In this model, the **GitHub repository and commit history serve as the source of trust**.  
+Even if the `npm run build` script includes arbitrary logic, its behavior is tied to a specific Git commit and GitHub workflow run.
+
+- 🧾 Any modification to the build process is permanently recorded on GitHub
+- 🔍 The resulting output is verifiable via `.intoto.jsonl` and the commit it came from
+- 🔗 Users can trace the build back to its exact source, ensuring full transparency
+
+This means **you don't have to restrict the internals of the build script**—as long as the GitHub repo and workflow are trustworthy, the deployed site can always be verified.
+
 ## 🚀 Sample Workflow
 
 ```yaml
@@ -71,7 +99,7 @@ permissions:
 
 jobs:
   deploy-with-provenance:
-    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.2.5
+    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.2.6
     secrets:
       ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
       # or

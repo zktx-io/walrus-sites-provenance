@@ -9654,120 +9654,6 @@ async function pbkdf2Async(hash, password, salt, opts) {
 
 /***/ }),
 
-/***/ 91289:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ripemd160 = exports.RIPEMD160 = void 0;
-/**
- * RIPEMD-160 legacy hash function.
- * https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
- * https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf
- * @module
- */
-const _md_js_1 = __nccwpck_require__(24901);
-const utils_js_1 = __nccwpck_require__(4248);
-const Rho = /* @__PURE__ */ new Uint8Array([7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8]);
-const Id = /* @__PURE__ */ new Uint8Array(new Array(16).fill(0).map((_, i) => i));
-const Pi = /* @__PURE__ */ Id.map((i) => (9 * i + 5) % 16);
-let idxL = [Id];
-let idxR = [Pi];
-for (let i = 0; i < 4; i++)
-    for (let j of [idxL, idxR])
-        j.push(j[i].map((k) => Rho[k]));
-const shifts = /* @__PURE__ */ [
-    [11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8],
-    [12, 13, 11, 15, 6, 9, 9, 7, 12, 15, 11, 13, 7, 8, 7, 7],
-    [13, 15, 14, 11, 7, 7, 6, 8, 13, 14, 13, 12, 5, 5, 6, 9],
-    [14, 11, 12, 14, 8, 6, 5, 5, 15, 12, 15, 14, 9, 9, 8, 6],
-    [15, 12, 13, 13, 9, 5, 8, 6, 14, 11, 12, 11, 8, 6, 5, 5],
-].map((i) => new Uint8Array(i));
-const shiftsL = /* @__PURE__ */ idxL.map((idx, i) => idx.map((j) => shifts[i][j]));
-const shiftsR = /* @__PURE__ */ idxR.map((idx, i) => idx.map((j) => shifts[i][j]));
-const Kl = /* @__PURE__ */ new Uint32Array([
-    0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e,
-]);
-const Kr = /* @__PURE__ */ new Uint32Array([
-    0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000,
-]);
-// It's called f() in spec.
-function f(group, x, y, z) {
-    if (group === 0)
-        return x ^ y ^ z;
-    else if (group === 1)
-        return (x & y) | (~x & z);
-    else if (group === 2)
-        return (x | ~y) ^ z;
-    else if (group === 3)
-        return (x & z) | (y & ~z);
-    else
-        return x ^ (y | ~z);
-}
-// Temporary buffer, not used to store anything between runs
-const R_BUF = /* @__PURE__ */ new Uint32Array(16);
-class RIPEMD160 extends _md_js_1.HashMD {
-    constructor() {
-        super(64, 20, 8, true);
-        this.h0 = 0x67452301 | 0;
-        this.h1 = 0xefcdab89 | 0;
-        this.h2 = 0x98badcfe | 0;
-        this.h3 = 0x10325476 | 0;
-        this.h4 = 0xc3d2e1f0 | 0;
-    }
-    get() {
-        const { h0, h1, h2, h3, h4 } = this;
-        return [h0, h1, h2, h3, h4];
-    }
-    set(h0, h1, h2, h3, h4) {
-        this.h0 = h0 | 0;
-        this.h1 = h1 | 0;
-        this.h2 = h2 | 0;
-        this.h3 = h3 | 0;
-        this.h4 = h4 | 0;
-    }
-    process(view, offset) {
-        for (let i = 0; i < 16; i++, offset += 4)
-            R_BUF[i] = view.getUint32(offset, true);
-        // prettier-ignore
-        let al = this.h0 | 0, ar = al, bl = this.h1 | 0, br = bl, cl = this.h2 | 0, cr = cl, dl = this.h3 | 0, dr = dl, el = this.h4 | 0, er = el;
-        // Instead of iterating 0 to 80, we split it into 5 groups
-        // And use the groups in constants, functions, etc. Much simpler
-        for (let group = 0; group < 5; group++) {
-            const rGroup = 4 - group;
-            const hbl = Kl[group], hbr = Kr[group]; // prettier-ignore
-            const rl = idxL[group], rr = idxR[group]; // prettier-ignore
-            const sl = shiftsL[group], sr = shiftsR[group]; // prettier-ignore
-            for (let i = 0; i < 16; i++) {
-                const tl = ((0, utils_js_1.rotl)(al + f(group, bl, cl, dl) + R_BUF[rl[i]] + hbl, sl[i]) + el) | 0;
-                al = el, el = dl, dl = (0, utils_js_1.rotl)(cl, 10) | 0, cl = bl, bl = tl; // prettier-ignore
-            }
-            // 2 loops are 10% faster
-            for (let i = 0; i < 16; i++) {
-                const tr = ((0, utils_js_1.rotl)(ar + f(rGroup, br, cr, dr) + R_BUF[rr[i]] + hbr, sr[i]) + er) | 0;
-                ar = er, er = dr, dr = (0, utils_js_1.rotl)(cr, 10) | 0, cr = br, br = tr; // prettier-ignore
-            }
-        }
-        // Add the compressed chunk to the current hash value
-        this.set((this.h1 + cl + dr) | 0, (this.h2 + dl + er) | 0, (this.h3 + el + ar) | 0, (this.h4 + al + br) | 0, (this.h0 + bl + cr) | 0);
-    }
-    roundClean() {
-        R_BUF.fill(0);
-    }
-    destroy() {
-        this.destroyed = true;
-        this.buffer.fill(0);
-        this.set(0, 0, 0, 0, 0);
-    }
-}
-exports.RIPEMD160 = RIPEMD160;
-/** RIPEMD-160 - a legacy hash function from 1990s. */
-exports.ripemd160 = (0, utils_js_1.wrapConstructor)(() => new RIPEMD160());
-//# sourceMappingURL=ripemd160.js.map
-
-/***/ }),
-
 /***/ 77178:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -10956,307 +10842,6 @@ const stringToBytes = (type, str) => {
 };
 exports.stringToBytes = stringToBytes;
 exports.bytes = exports.stringToBytes;
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 92269:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HDKey = exports.HARDENED_OFFSET = void 0;
-/**
- * @module BIP32 hierarchical deterministic (HD) wallets over secp256k1.
- * @example
- * ```js
- * import { HDKey } from "@scure/bip32";
- * const hdkey1 = HDKey.fromMasterSeed(seed);
- * const hdkey2 = HDKey.fromExtendedKey(base58key);
- * const hdkey3 = HDKey.fromJSON({ xpriv: string });
- *
- * // props
- * [hdkey1.depth, hdkey1.index, hdkey1.chainCode];
- * console.log(hdkey2.privateKey, hdkey2.publicKey);
- * console.log(hdkey3.derive("m/0/2147483647'/1"));
- * const sig = hdkey3.sign(hash);
- * hdkey3.verify(hash, sig);
- * ```
- */
-/*! scure-bip32 - MIT License (c) 2022 Patricio Palladino, Paul Miller (paulmillr.com) */
-const hmac_1 = __nccwpck_require__(11494);
-const ripemd160_1 = __nccwpck_require__(91289);
-const sha256_1 = __nccwpck_require__(77178);
-const sha512_1 = __nccwpck_require__(57507);
-const _assert_1 = __nccwpck_require__(44894);
-const utils_1 = __nccwpck_require__(4248);
-const secp256k1_1 = __nccwpck_require__(86001);
-const modular_1 = __nccwpck_require__(49542);
-const base_1 = __nccwpck_require__(80628);
-const Point = secp256k1_1.secp256k1.ProjectivePoint;
-const base58check = (0, base_1.createBase58check)(sha256_1.sha256);
-function bytesToNumber(bytes) {
-    (0, _assert_1.abytes)(bytes);
-    const h = bytes.length === 0 ? '0' : (0, utils_1.bytesToHex)(bytes);
-    return BigInt('0x' + h);
-}
-function numberToBytes(num) {
-    if (typeof num !== 'bigint')
-        throw new Error('bigint expected');
-    return (0, utils_1.hexToBytes)(num.toString(16).padStart(64, '0'));
-}
-const MASTER_SECRET = (0, utils_1.utf8ToBytes)('Bitcoin seed');
-// Bitcoin hardcoded by default
-const BITCOIN_VERSIONS = { private: 0x0488ade4, public: 0x0488b21e };
-exports.HARDENED_OFFSET = 0x80000000;
-const hash160 = (data) => (0, ripemd160_1.ripemd160)((0, sha256_1.sha256)(data));
-const fromU32 = (data) => (0, utils_1.createView)(data).getUint32(0, false);
-const toU32 = (n) => {
-    if (!Number.isSafeInteger(n) || n < 0 || n > 2 ** 32 - 1) {
-        throw new Error('invalid number, should be from 0 to 2**32-1, got ' + n);
-    }
-    const buf = new Uint8Array(4);
-    (0, utils_1.createView)(buf).setUint32(0, n, false);
-    return buf;
-};
-class HDKey {
-    get fingerprint() {
-        if (!this.pubHash) {
-            throw new Error('No publicKey set!');
-        }
-        return fromU32(this.pubHash);
-    }
-    get identifier() {
-        return this.pubHash;
-    }
-    get pubKeyHash() {
-        return this.pubHash;
-    }
-    get privateKey() {
-        return this.privKeyBytes || null;
-    }
-    get publicKey() {
-        return this.pubKey || null;
-    }
-    get privateExtendedKey() {
-        const priv = this.privateKey;
-        if (!priv) {
-            throw new Error('No private key');
-        }
-        return base58check.encode(this.serialize(this.versions.private, (0, utils_1.concatBytes)(new Uint8Array([0]), priv)));
-    }
-    get publicExtendedKey() {
-        if (!this.pubKey) {
-            throw new Error('No public key');
-        }
-        return base58check.encode(this.serialize(this.versions.public, this.pubKey));
-    }
-    static fromMasterSeed(seed, versions = BITCOIN_VERSIONS) {
-        (0, _assert_1.abytes)(seed);
-        if (8 * seed.length < 128 || 8 * seed.length > 512) {
-            throw new Error('HDKey: seed length must be between 128 and 512 bits; 256 bits is advised, got ' +
-                seed.length);
-        }
-        const I = (0, hmac_1.hmac)(sha512_1.sha512, MASTER_SECRET, seed);
-        return new HDKey({
-            versions,
-            chainCode: I.slice(32),
-            privateKey: I.slice(0, 32),
-        });
-    }
-    static fromExtendedKey(base58key, versions = BITCOIN_VERSIONS) {
-        // => version(4) || depth(1) || fingerprint(4) || index(4) || chain(32) || key(33)
-        const keyBuffer = base58check.decode(base58key);
-        const keyView = (0, utils_1.createView)(keyBuffer);
-        const version = keyView.getUint32(0, false);
-        const opt = {
-            versions,
-            depth: keyBuffer[4],
-            parentFingerprint: keyView.getUint32(5, false),
-            index: keyView.getUint32(9, false),
-            chainCode: keyBuffer.slice(13, 45),
-        };
-        const key = keyBuffer.slice(45);
-        const isPriv = key[0] === 0;
-        if (version !== versions[isPriv ? 'private' : 'public']) {
-            throw new Error('Version mismatch');
-        }
-        if (isPriv) {
-            return new HDKey({ ...opt, privateKey: key.slice(1) });
-        }
-        else {
-            return new HDKey({ ...opt, publicKey: key });
-        }
-    }
-    static fromJSON(json) {
-        return HDKey.fromExtendedKey(json.xpriv);
-    }
-    constructor(opt) {
-        this.depth = 0;
-        this.index = 0;
-        this.chainCode = null;
-        this.parentFingerprint = 0;
-        if (!opt || typeof opt !== 'object') {
-            throw new Error('HDKey.constructor must not be called directly');
-        }
-        this.versions = opt.versions || BITCOIN_VERSIONS;
-        this.depth = opt.depth || 0;
-        this.chainCode = opt.chainCode || null;
-        this.index = opt.index || 0;
-        this.parentFingerprint = opt.parentFingerprint || 0;
-        if (!this.depth) {
-            if (this.parentFingerprint || this.index) {
-                throw new Error('HDKey: zero depth with non-zero index/parent fingerprint');
-            }
-        }
-        if (opt.publicKey && opt.privateKey) {
-            throw new Error('HDKey: publicKey and privateKey at same time.');
-        }
-        if (opt.privateKey) {
-            if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(opt.privateKey)) {
-                throw new Error('Invalid private key');
-            }
-            this.privKey =
-                typeof opt.privateKey === 'bigint' ? opt.privateKey : bytesToNumber(opt.privateKey);
-            this.privKeyBytes = numberToBytes(this.privKey);
-            this.pubKey = secp256k1_1.secp256k1.getPublicKey(opt.privateKey, true);
-        }
-        else if (opt.publicKey) {
-            this.pubKey = Point.fromHex(opt.publicKey).toRawBytes(true); // force compressed point
-        }
-        else {
-            throw new Error('HDKey: no public or private key provided');
-        }
-        this.pubHash = hash160(this.pubKey);
-    }
-    derive(path) {
-        if (!/^[mM]'?/.test(path)) {
-            throw new Error('Path must start with "m" or "M"');
-        }
-        if (/^[mM]'?$/.test(path)) {
-            return this;
-        }
-        const parts = path.replace(/^[mM]'?\//, '').split('/');
-        // tslint:disable-next-line
-        let child = this;
-        for (const c of parts) {
-            const m = /^(\d+)('?)$/.exec(c);
-            const m1 = m && m[1];
-            if (!m || m.length !== 3 || typeof m1 !== 'string')
-                throw new Error('invalid child index: ' + c);
-            let idx = +m1;
-            if (!Number.isSafeInteger(idx) || idx >= exports.HARDENED_OFFSET) {
-                throw new Error('Invalid index');
-            }
-            // hardened key
-            if (m[2] === "'") {
-                idx += exports.HARDENED_OFFSET;
-            }
-            child = child.deriveChild(idx);
-        }
-        return child;
-    }
-    deriveChild(index) {
-        if (!this.pubKey || !this.chainCode) {
-            throw new Error('No publicKey or chainCode set');
-        }
-        let data = toU32(index);
-        if (index >= exports.HARDENED_OFFSET) {
-            // Hardened
-            const priv = this.privateKey;
-            if (!priv) {
-                throw new Error('Could not derive hardened child key');
-            }
-            // Hardened child: 0x00 || ser256(kpar) || ser32(index)
-            data = (0, utils_1.concatBytes)(new Uint8Array([0]), priv, data);
-        }
-        else {
-            // Normal child: serP(point(kpar)) || ser32(index)
-            data = (0, utils_1.concatBytes)(this.pubKey, data);
-        }
-        const I = (0, hmac_1.hmac)(sha512_1.sha512, this.chainCode, data);
-        const childTweak = bytesToNumber(I.slice(0, 32));
-        const chainCode = I.slice(32);
-        if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(childTweak)) {
-            throw new Error('Tweak bigger than curve order');
-        }
-        const opt = {
-            versions: this.versions,
-            chainCode,
-            depth: this.depth + 1,
-            parentFingerprint: this.fingerprint,
-            index,
-        };
-        try {
-            // Private parent key -> private child key
-            if (this.privateKey) {
-                const added = (0, modular_1.mod)(this.privKey + childTweak, secp256k1_1.secp256k1.CURVE.n);
-                if (!secp256k1_1.secp256k1.utils.isValidPrivateKey(added)) {
-                    throw new Error('The tweak was out of range or the resulted private key is invalid');
-                }
-                opt.privateKey = added;
-            }
-            else {
-                const added = Point.fromHex(this.pubKey).add(Point.fromPrivateKey(childTweak));
-                // Cryptographically impossible: hmac-sha512 preimage would need to be found
-                if (added.equals(Point.ZERO)) {
-                    throw new Error('The tweak was equal to negative P, which made the result key invalid');
-                }
-                opt.publicKey = added.toRawBytes(true);
-            }
-            return new HDKey(opt);
-        }
-        catch (err) {
-            return this.deriveChild(index + 1);
-        }
-    }
-    sign(hash) {
-        if (!this.privateKey) {
-            throw new Error('No privateKey set!');
-        }
-        (0, _assert_1.abytes)(hash, 32);
-        return secp256k1_1.secp256k1.sign(hash, this.privKey).toCompactRawBytes();
-    }
-    verify(hash, signature) {
-        (0, _assert_1.abytes)(hash, 32);
-        (0, _assert_1.abytes)(signature, 64);
-        if (!this.publicKey) {
-            throw new Error('No publicKey set!');
-        }
-        let sig;
-        try {
-            sig = secp256k1_1.secp256k1.Signature.fromCompact(signature);
-        }
-        catch (error) {
-            return false;
-        }
-        return secp256k1_1.secp256k1.verify(sig, hash, this.publicKey);
-    }
-    wipePrivateData() {
-        this.privKey = undefined;
-        if (this.privKeyBytes) {
-            this.privKeyBytes.fill(0);
-            this.privKeyBytes = undefined;
-        }
-        return this;
-    }
-    toJSON() {
-        return {
-            xpriv: this.privateExtendedKey,
-            xpub: this.publicExtendedKey,
-        };
-    }
-    serialize(version, key) {
-        if (!this.chainCode) {
-            throw new Error('No chainCode set');
-        }
-        (0, _assert_1.abytes)(key, 33);
-        // version(4) || depth(1) || fingerprint(4) || index(4) || chain(32) || key(33)
-        return (0, utils_1.concatBytes)(toU32(version), new Uint8Array([this.depth]), toU32(this.parentFingerprint), toU32(this.index), this.chainCode, key);
-    }
-}
-exports.HDKey = HDKey;
 //# sourceMappingURL=index.js.map
 
 /***/ }),
@@ -61480,11 +61065,9 @@ const client_1 = __nccwpck_require__(70827);
 const cryptography_1 = __nccwpck_require__(51250);
 const faucet_1 = __nccwpck_require__(78612);
 const ed25519_1 = __nccwpck_require__(92094);
-const passkey_1 = __nccwpck_require__(39391);
-const secp256k1_1 = __nccwpck_require__(42551);
-const secp256r1_1 = __nccwpck_require__(2138);
 const transactions_1 = __nccwpck_require__(59417);
 const utils_1 = __nccwpck_require__(33973);
+const verify_1 = __nccwpck_require__(75693);
 const writeBlobHelper_1 = __nccwpck_require__(42452);
 const NETWORK = 'devnet';
 const SALT_LENGTH = 16;
@@ -61585,28 +61168,21 @@ class GitSigner extends cryptography_1.Keypair {
         this.#pin = pin;
         this.#client = client;
     }
-    async #verifySignature(bytes, serializedSignature) {
+    async #verifySignature(payload, signature) {
         try {
-            const parsed = (0, cryptography_1.parseSerializedSignature)(serializedSignature);
-            let publickey = undefined;
-            switch (parsed.signatureScheme) {
-                case 'ED25519':
-                    publickey = new ed25519_1.Ed25519PublicKey(parsed.publicKey);
-                    break;
-                case 'Secp256k1':
-                    publickey = new secp256k1_1.Secp256k1PublicKey(parsed.publicKey);
-                    break;
-                case 'Secp256r1':
-                    publickey = new secp256r1_1.Secp256r1PublicKey(parsed.publicKey);
-                    break;
-                case 'Passkey':
-                    publickey = new passkey_1.PasskeyPublicKey(parsed.publicKey);
-                    break;
+            switch (payload.intent) {
+                case 'TransactionData': {
+                    const pubKey = await (0, verify_1.verifyTransactionSignature)((0, utils_1.fromBase64)(payload.bytes), signature);
+                    return pubKey.toSuiAddress() === this.#realAddress;
+                }
+                case 'PersonalMessage': {
+                    const pubKey = await (0, verify_1.verifyPersonalMessageSignature)((0, utils_1.fromBase64)(payload.bytes), signature);
+                    return pubKey.toSuiAddress() === this.#realAddress;
+                }
+                default:
+                    core.setFailed(`Unknown intent: ${payload.intent}`);
+                    return false;
             }
-            if (!publickey || publickey.toSuiAddress() !== this.#realAddress || !parsed.signature) {
-                return false;
-            }
-            return publickey.verify(bytes, parsed.signature);
         }
         catch {
             return false;
@@ -61628,7 +61204,7 @@ class GitSigner extends cryptography_1.Keypair {
         let retry = 20;
         const sleepTime = 5000;
         while (retry-- > 0) {
-            core.info('Wating for response...');
+            core.info(`⏳ Waiting for response... (${retry} retries left)`);
             const { data } = await this.#client.queryTransactionBlocks({
                 filter: { FromAddress: ephemeralAddress },
                 order: 'descending',
@@ -61645,12 +61221,12 @@ class GitSigner extends cryptography_1.Keypair {
                     const received = JSON.parse(new TextDecoder().decode(decrypted));
                     if (received.intent !== payload.intent) {
                         core.setFailed(`Unexpected intent: received ${received.intent}, expected ${payload.intent}`);
-                        throw new Error('Process will be terminated. (Unexpected intent)');
+                        throw new Error('Process will be terminated.');
                     }
-                    const verify = await this.#verifySignature((0, utils_1.fromBase64)(payload.bytes), received.signature);
+                    const verify = await this.#verifySignature(payload, received.signature);
                     if (!verify) {
                         core.setFailed(`Signature verification failed for address ${this.#realAddress}`);
-                        throw new Error('Process will be terminated. (Signature verification failed)');
+                        throw new Error('Process will be terminated.');
                     }
                     return {
                         bytes: payload.bytes,
@@ -61659,13 +61235,13 @@ class GitSigner extends cryptography_1.Keypair {
                 }
                 else {
                     core.setFailed(`Invalid tx type or structure: ${JSON.stringify(tx)}`);
-                    throw new Error('Process will be terminated. (Invalid tx type or structure)');
+                    throw new Error('Process will be terminated.');
                 }
             }
             await (0, writeBlobHelper_1.sleep)(sleepTime);
         }
         core.setFailed('Timeout: transaction not found');
-        throw new Error('Process will be terminated. (Timeout)');
+        throw new Error('Process will be terminated.');
     }
     toSuiAddress() {
         return this.#realAddress;
@@ -69553,302 +69129,6 @@ Ed25519PublicKey.SIZE = PUBLIC_KEY_SIZE;
 
 /***/ }),
 
-/***/ 39391:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var passkey_exports = {};
-__export(passkey_exports, {
-  BrowserPasskeyProvider: () => import_keypair.BrowserPasskeyProvider,
-  PasskeyKeypair: () => import_keypair.PasskeyKeypair,
-  PasskeyPublicKey: () => import_publickey.PasskeyPublicKey,
-  findCommonPublicKey: () => import_keypair.findCommonPublicKey
-});
-module.exports = __toCommonJS(passkey_exports);
-var import_keypair = __nccwpck_require__(19720);
-var import_publickey = __nccwpck_require__(33187);
-//# sourceMappingURL=index.js.map
-
-
-/***/ }),
-
-/***/ 19720:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __typeError = (msg) => {
-  throw TypeError(msg);
-};
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
-var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
-var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
-var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
-var keypair_exports = {};
-__export(keypair_exports, {
-  BrowserPasskeyProvider: () => BrowserPasskeyProvider,
-  PasskeyKeypair: () => PasskeyKeypair,
-  findCommonPublicKey: () => findCommonPublicKey
-});
-module.exports = __toCommonJS(keypair_exports);
-var import_bcs = __nccwpck_require__(88830);
-var import_p256 = __nccwpck_require__(17544);
-var import_blake2b = __nccwpck_require__(15596);
-var import_sha256 = __nccwpck_require__(77178);
-var import_utils = __nccwpck_require__(4248);
-var import_bcs2 = __nccwpck_require__(33388);
-var import_cryptography = __nccwpck_require__(51250);
-var import_publickey = __nccwpck_require__(33187);
-var _name, _options;
-class BrowserPasskeyProvider {
-  constructor(name, options) {
-    __privateAdd(this, _name);
-    __privateAdd(this, _options);
-    __privateSet(this, _name, name);
-    __privateSet(this, _options, options);
-  }
-  async create() {
-    return await navigator.credentials.create({
-      publicKey: {
-        timeout: __privateGet(this, _options).timeout ?? 6e4,
-        ...__privateGet(this, _options),
-        rp: {
-          name: __privateGet(this, _name),
-          ...__privateGet(this, _options).rp
-        },
-        user: {
-          name: __privateGet(this, _name),
-          displayName: __privateGet(this, _name),
-          ...__privateGet(this, _options).user,
-          id: (0, import_utils.randomBytes)(10)
-        },
-        challenge: new TextEncoder().encode("Create passkey wallet on Sui"),
-        pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-        authenticatorSelection: {
-          authenticatorAttachment: "cross-platform",
-          residentKey: "required",
-          requireResidentKey: true,
-          userVerification: "required",
-          ...__privateGet(this, _options).authenticatorSelection
-        }
-      }
-    });
-  }
-  async get(challenge) {
-    return await navigator.credentials.get({
-      publicKey: {
-        challenge,
-        userVerification: __privateGet(this, _options).authenticatorSelection?.userVerification || "required",
-        timeout: __privateGet(this, _options).timeout ?? 6e4
-      }
-    });
-  }
-}
-_name = new WeakMap();
-_options = new WeakMap();
-class PasskeyKeypair extends import_cryptography.Signer {
-  /**
-   * Get the key scheme of passkey,
-   */
-  getKeyScheme() {
-    return "Passkey";
-  }
-  /**
-   * Creates an instance of Passkey signer. If no passkey wallet had created before,
-   * use `getPasskeyInstance`. For example:
-   * ```
-   * let provider = new BrowserPasskeyProvider('Sui Passkey Example',{
-   * 	  rpName: 'Sui Passkey Example',
-   * 	  rpId: window.location.hostname,
-   * } as BrowserPasswordProviderOptions);
-   * const signer = await PasskeyKeypair.getPasskeyInstance(provider);
-   * ```
-   *
-   * If there are existing passkey wallet, use `signAndRecover` to identify the correct
-   * public key and then initialize the instance. See usage in `signAndRecover`.
-   */
-  constructor(publicKey, provider) {
-    super();
-    this.publicKey = publicKey;
-    this.provider = provider;
-  }
-  /**
-   * Creates an instance of Passkey signer invoking the passkey from navigator.
-   * Note that this will invoke the passkey device to create a fresh credential.
-   * Should only be called if passkey wallet is created for the first time.
-   *
-   * @param provider - the passkey provider.
-   * @returns the passkey instance.
-   */
-  static async getPasskeyInstance(provider) {
-    const credential = await provider.create();
-    if (!credential.response.getPublicKey()) {
-      throw new Error("Invalid credential create response");
-    } else {
-      const derSPKI = credential.response.getPublicKey();
-      const pubkeyUncompressed = (0, import_publickey.parseDerSPKI)(new Uint8Array(derSPKI));
-      const pubkey = import_p256.secp256r1.ProjectivePoint.fromHex(pubkeyUncompressed);
-      const pubkeyCompressed = pubkey.toRawBytes(true);
-      return new PasskeyKeypair(pubkeyCompressed, provider);
-    }
-  }
-  /**
-   * Return the public key for this passkey.
-   */
-  getPublicKey() {
-    return new import_publickey.PasskeyPublicKey(this.publicKey);
-  }
-  /**
-   * Return the signature for the provided data (i.e. blake2b(intent_message)).
-   * This is sent to passkey as the challenge field.
-   */
-  async sign(data) {
-    const credential = await this.provider.get(data);
-    const authenticatorData = new Uint8Array(credential.response.authenticatorData);
-    const clientDataJSON = new Uint8Array(credential.response.clientDataJSON);
-    const decoder = new TextDecoder();
-    const clientDataJSONString = decoder.decode(clientDataJSON);
-    const sig = import_p256.secp256r1.Signature.fromDER(new Uint8Array(credential.response.signature));
-    const normalized = sig.normalizeS().toCompactRawBytes();
-    if (normalized.length !== import_publickey.PASSKEY_SIGNATURE_SIZE || this.publicKey.length !== import_publickey.PASSKEY_PUBLIC_KEY_SIZE) {
-      throw new Error("Invalid signature or public key length");
-    }
-    const arr = new Uint8Array(1 + normalized.length + this.publicKey.length);
-    arr.set([import_cryptography.SIGNATURE_SCHEME_TO_FLAG["Secp256r1"]]);
-    arr.set(normalized, 1);
-    arr.set(this.publicKey, 1 + normalized.length);
-    return import_bcs2.PasskeyAuthenticator.serialize({
-      authenticatorData,
-      clientDataJson: clientDataJSONString,
-      userSignature: arr
-    }).toBytes();
-  }
-  /**
-   * This overrides the base class implementation that accepts the raw bytes and signs its
-   * digest of the intent message, then serialize it with the passkey flag.
-   */
-  async signWithIntent(bytes, intent) {
-    const intentMessage = (0, import_cryptography.messageWithIntent)(intent, bytes);
-    const digest = (0, import_blake2b.blake2b)(intentMessage, { dkLen: 32 });
-    const signature = await this.sign(digest);
-    const serializedSignature = new Uint8Array(1 + signature.length);
-    serializedSignature.set([import_cryptography.SIGNATURE_SCHEME_TO_FLAG[this.getKeyScheme()]]);
-    serializedSignature.set(signature, 1);
-    return {
-      signature: (0, import_bcs.toBase64)(serializedSignature),
-      bytes: (0, import_bcs.toBase64)(bytes)
-    };
-  }
-  /**
-   * Given a message, asks the passkey device to sign it and return all (up to 4) possible public keys.
-   * See: https://bitcoin.stackexchange.com/questions/81232/how-is-public-key-extracted-from-message-digital-signature-address
-   *
-   * This is useful if the user previously created passkey wallet with the origin, but the wallet session
-   * does not have the public key / address. By calling this method twice with two different messages, the
-   * wallet can compare the returned public keys and uniquely identify the previously created passkey wallet
-   * using `findCommonPublicKey`.
-   *
-   * Alternatively, one call can be made and all possible public keys should be checked onchain to see if
-   * there is any assets.
-   *
-   * Once the correct public key is identified, a passkey instance can then be initialized with this public key.
-   *
-   * Example usage to recover wallet with two signing calls:
-   * ```
-   * let provider = new BrowserPasskeyProvider('Sui Passkey Example',{
-   *     rpName: 'Sui Passkey Example',
-   * 	   rpId: window.location.hostname,
-   * } as BrowserPasswordProviderOptions);
-   * const testMessage = new TextEncoder().encode('Hello world!');
-   * const possiblePks = await PasskeyKeypair.signAndRecover(provider, testMessage);
-   * const testMessage2 = new TextEncoder().encode('Hello world 2!');
-   * const possiblePks2 = await PasskeyKeypair.signAndRecover(provider, testMessage2);
-   * const commonPk = findCommonPublicKey(possiblePks, possiblePks2);
-   * const signer = new PasskeyKeypair(provider, commonPk.toRawBytes());
-   * ```
-   *
-   * @param provider - the passkey provider.
-   * @param message - the message to sign.
-   * @returns all possible public keys.
-   */
-  static async signAndRecover(provider, message) {
-    const credential = await provider.get(message);
-    const fullMessage = messageFromAssertionResponse(credential.response);
-    const sig = import_p256.secp256r1.Signature.fromDER(new Uint8Array(credential.response.signature));
-    const res = [];
-    for (let i = 0; i < 4; i++) {
-      const s = sig.addRecoveryBit(i);
-      try {
-        const pubkey = s.recoverPublicKey((0, import_sha256.sha256)(fullMessage));
-        const pk = new import_publickey.PasskeyPublicKey(pubkey.toRawBytes(true));
-        res.push(pk);
-      } catch {
-        continue;
-      }
-    }
-    return res;
-  }
-}
-function findCommonPublicKey(arr1, arr2) {
-  const matchingPubkeys = [];
-  for (const pubkey1 of arr1) {
-    for (const pubkey2 of arr2) {
-      if (pubkey1.equals(pubkey2)) {
-        matchingPubkeys.push(pubkey1);
-      }
-    }
-  }
-  if (matchingPubkeys.length !== 1) {
-    throw new Error("No unique public key found");
-  }
-  return matchingPubkeys[0];
-}
-function messageFromAssertionResponse(response) {
-  const authenticatorData = new Uint8Array(response.authenticatorData);
-  const clientDataJSON = new Uint8Array(response.clientDataJSON);
-  const clientDataJSONDigest = (0, import_sha256.sha256)(clientDataJSON);
-  return new Uint8Array([...authenticatorData, ...clientDataJSONDigest]);
-}
-//# sourceMappingURL=keypair.js.map
-
-
-/***/ }),
-
 /***/ 33187:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -70025,200 +69305,6 @@ function parseSerializedPasskeySignature(signature) {
 
 /***/ }),
 
-/***/ 42551:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var secp256k1_exports = {};
-__export(secp256k1_exports, {
-  DEFAULT_SECP256K1_DERIVATION_PATH: () => import_keypair.DEFAULT_SECP256K1_DERIVATION_PATH,
-  Secp256k1Keypair: () => import_keypair.Secp256k1Keypair,
-  Secp256k1PublicKey: () => import_publickey.Secp256k1PublicKey
-});
-module.exports = __toCommonJS(secp256k1_exports);
-var import_keypair = __nccwpck_require__(89376);
-var import_publickey = __nccwpck_require__(37323);
-//# sourceMappingURL=index.js.map
-
-
-/***/ }),
-
-/***/ 89376:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var keypair_exports = {};
-__export(keypair_exports, {
-  DEFAULT_SECP256K1_DERIVATION_PATH: () => DEFAULT_SECP256K1_DERIVATION_PATH,
-  Secp256k1Keypair: () => Secp256k1Keypair
-});
-module.exports = __toCommonJS(keypair_exports);
-var import_secp256k1 = __nccwpck_require__(86001);
-var import_blake2b = __nccwpck_require__(15596);
-var import_sha256 = __nccwpck_require__(77178);
-var import_utils = __nccwpck_require__(4248);
-var import_bip32 = __nccwpck_require__(92269);
-var import_keypair = __nccwpck_require__(82109);
-var import_mnemonics = __nccwpck_require__(51619);
-var import_publickey = __nccwpck_require__(37323);
-const DEFAULT_SECP256K1_DERIVATION_PATH = "m/54'/784'/0'/0/0";
-class Secp256k1Keypair extends import_keypair.Keypair {
-  /**
-   * Create a new keypair instance.
-   * Generate random keypair if no {@link Secp256k1Keypair} is provided.
-   *
-   * @param keypair secp256k1 keypair
-   */
-  constructor(keypair) {
-    super();
-    if (keypair) {
-      this.keypair = keypair;
-    } else {
-      const secretKey = import_secp256k1.secp256k1.utils.randomPrivateKey();
-      const publicKey = import_secp256k1.secp256k1.getPublicKey(secretKey, true);
-      this.keypair = { publicKey, secretKey };
-    }
-  }
-  /**
-   * Get the key scheme of the keypair Secp256k1
-   */
-  getKeyScheme() {
-    return "Secp256k1";
-  }
-  /**
-   * Generate a new random keypair
-   */
-  static generate() {
-    return new Secp256k1Keypair();
-  }
-  /**
-   * Create a keypair from a raw secret key byte array.
-   *
-   * This method should only be used to recreate a keypair from a previously
-   * generated secret key. Generating keypairs from a random seed should be done
-   * with the {@link Keypair.fromSeed} method.
-   *
-   * @throws error if the provided secret key is invalid and validation is not skipped.
-   *
-   * @param secretKey secret key byte array  or Bech32 secret key string
-   * @param options: skip secret key validation
-   */
-  static fromSecretKey(secretKey, options) {
-    if (typeof secretKey === "string") {
-      const decoded = (0, import_keypair.decodeSuiPrivateKey)(secretKey);
-      if (decoded.schema !== "Secp256k1") {
-        throw new Error(`Expected a Secp256k1 keypair, got ${decoded.schema}`);
-      }
-      return this.fromSecretKey(decoded.secretKey, options);
-    }
-    const publicKey = import_secp256k1.secp256k1.getPublicKey(secretKey, true);
-    if (!options || !options.skipValidation) {
-      const encoder = new TextEncoder();
-      const signData = encoder.encode("sui validation");
-      const msgHash = (0, import_utils.bytesToHex)((0, import_blake2b.blake2b)(signData, { dkLen: 32 }));
-      const signature = import_secp256k1.secp256k1.sign(msgHash, secretKey);
-      if (!import_secp256k1.secp256k1.verify(signature, msgHash, publicKey, { lowS: true })) {
-        throw new Error("Provided secretKey is invalid");
-      }
-    }
-    return new Secp256k1Keypair({ publicKey, secretKey });
-  }
-  /**
-   * Generate a keypair from a 32 byte seed.
-   *
-   * @param seed seed byte array
-   */
-  static fromSeed(seed) {
-    const publicKey = import_secp256k1.secp256k1.getPublicKey(seed, true);
-    return new Secp256k1Keypair({ publicKey, secretKey: seed });
-  }
-  /**
-   * The public key for this keypair
-   */
-  getPublicKey() {
-    return new import_publickey.Secp256k1PublicKey(this.keypair.publicKey);
-  }
-  /**
-   * The Bech32 secret key string for this Secp256k1 keypair
-   */
-  getSecretKey() {
-    return (0, import_keypair.encodeSuiPrivateKey)(this.keypair.secretKey, this.getKeyScheme());
-  }
-  /**
-   * Return the signature for the provided data.
-   */
-  async sign(data) {
-    const msgHash = (0, import_sha256.sha256)(data);
-    const sig = import_secp256k1.secp256k1.sign(msgHash, this.keypair.secretKey, {
-      lowS: true
-    });
-    return sig.toCompactRawBytes();
-  }
-  /**
-   * Derive Secp256k1 keypair from mnemonics and path. The mnemonics must be normalized
-   * and validated against the english wordlist.
-   *
-   * If path is none, it will default to m/54'/784'/0'/0/0, otherwise the path must
-   * be compliant to BIP-32 in form m/54'/784'/{account_index}'/{change_index}/{address_index}.
-   */
-  static deriveKeypair(mnemonics, path) {
-    if (path == null) {
-      path = DEFAULT_SECP256K1_DERIVATION_PATH;
-    }
-    if (!(0, import_mnemonics.isValidBIP32Path)(path)) {
-      throw new Error("Invalid derivation path");
-    }
-    const key = import_bip32.HDKey.fromMasterSeed((0, import_mnemonics.mnemonicToSeed)(mnemonics)).derive(path);
-    if (key.publicKey == null || key.privateKey == null) {
-      throw new Error("Invalid key");
-    }
-    return new Secp256k1Keypair({
-      publicKey: key.publicKey,
-      secretKey: key.privateKey
-    });
-  }
-}
-//# sourceMappingURL=keypair.js.map
-
-
-/***/ }),
-
 /***/ 37323:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -70316,194 +69402,6 @@ class Secp256k1PublicKey extends import_publickey.PublicKey {
 }
 Secp256k1PublicKey.SIZE = SECP256K1_PUBLIC_KEY_SIZE;
 //# sourceMappingURL=publickey.js.map
-
-
-/***/ }),
-
-/***/ 2138:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var secp256r1_exports = {};
-__export(secp256r1_exports, {
-  DEFAULT_SECP256R1_DERIVATION_PATH: () => import_keypair.DEFAULT_SECP256R1_DERIVATION_PATH,
-  Secp256r1Keypair: () => import_keypair.Secp256r1Keypair,
-  Secp256r1PublicKey: () => import_publickey.Secp256r1PublicKey
-});
-module.exports = __toCommonJS(secp256r1_exports);
-var import_keypair = __nccwpck_require__(16517);
-var import_publickey = __nccwpck_require__(68366);
-//# sourceMappingURL=index.js.map
-
-
-/***/ }),
-
-/***/ 16517:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var keypair_exports = {};
-__export(keypair_exports, {
-  DEFAULT_SECP256R1_DERIVATION_PATH: () => DEFAULT_SECP256R1_DERIVATION_PATH,
-  Secp256r1Keypair: () => Secp256r1Keypair
-});
-module.exports = __toCommonJS(keypair_exports);
-var import_p256 = __nccwpck_require__(17544);
-var import_blake2b = __nccwpck_require__(15596);
-var import_sha256 = __nccwpck_require__(77178);
-var import_utils = __nccwpck_require__(4248);
-var import_bip32 = __nccwpck_require__(92269);
-var import_keypair = __nccwpck_require__(82109);
-var import_mnemonics = __nccwpck_require__(51619);
-var import_publickey = __nccwpck_require__(68366);
-const DEFAULT_SECP256R1_DERIVATION_PATH = "m/74'/784'/0'/0/0";
-class Secp256r1Keypair extends import_keypair.Keypair {
-  /**
-   * Create a new keypair instance.
-   * Generate random keypair if no {@link Secp256r1Keypair} is provided.
-   *
-   * @param keypair Secp256r1 keypair
-   */
-  constructor(keypair) {
-    super();
-    if (keypair) {
-      this.keypair = keypair;
-    } else {
-      const secretKey = import_p256.secp256r1.utils.randomPrivateKey();
-      const publicKey = import_p256.secp256r1.getPublicKey(secretKey, true);
-      this.keypair = { publicKey, secretKey };
-    }
-  }
-  /**
-   * Get the key scheme of the keypair Secp256r1
-   */
-  getKeyScheme() {
-    return "Secp256r1";
-  }
-  /**
-   * Generate a new random keypair
-   */
-  static generate() {
-    return new Secp256r1Keypair();
-  }
-  /**
-   * Create a keypair from a raw secret key byte array.
-   *
-   * This method should only be used to recreate a keypair from a previously
-   * generated secret key. Generating keypairs from a random seed should be done
-   * with the {@link Keypair.fromSeed} method.
-   *
-   * @throws error if the provided secret key is invalid and validation is not skipped.
-   *
-   * @param secretKey secret key byte array or Bech32 secret key string
-   * @param options: skip secret key validation
-   */
-  static fromSecretKey(secretKey, options) {
-    if (typeof secretKey === "string") {
-      const decoded = (0, import_keypair.decodeSuiPrivateKey)(secretKey);
-      if (decoded.schema !== "Secp256r1") {
-        throw new Error(`Expected a Secp256r1 keypair, got ${decoded.schema}`);
-      }
-      return this.fromSecretKey(decoded.secretKey, options);
-    }
-    const publicKey = import_p256.secp256r1.getPublicKey(secretKey, true);
-    if (!options || !options.skipValidation) {
-      const encoder = new TextEncoder();
-      const signData = encoder.encode("sui validation");
-      const msgHash = (0, import_utils.bytesToHex)((0, import_blake2b.blake2b)(signData, { dkLen: 32 }));
-      const signature = import_p256.secp256r1.sign(msgHash, secretKey, { lowS: true });
-      if (!import_p256.secp256r1.verify(signature, msgHash, publicKey, { lowS: true })) {
-        throw new Error("Provided secretKey is invalid");
-      }
-    }
-    return new Secp256r1Keypair({ publicKey, secretKey });
-  }
-  /**
-   * Generate a keypair from a 32 byte seed.
-   *
-   * @param seed seed byte array
-   */
-  static fromSeed(seed) {
-    const publicKey = import_p256.secp256r1.getPublicKey(seed, true);
-    return new Secp256r1Keypair({ publicKey, secretKey: seed });
-  }
-  /**
-   * The public key for this keypair
-   */
-  getPublicKey() {
-    return new import_publickey.Secp256r1PublicKey(this.keypair.publicKey);
-  }
-  /**
-   * The Bech32 secret key string for this Secp256r1 keypair
-   */
-  getSecretKey() {
-    return (0, import_keypair.encodeSuiPrivateKey)(this.keypair.secretKey, this.getKeyScheme());
-  }
-  /**
-   * Return the signature for the provided data.
-   */
-  async sign(data) {
-    const msgHash = (0, import_sha256.sha256)(data);
-    const sig = import_p256.secp256r1.sign(msgHash, this.keypair.secretKey, {
-      lowS: true
-    });
-    return sig.toCompactRawBytes();
-  }
-  /**
-   * Derive Secp256r1 keypair from mnemonics and path. The mnemonics must be normalized
-   * and validated against the english wordlist.
-   *
-   * If path is none, it will default to m/74'/784'/0'/0/0, otherwise the path must
-   * be compliant to BIP-32 in form m/74'/784'/{account_index}'/{change_index}/{address_index}.
-   */
-  static deriveKeypair(mnemonics, path) {
-    if (path == null) {
-      path = DEFAULT_SECP256R1_DERIVATION_PATH;
-    }
-    if (!(0, import_mnemonics.isValidBIP32Path)(path)) {
-      throw new Error("Invalid derivation path");
-    }
-    const privateKey = import_bip32.HDKey.fromMasterSeed((0, import_mnemonics.mnemonicToSeed)(mnemonics)).derive(path).privateKey;
-    return Secp256r1Keypair.fromSecretKey(privateKey);
-  }
-}
-//# sourceMappingURL=keypair.js.map
 
 
 /***/ }),
@@ -70606,6 +69504,386 @@ class Secp256r1PublicKey extends import_publickey.PublicKey {
 }
 Secp256r1PublicKey.SIZE = SECP256R1_PUBLIC_KEY_SIZE;
 //# sourceMappingURL=publickey.js.map
+
+
+/***/ }),
+
+/***/ 42514:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var publickey_exports = {};
+__export(publickey_exports, {
+  MAX_SIGNER_IN_MULTISIG: () => MAX_SIGNER_IN_MULTISIG,
+  MIN_SIGNER_IN_MULTISIG: () => MIN_SIGNER_IN_MULTISIG,
+  MultiSigPublicKey: () => MultiSigPublicKey,
+  parsePartialSignatures: () => parsePartialSignatures
+});
+module.exports = __toCommonJS(publickey_exports);
+var import_bcs = __nccwpck_require__(88830);
+var import_blake2b = __nccwpck_require__(15596);
+var import_utils = __nccwpck_require__(4248);
+var import_bcs2 = __nccwpck_require__(56244);
+var import_publickey = __nccwpck_require__(44822);
+var import_signature_scheme = __nccwpck_require__(74094);
+var import_signature = __nccwpck_require__(76676);
+var import_sui_types = __nccwpck_require__(24818);
+var import_verify = __nccwpck_require__(75693);
+var import_publickey2 = __nccwpck_require__(13472);
+var import_signer = __nccwpck_require__(55214);
+const MAX_SIGNER_IN_MULTISIG = 10;
+const MIN_SIGNER_IN_MULTISIG = 1;
+class MultiSigPublicKey extends import_publickey.PublicKey {
+  /**
+   * Create a new MultiSigPublicKey object
+   */
+  constructor(value, options = {}) {
+    super();
+    if (typeof value === "string") {
+      this.rawBytes = (0, import_bcs.fromBase64)(value);
+      this.multisigPublicKey = import_bcs2.bcs.MultiSigPublicKey.parse(this.rawBytes);
+    } else if (value instanceof Uint8Array) {
+      this.rawBytes = value;
+      this.multisigPublicKey = import_bcs2.bcs.MultiSigPublicKey.parse(this.rawBytes);
+    } else {
+      this.multisigPublicKey = value;
+      this.rawBytes = import_bcs2.bcs.MultiSigPublicKey.serialize(value).toBytes();
+    }
+    if (this.multisigPublicKey.threshold < 1) {
+      throw new Error("Invalid threshold");
+    }
+    const seenPublicKeys = /* @__PURE__ */ new Set();
+    this.publicKeys = this.multisigPublicKey.pk_map.map(({ pubKey, weight }) => {
+      const [scheme, bytes] = Object.entries(pubKey).filter(([name]) => name !== "$kind")[0];
+      const publicKeyStr = Uint8Array.from(bytes).toString();
+      if (seenPublicKeys.has(publicKeyStr)) {
+        throw new Error(`Multisig does not support duplicate public keys`);
+      }
+      seenPublicKeys.add(publicKeyStr);
+      if (weight < 1) {
+        throw new Error(`Invalid weight`);
+      }
+      return {
+        publicKey: (0, import_verify.publicKeyFromRawBytes)(scheme, Uint8Array.from(bytes), options),
+        weight
+      };
+    });
+    const totalWeight = this.publicKeys.reduce((sum, { weight }) => sum + weight, 0);
+    if (this.multisigPublicKey.threshold > totalWeight) {
+      throw new Error(`Unreachable threshold`);
+    }
+    if (this.publicKeys.length > MAX_SIGNER_IN_MULTISIG) {
+      throw new Error(`Max number of signers in a multisig is ${MAX_SIGNER_IN_MULTISIG}`);
+    }
+    if (this.publicKeys.length < MIN_SIGNER_IN_MULTISIG) {
+      throw new Error(`Min number of signers in a multisig is ${MIN_SIGNER_IN_MULTISIG}`);
+    }
+  }
+  /**
+   * 	A static method to create a new MultiSig publickey instance from a set of public keys and their associated weights pairs and threshold.
+   */
+  static fromPublicKeys({
+    threshold,
+    publicKeys
+  }) {
+    return new MultiSigPublicKey({
+      pk_map: publicKeys.map(({ publicKey, weight }) => {
+        const scheme = import_signature_scheme.SIGNATURE_FLAG_TO_SCHEME[publicKey.flag()];
+        return {
+          pubKey: { [scheme]: Array.from(publicKey.toRawBytes()) },
+          weight
+        };
+      }),
+      threshold
+    });
+  }
+  /**
+   * Checks if two MultiSig public keys are equal
+   */
+  equals(publicKey) {
+    return super.equals(publicKey);
+  }
+  /**
+   * Return the byte array representation of the MultiSig public key
+   */
+  toRawBytes() {
+    return this.rawBytes;
+  }
+  getPublicKeys() {
+    return this.publicKeys;
+  }
+  getThreshold() {
+    return this.multisigPublicKey.threshold;
+  }
+  getSigner(...signers) {
+    return new import_signer.MultiSigSigner(this, signers);
+  }
+  /**
+   * Return the Sui address associated with this MultiSig public key
+   */
+  toSuiAddress() {
+    const maxLength = 1 + (64 + 1) * MAX_SIGNER_IN_MULTISIG + 2;
+    const tmp = new Uint8Array(maxLength);
+    tmp.set([import_signature_scheme.SIGNATURE_SCHEME_TO_FLAG["MultiSig"]]);
+    tmp.set(import_bcs2.bcs.u16().serialize(this.multisigPublicKey.threshold).toBytes(), 1);
+    let i = 3;
+    for (const { publicKey, weight } of this.publicKeys) {
+      const bytes = publicKey.toSuiBytes();
+      tmp.set(bytes, i);
+      i += bytes.length;
+      tmp.set([weight], i++);
+    }
+    return (0, import_sui_types.normalizeSuiAddress)((0, import_utils.bytesToHex)((0, import_blake2b.blake2b)(tmp.slice(0, i), { dkLen: 32 })));
+  }
+  /**
+   * Return the Sui address associated with this MultiSig public key
+   */
+  flag() {
+    return import_signature_scheme.SIGNATURE_SCHEME_TO_FLAG["MultiSig"];
+  }
+  /**
+   * Verifies that the signature is valid for for the provided message
+   */
+  async verify(message, multisigSignature) {
+    const parsed = (0, import_signature.parseSerializedSignature)(multisigSignature);
+    if (parsed.signatureScheme !== "MultiSig") {
+      throw new Error("Invalid signature scheme");
+    }
+    const { multisig } = parsed;
+    let signatureWeight = 0;
+    if (!(0, import_publickey.bytesEqual)(
+      import_bcs2.bcs.MultiSigPublicKey.serialize(this.multisigPublicKey).toBytes(),
+      import_bcs2.bcs.MultiSigPublicKey.serialize(multisig.multisig_pk).toBytes()
+    )) {
+      return false;
+    }
+    for (const { publicKey, weight, signature } of parsePartialSignatures(multisig)) {
+      if (!await publicKey.verify(message, signature)) {
+        return false;
+      }
+      signatureWeight += weight;
+    }
+    return signatureWeight >= this.multisigPublicKey.threshold;
+  }
+  /**
+   * Combines multiple partial signatures into a single multisig, ensuring that each public key signs only once
+   * and that all the public keys involved are known and valid, and then serializes multisig into the standard format
+   */
+  combinePartialSignatures(signatures) {
+    if (signatures.length > MAX_SIGNER_IN_MULTISIG) {
+      throw new Error(`Max number of signatures in a multisig is ${MAX_SIGNER_IN_MULTISIG}`);
+    }
+    let bitmap = 0;
+    const compressedSignatures = new Array(signatures.length);
+    for (let i = 0; i < signatures.length; i++) {
+      const parsed = (0, import_signature.parseSerializedSignature)(signatures[i]);
+      if (parsed.signatureScheme === "MultiSig") {
+        throw new Error("MultiSig is not supported inside MultiSig");
+      }
+      let publicKey;
+      if (parsed.signatureScheme === "ZkLogin") {
+        publicKey = (0, import_publickey2.toZkLoginPublicIdentifier)(
+          parsed.zkLogin?.addressSeed,
+          parsed.zkLogin?.iss
+        ).toRawBytes();
+      } else {
+        publicKey = parsed.publicKey;
+      }
+      compressedSignatures[i] = {
+        [parsed.signatureScheme]: Array.from(parsed.signature.map((x) => Number(x)))
+      };
+      let publicKeyIndex;
+      for (let j = 0; j < this.publicKeys.length; j++) {
+        if ((0, import_publickey.bytesEqual)(publicKey, this.publicKeys[j].publicKey.toRawBytes())) {
+          if (bitmap & 1 << j) {
+            throw new Error("Received multiple signatures from the same public key");
+          }
+          publicKeyIndex = j;
+          break;
+        }
+      }
+      if (publicKeyIndex === void 0) {
+        throw new Error("Received signature from unknown public key");
+      }
+      bitmap |= 1 << publicKeyIndex;
+    }
+    const multisig = {
+      sigs: compressedSignatures,
+      bitmap,
+      multisig_pk: this.multisigPublicKey
+    };
+    const bytes = import_bcs2.bcs.MultiSig.serialize(multisig, { maxSize: 8192 }).toBytes();
+    const tmp = new Uint8Array(bytes.length + 1);
+    tmp.set([import_signature_scheme.SIGNATURE_SCHEME_TO_FLAG["MultiSig"]]);
+    tmp.set(bytes, 1);
+    return (0, import_bcs.toBase64)(tmp);
+  }
+}
+function parsePartialSignatures(multisig, options = {}) {
+  const res = new Array(multisig.sigs.length);
+  for (let i = 0; i < multisig.sigs.length; i++) {
+    const [signatureScheme, signature] = Object.entries(multisig.sigs[i]).filter(
+      ([name]) => name !== "$kind"
+    )[0];
+    const pkIndex = asIndices(multisig.bitmap).at(i);
+    const pair = multisig.multisig_pk.pk_map[pkIndex];
+    const pkBytes = Uint8Array.from(Object.values(pair.pubKey)[0]);
+    if (signatureScheme === "MultiSig") {
+      throw new Error("MultiSig is not supported inside MultiSig");
+    }
+    const publicKey = (0, import_verify.publicKeyFromRawBytes)(signatureScheme, pkBytes, options);
+    res[i] = {
+      signatureScheme,
+      signature: Uint8Array.from(signature),
+      publicKey,
+      weight: pair.weight
+    };
+  }
+  return res;
+}
+function asIndices(bitmap) {
+  if (bitmap < 0 || bitmap > 1024) {
+    throw new Error("Invalid bitmap");
+  }
+  const res = [];
+  for (let i = 0; i < 10; i++) {
+    if ((bitmap & 1 << i) !== 0) {
+      res.push(i);
+    }
+  }
+  return Uint8Array.from(res);
+}
+//# sourceMappingURL=publickey.js.map
+
+
+/***/ }),
+
+/***/ 55214:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var signer_exports = {};
+__export(signer_exports, {
+  MultiSigSigner: () => MultiSigSigner
+});
+module.exports = __toCommonJS(signer_exports);
+var import_bcs = __nccwpck_require__(88830);
+var import_cryptography = __nccwpck_require__(51250);
+var _pubkey, _signers;
+class MultiSigSigner extends import_cryptography.Signer {
+  constructor(pubkey, signers = []) {
+    super();
+    __privateAdd(this, _pubkey);
+    __privateAdd(this, _signers);
+    __privateSet(this, _pubkey, pubkey);
+    __privateSet(this, _signers, signers);
+    const uniqueKeys = /* @__PURE__ */ new Set();
+    let combinedWeight = 0;
+    const weights = pubkey.getPublicKeys().map(({ weight, publicKey }) => ({
+      weight,
+      address: publicKey.toSuiAddress()
+    }));
+    for (const signer of signers) {
+      const address = signer.toSuiAddress();
+      if (uniqueKeys.has(address)) {
+        throw new Error(`Can't create MultiSigSigner with duplicate signers`);
+      }
+      uniqueKeys.add(address);
+      const weight = weights.find((w) => w.address === address)?.weight;
+      if (!weight) {
+        throw new Error(`Signer ${address} is not part of the MultiSig public key`);
+      }
+      combinedWeight += weight;
+    }
+    if (combinedWeight < pubkey.getThreshold()) {
+      throw new Error(`Combined weight of signers is less than threshold`);
+    }
+  }
+  getKeyScheme() {
+    return "MultiSig";
+  }
+  getPublicKey() {
+    return __privateGet(this, _pubkey);
+  }
+  sign(_data) {
+    throw new Error(
+      "MultiSigSigner does not support signing directly. Use signTransaction or signPersonalMessage instead"
+    );
+  }
+  signData(_data) {
+    throw new Error(
+      "MultiSigSigner does not support signing directly. Use signTransaction or signPersonalMessage instead"
+    );
+  }
+  async signTransaction(bytes) {
+    const signature = __privateGet(this, _pubkey).combinePartialSignatures(
+      await Promise.all(
+        __privateGet(this, _signers).map(async (signer) => (await signer.signTransaction(bytes)).signature)
+      )
+    );
+    return {
+      signature,
+      bytes: (0, import_bcs.toBase64)(bytes)
+    };
+  }
+  async signPersonalMessage(bytes) {
+    const signature = __privateGet(this, _pubkey).combinePartialSignatures(
+      await Promise.all(
+        __privateGet(this, _signers).map(async (signer) => (await signer.signPersonalMessage(bytes)).signature)
+      )
+    );
+    return {
+      signature,
+      bytes: (0, import_bcs.toBase64)(bytes)
+    };
+  }
+}
+_pubkey = new WeakMap();
+_signers = new WeakMap();
+//# sourceMappingURL=signer.js.map
 
 
 /***/ }),
@@ -75210,6 +74488,164 @@ function normalizeSuiNSName(name, format = "at") {
   return `${parts.slice(0, -1).join(".")}@${parts[parts.length - 1]}`;
 }
 //# sourceMappingURL=suins.js.map
+
+
+/***/ }),
+
+/***/ 75693:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var verify_exports = {};
+__export(verify_exports, {
+  publicKeyFromRawBytes: () => import_verify.publicKeyFromRawBytes,
+  publicKeyFromSuiBytes: () => import_verify.publicKeyFromSuiBytes,
+  verifyPersonalMessageSignature: () => import_verify.verifyPersonalMessageSignature,
+  verifySignature: () => import_verify.verifySignature,
+  verifyTransactionSignature: () => import_verify.verifyTransactionSignature
+});
+module.exports = __toCommonJS(verify_exports);
+var import_verify = __nccwpck_require__(6332);
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 6332:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var verify_exports = {};
+__export(verify_exports, {
+  publicKeyFromRawBytes: () => publicKeyFromRawBytes,
+  publicKeyFromSuiBytes: () => publicKeyFromSuiBytes,
+  verifyPersonalMessageSignature: () => verifyPersonalMessageSignature,
+  verifySignature: () => verifySignature,
+  verifyTransactionSignature: () => verifyTransactionSignature
+});
+module.exports = __toCommonJS(verify_exports);
+var import_bcs = __nccwpck_require__(88830);
+var import_cryptography = __nccwpck_require__(51250);
+var import_publickey = __nccwpck_require__(11010);
+var import_publickey2 = __nccwpck_require__(33187);
+var import_publickey3 = __nccwpck_require__(37323);
+var import_publickey4 = __nccwpck_require__(68366);
+var import_publickey5 = __nccwpck_require__(42514);
+var import_publickey6 = __nccwpck_require__(13472);
+async function verifySignature(bytes, signature, options) {
+  const parsedSignature = parseSignature(signature);
+  if (!await parsedSignature.publicKey.verify(bytes, parsedSignature.serializedSignature)) {
+    throw new Error(`Signature is not valid for the provided data`);
+  }
+  if (options?.address && !parsedSignature.publicKey.verifyAddress(options.address)) {
+    throw new Error(`Signature is not valid for the provided address`);
+  }
+  return parsedSignature.publicKey;
+}
+async function verifyPersonalMessageSignature(message, signature, options = {}) {
+  const parsedSignature = parseSignature(signature, options);
+  if (!await parsedSignature.publicKey.verifyPersonalMessage(
+    message,
+    parsedSignature.serializedSignature
+  )) {
+    throw new Error(`Signature is not valid for the provided message`);
+  }
+  if (options?.address && !parsedSignature.publicKey.verifyAddress(options.address)) {
+    throw new Error(`Signature is not valid for the provided address`);
+  }
+  return parsedSignature.publicKey;
+}
+async function verifyTransactionSignature(transaction, signature, options = {}) {
+  const parsedSignature = parseSignature(signature, options);
+  if (!await parsedSignature.publicKey.verifyTransaction(
+    transaction,
+    parsedSignature.serializedSignature
+  )) {
+    throw new Error(`Signature is not valid for the provided Transaction`);
+  }
+  if (options?.address && !parsedSignature.publicKey.verifyAddress(options.address)) {
+    throw new Error(`Signature is not valid for the provided address`);
+  }
+  return parsedSignature.publicKey;
+}
+function parseSignature(signature, options = {}) {
+  const parsedSignature = (0, import_cryptography.parseSerializedSignature)(signature);
+  if (parsedSignature.signatureScheme === "MultiSig") {
+    return {
+      ...parsedSignature,
+      publicKey: new import_publickey5.MultiSigPublicKey(parsedSignature.multisig.multisig_pk)
+    };
+  }
+  const publicKey = publicKeyFromRawBytes(
+    parsedSignature.signatureScheme,
+    parsedSignature.publicKey,
+    options
+  );
+  return {
+    ...parsedSignature,
+    publicKey
+  };
+}
+function publicKeyFromRawBytes(signatureScheme, bytes, options = {}) {
+  switch (signatureScheme) {
+    case "ED25519":
+      return new import_publickey.Ed25519PublicKey(bytes);
+    case "Secp256k1":
+      return new import_publickey3.Secp256k1PublicKey(bytes);
+    case "Secp256r1":
+      return new import_publickey4.Secp256r1PublicKey(bytes);
+    case "MultiSig":
+      return new import_publickey5.MultiSigPublicKey(bytes);
+    case "ZkLogin":
+      return new import_publickey6.ZkLoginPublicIdentifier(bytes, options);
+    case "Passkey":
+      return new import_publickey2.PasskeyPublicKey(bytes);
+    default:
+      throw new Error(`Unsupported signature scheme ${signatureScheme}`);
+  }
+}
+function publicKeyFromSuiBytes(publicKey, options = {}) {
+  const bytes = typeof publicKey === "string" ? (0, import_bcs.fromBase64)(publicKey) : publicKey;
+  const signatureScheme = import_cryptography.SIGNATURE_FLAG_TO_SCHEME[bytes[0]];
+  return publicKeyFromRawBytes(signatureScheme, bytes.slice(1), options);
+}
+//# sourceMappingURL=verify.js.map
 
 
 /***/ }),
