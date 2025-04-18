@@ -91,6 +91,7 @@ const main = async (): Promise<void> => {
       blobs,
       siteObjectId: config.object_id,
       signer,
+      isGitSigner,
     });
   } else {
     core.info('\n🛠️ Creating Site with Resources...');
