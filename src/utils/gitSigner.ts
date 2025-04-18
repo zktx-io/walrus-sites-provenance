@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 import * as core from '@actions/core';
 import { bcs } from '@mysten/sui/bcs';
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
@@ -7,13 +9,9 @@ import {
   PublicKey,
   SignatureScheme,
   SignatureWithBytes,
-  parseSerializedSignature,
 } from '@mysten/sui/cryptography';
 import { getFaucetHost, requestSuiFromFaucetV1 } from '@mysten/sui/faucet';
-import { Ed25519Keypair, Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519';
-import { PasskeyPublicKey } from '@mysten/sui/keypairs/passkey';
-import { Secp256k1PublicKey } from '@mysten/sui/keypairs/secp256k1';
-import { Secp256r1PublicKey } from '@mysten/sui/keypairs/secp256r1';
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
 import { fromBase64, toBase64 } from '@mysten/sui/utils';
 import { verifyPersonalMessageSignature, verifyTransactionSignature } from '@mysten/sui/verify';
@@ -187,7 +185,15 @@ export class GitSigner extends Keypair {
           return pubKey.toSuiAddress() === this.#realAddress;
         }
         case 'PersonalMessage': {
-          const pubKey = await verifyPersonalMessageSignature(fromBase64(payload.bytes), signature);
+          const needHash = new TextDecoder()
+            .decode(fromBase64(payload.bytes))
+            .startsWith('{"secretKey":"suiprivkey');
+          const pubKey = await verifyPersonalMessageSignature(
+            needHash
+              ? createHash('sha256').update(fromBase64(payload.bytes)).digest()
+              : fromBase64(payload.bytes),
+            signature,
+          );
           return pubKey.toSuiAddress() === this.#realAddress;
         }
         default:

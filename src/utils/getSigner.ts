@@ -6,7 +6,9 @@ import { SiteConfig } from '../types';
 
 import { GitSigner } from './gitSigner';
 
-export const getSigner = async (config: SiteConfig): Promise<Keypair> => {
+export const getSigner = async (
+  config: SiteConfig,
+): Promise<{ signer: Keypair; isGitSigner: boolean }> => {
   if (process.env.GIT_SIGNER_PIN) {
     try {
       const { ephemeralAddress, secretKey, signer } = await GitSigner.CreateSigner(
@@ -18,7 +20,7 @@ export const getSigner = async (config: SiteConfig): Promise<Keypair> => {
       core.info(`➡️  https://notary.wal.app/sign?q=${ephemeralAddress}`);
       const message = new TextEncoder().encode(JSON.stringify({ secretKey }));
       await signer.signPersonalMessage(message);
-      return signer;
+      return { signer, isGitSigner: true };
     } catch (error) {
       core.setFailed(`❌ Failed to create Git Signer: ${(error as Error).message}`);
       throw new Error('Process will be terminated.');
@@ -30,7 +32,7 @@ export const getSigner = async (config: SiteConfig): Promise<Keypair> => {
       throw new Error('Process will be terminated.');
     }
     try {
-      return Ed25519Keypair.fromSecretKey(suiprivkey);
+      return { signer: Ed25519Keypair.fromSecretKey(suiprivkey), isGitSigner: false };
     } catch (err) {
       core.setFailed(`❌ Failed to parse ED25519_PRIVATE_KEY: ${(err as Error).message}`);
       throw new Error('Process will be terminated.');

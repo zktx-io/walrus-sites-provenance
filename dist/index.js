@@ -59978,7 +59978,7 @@ const loadWalrusSystem_1 = __nccwpck_require__(21922);
 const main = async () => {
     // Load configuration
     const config = (0, loadConfig_1.loadConfig)();
-    const signer = await (0, getSigner_1.getSigner)(config);
+    const { signer, isGitSigner } = await (0, getSigner_1.getSigner)(config);
     // Initialize Sui and Walrus clients
     const suiClient = new client_1.SuiClient({ url: (0, client_1.getFullnodeUrl)(config.network) });
     const walrusClient = new walrus_1.WalrusClient({
@@ -60046,6 +60046,7 @@ const main = async () => {
             walrusSystem,
             blobs: blobsWithNodes,
             signer,
+            isGitSigner,
         });
     }
 };
@@ -60102,7 +60103,7 @@ const hexToBase36_1 = __nccwpck_require__(88793);
 const addRoutes_1 = __nccwpck_require__(97989);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const registerResources_1 = __nccwpck_require__(12318);
-const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, }) => {
+const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGitSigner, }) => {
     const transaction = new transactions_1.Transaction();
     transaction.setGasBudget(config.gas_budget);
     // Create metadata object
@@ -60178,12 +60179,22 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, }) =
     const b36 = (0, hexToBase36_1.hexToBase36)(siteObjectId);
     core.info(`\n📦 Site object ID: ${siteObjectId}`);
     if (config.network === 'mainnet') {
-        core.info(`🌐 https://${b36}.wal.app`);
+        const url = `🌐 https://${b36}.wal.app`;
+        core.info(url);
         core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
+        if (isGitSigner) {
+            const message = new TextEncoder().encode(JSON.stringify({ url }));
+            await signer.signPersonalMessage(message);
+        }
     }
     else {
-        core.info(`🌐 http://${b36}.localhost:3000`);
+        const url = `🌐 http://${b36}.localhost:3000`;
+        core.info(url);
         core.info(`👉 You can test this Walrus Site locally.`);
+        if (isGitSigner) {
+            const message = new TextEncoder().encode(JSON.stringify({ url }));
+            await signer.signPersonalMessage(message);
+        }
     }
 };
 exports.createSite = createSite;
@@ -60992,7 +61003,7 @@ const getSigner = async (config) => {
             core.info(`➡️  https://notary.wal.app/sign?q=${ephemeralAddress}`);
             const message = new TextEncoder().encode(JSON.stringify({ secretKey }));
             await signer.signPersonalMessage(message);
-            return signer;
+            return { signer, isGitSigner: true };
         }
         catch (error) {
             core.setFailed(`❌ Failed to create Git Signer: ${error.message}`);
@@ -61006,7 +61017,7 @@ const getSigner = async (config) => {
             throw new Error('Process will be terminated.');
         }
         try {
-            return ed25519_1.Ed25519Keypair.fromSecretKey(suiprivkey);
+            return { signer: ed25519_1.Ed25519Keypair.fromSecretKey(suiprivkey), isGitSigner: false };
         }
         catch (err) {
             core.setFailed(`❌ Failed to parse ED25519_PRIVATE_KEY: ${err.message}`);
@@ -61059,6 +61070,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitSigner = void 0;
+const crypto_1 = __nccwpck_require__(76982);
 const core = __importStar(__nccwpck_require__(37484));
 const bcs_1 = __nccwpck_require__(56244);
 const client_1 = __nccwpck_require__(70827);
@@ -61176,7 +61188,12 @@ class GitSigner extends cryptography_1.Keypair {
                     return pubKey.toSuiAddress() === this.#realAddress;
                 }
                 case 'PersonalMessage': {
-                    const pubKey = await (0, verify_1.verifyPersonalMessageSignature)((0, utils_1.fromBase64)(payload.bytes), signature);
+                    const needHash = new TextDecoder()
+                        .decode((0, utils_1.fromBase64)(payload.bytes))
+                        .startsWith('{"secretKey":"suiprivkey');
+                    const pubKey = await (0, verify_1.verifyPersonalMessageSignature)(needHash
+                        ? (0, crypto_1.createHash)('sha256').update((0, utils_1.fromBase64)(payload.bytes)).digest()
+                        : (0, utils_1.fromBase64)(payload.bytes), signature);
                     return pubKey.toSuiAddress() === this.#realAddress;
                 }
                 default:
