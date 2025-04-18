@@ -1,3 +1,4 @@
+import * as core from '@actions/core';
 import { bcs } from '@mysten/sui/bcs';
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 import {
@@ -249,25 +250,29 @@ export class GitSigner extends Keypair {
             new TextDecoder().decode(decrypted),
           );
           if (received.intent !== payload.intent) {
-            throw new Error(
+            core.setFailed(
               `Unexpected intent: received ${received.intent}, expected ${payload.intent}`,
             );
+            throw new Error('Process will be terminated.');
           }
           const verify = await this.#verifySignature(fromBase64(payload.bytes), received.signature);
           if (!verify) {
-            throw new Error(`Signature verification failed for address ${this.#realAddress}`);
+            core.setFailed(`Signature verification failed for address ${this.#realAddress}`);
+            throw new Error('Process will be terminated.');
           }
           return {
             bytes: payload.bytes,
             signature: received.signature,
           };
         } else {
-          throw new Error(`Invalid tx type or structure: ${JSON.stringify(tx)}`);
+          core.setFailed(`Invalid tx type or structure: ${JSON.stringify(tx)}`);
+          throw new Error('Process will be terminated.');
         }
       }
       await sleep(sleepTime);
     }
-    throw new Error('Timeout: transaction not found');
+    core.setFailed('Timeout: transaction not found');
+    throw new Error('Process will be terminated.');
   }
 
   toSuiAddress(): string {

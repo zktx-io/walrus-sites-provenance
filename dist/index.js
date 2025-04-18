@@ -61435,12 +61435,46 @@ exports.getSigner = getSigner;
 /***/ }),
 
 /***/ 86579:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitSigner = void 0;
+const core = __importStar(__nccwpck_require__(37484));
 const bcs_1 = __nccwpck_require__(56244);
 const client_1 = __nccwpck_require__(70827);
 const cryptography_1 = __nccwpck_require__(51250);
@@ -61609,11 +61643,13 @@ class GitSigner extends cryptography_1.Keypair {
                     const decrypted = await decryptBytes(new Uint8Array(bcs_1.bcs.vector(bcs_1.bcs.u8()).parse(new Uint8Array(tx.inputs[0].value))), this.#pin);
                     const received = JSON.parse(new TextDecoder().decode(decrypted));
                     if (received.intent !== payload.intent) {
-                        throw new Error(`Unexpected intent: received ${received.intent}, expected ${payload.intent}`);
+                        core.setFailed(`Unexpected intent: received ${received.intent}, expected ${payload.intent}`);
+                        throw new Error('Process will be terminated.');
                     }
                     const verify = await this.#verifySignature((0, utils_1.fromBase64)(payload.bytes), received.signature);
                     if (!verify) {
-                        throw new Error(`Signature verification failed for address ${this.#realAddress}`);
+                        core.setFailed(`Signature verification failed for address ${this.#realAddress}`);
+                        throw new Error('Process will be terminated.');
                     }
                     return {
                         bytes: payload.bytes,
@@ -61621,12 +61657,14 @@ class GitSigner extends cryptography_1.Keypair {
                     };
                 }
                 else {
-                    throw new Error(`Invalid tx type or structure: ${JSON.stringify(tx)}`);
+                    core.setFailed(`Invalid tx type or structure: ${JSON.stringify(tx)}`);
+                    throw new Error('Process will be terminated.');
                 }
             }
             await (0, writeBlobHelper_1.sleep)(sleepTime);
         }
-        throw new Error('Timeout: transaction not found');
+        core.setFailed('Timeout: transaction not found');
+        throw new Error('Process will be terminated.');
     }
     toSuiAddress() {
         return this.#realAddress;
