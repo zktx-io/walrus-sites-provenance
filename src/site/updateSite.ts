@@ -4,13 +4,13 @@ import { Signer } from '@mysten/sui/cryptography';
 import { Transaction } from '@mysten/sui/transactions';
 import { WalrusClient } from '@mysten/walrus';
 
+import { cleanupBlobs } from '../blob/helper/cleanupBlobs';
 import { BlobDictionary, SiteConfig } from '../types';
 import { GitSigner } from '../utils/gitSigner';
 import { hexToBase36 } from '../utils/hexToBase36';
 import { WalrusSystem } from '../utils/loadWalrusSystem';
 
 import { addRoutes } from './helper/addRoutes';
-import { deleteOldBlobs } from './helper/deleteOldBlobs';
 import { generateBatchedResourceCommands } from './helper/generateBatchedResourceCommands';
 import { getOldBlobObjects } from './helper/getOldBlobObjects';
 import { getResourceObjects } from './helper/getResourceObjects';
@@ -121,27 +121,12 @@ export const updateSite = async ({
 
   // Cleanup old blobs
   if (oldBlobObjects.length > 0) {
-    const tx = new Transaction();
-    tx.setGasBudget(config.gas_budget);
-    tx.add(
-      deleteOldBlobs({
-        owner: config.owner,
-        packageId: walrusSystem.blobPackageId,
-        oldBlobObjects,
-        systemObjectId: walrusSystem.systemObjectId,
-      }),
-    );
-    const { digest: digest3 } = await suiClient.signAndExecuteTransaction({
+    await cleanupBlobs({
       signer,
-      transaction: tx,
-    });
-    const receipt3 = await suiClient.waitForTransaction({
-      digest,
-      options: { showEffects: true, showEvents: true },
-    });
-    core.info(`🗑️  Old blobs deleted successfully, tx digest: ${digest3}`);
-    oldBlobObjects.forEach(blobObjectId => {
-      core.info(` - Removed blob object ID: ${blobObjectId}`);
+      suiClient,
+      config,
+      walrusSystem,
+      blobObjectsIds: oldBlobObjects,
     });
   } else {
     core.info(`🗑️  No old blobs to delete.`);

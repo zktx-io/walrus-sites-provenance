@@ -59287,6 +59287,76 @@ exports.groupFilesBySize = groupFilesBySize;
 
 /***/ }),
 
+/***/ 49754:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.cleanupBlobs = void 0;
+const core = __importStar(__nccwpck_require__(37484));
+const transactions_1 = __nccwpck_require__(59417);
+const deleteBlobs_1 = __nccwpck_require__(16758);
+const cleanupBlobs = async ({ signer, suiClient, config, walrusSystem, blobObjectsIds, }) => {
+    const tx = new transactions_1.Transaction();
+    tx.setGasBudget(config.gas_budget);
+    tx.add((0, deleteBlobs_1.deleteBlobs)({
+        owner: config.owner,
+        packageId: walrusSystem.blobPackageId,
+        blobObjectsIds,
+        systemObjectId: walrusSystem.systemObjectId,
+    }));
+    const { digest } = await suiClient.signAndExecuteTransaction({
+        signer,
+        transaction: tx,
+    });
+    const receipt = await suiClient.waitForTransaction({
+        digest,
+        options: { showEffects: true, showEvents: true },
+    });
+    core.info(`🗑️  blobs deleted successfully, tx digest: ${digest}`);
+    blobObjectsIds.forEach(blobObjectId => {
+        core.info(` - Removed blob object ID: ${blobObjectId}`);
+    });
+};
+exports.cleanupBlobs = cleanupBlobs;
+
+
+/***/ }),
+
 /***/ 12717:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -59503,6 +59573,30 @@ const Committee = () => {
     });
 };
 exports.Committee = Committee;
+
+
+/***/ }),
+
+/***/ 16758:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.deleteBlobs = void 0;
+const deleteBlobs = ({ owner, packageId, systemObjectId, blobObjectsIds, }) => {
+    return (tx) => {
+        const result = [];
+        blobObjectsIds.forEach(id => {
+            result.push(tx.moveCall({
+                target: `${packageId}::system::delete_blob`,
+                arguments: [tx.object(systemObjectId), tx.object(id)],
+            }));
+        });
+        return tx.transferObjects(result, owner);
+    };
+};
+exports.deleteBlobs = deleteBlobs;
 
 
 /***/ }),
@@ -59896,23 +59990,38 @@ exports.registerBlobs = registerBlobs;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.writeBlobs = void 0;
+const cleanupBlobs_1 = __nccwpck_require__(49754);
 const getCommittee_1 = __nccwpck_require__(27026);
 const writeBlobHelper_1 = __nccwpck_require__(42452);
-const writeBlobs = async ({ retryLimit, suiClient, walrusClient, blobs, }) => {
-    const systemState = await walrusClient.systemState();
-    const stakingState = await walrusClient.stakingState();
-    const committee = await (0, getCommittee_1.getCommittee)(suiClient, stakingState.committee);
-    const quorum = systemState.committee.n_shards - Math.floor((systemState.committee.n_shards - 1) / 4);
-    for (const blobId of Object.keys(blobs)) {
-        const blob = blobs[blobId];
-        const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit + 1, quorum, committee, {
-            blobId,
-            metadata: blob.metadata,
-            sliversByNode: blob.sliversByNode,
-            deletable: true,
-            objectId: blob.objectId,
+const writeBlobs = async ({ retryLimit, config, signer, suiClient, walrusClient, walrusSystem, blobs, }) => {
+    try {
+        const systemState = await walrusClient.systemState();
+        const stakingState = await walrusClient.stakingState();
+        const committee = await (0, getCommittee_1.getCommittee)(suiClient, stakingState.committee);
+        const n = systemState.committee.n_shards;
+        const f = Math.floor((n - 1) / 3);
+        const quorum = 2 * f + 1;
+        for (const blobId of Object.keys(blobs)) {
+            const blob = blobs[blobId];
+            const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit + 1, quorum, committee, {
+                blobId,
+                metadata: blob.metadata,
+                sliversByNode: blob.sliversByNode,
+                deletable: true,
+                objectId: blob.objectId,
+            });
+            blobs[blobId].confirmations = confirmations;
+        }
+    }
+    catch (error) {
+        await (0, cleanupBlobs_1.cleanupBlobs)({
+            signer,
+            suiClient,
+            config,
+            walrusSystem,
+            blobObjectsIds: Object.keys(blobs).map(blobId => blobs[blobId].objectId),
         });
-        blobs[blobId].confirmations = confirmations;
+        throw new Error(`🚫 Failed to write blobs: ${error}`);
     }
     return blobs;
 };
@@ -60012,6 +60121,9 @@ const main = async () => {
     core.info('\n📤 Writing blobs to nodes...');
     const blobsWithNodes = await (0, writeBlobs_1.writeBlobs)({
         retryLimit: config.write_retry_limit || 5,
+        signer,
+        config,
+        walrusSystem,
         suiClient,
         walrusClient,
         blobs,
@@ -60237,30 +60349,6 @@ const addRoutes = ({ packageId, site, blobs, isUpdate, }) => {
     };
 };
 exports.addRoutes = addRoutes;
-
-
-/***/ }),
-
-/***/ 74450:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.deleteOldBlobs = void 0;
-const deleteOldBlobs = ({ owner, packageId, systemObjectId, oldBlobObjects, }) => {
-    return (tx) => {
-        const result = [];
-        oldBlobObjects.forEach(blobObjectId => {
-            result.push(tx.moveCall({
-                target: `${packageId}::system::delete_blob`,
-                arguments: [tx.object(systemObjectId), tx.object(blobObjectId)],
-            }));
-        });
-        return tx.transferObjects(result, owner);
-    };
-};
-exports.deleteOldBlobs = deleteOldBlobs;
 
 
 /***/ }),
@@ -60538,9 +60626,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updateSite = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
+const cleanupBlobs_1 = __nccwpck_require__(49754);
 const hexToBase36_1 = __nccwpck_require__(88793);
 const addRoutes_1 = __nccwpck_require__(97989);
-const deleteOldBlobs_1 = __nccwpck_require__(74450);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const getOldBlobObjects_1 = __nccwpck_require__(76178);
 const getResourceObjects_1 = __nccwpck_require__(53098);
@@ -60617,25 +60705,12 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
     }
     // Cleanup old blobs
     if (oldBlobObjects.length > 0) {
-        const tx = new transactions_1.Transaction();
-        tx.setGasBudget(config.gas_budget);
-        tx.add((0, deleteOldBlobs_1.deleteOldBlobs)({
-            owner: config.owner,
-            packageId: walrusSystem.blobPackageId,
-            oldBlobObjects,
-            systemObjectId: walrusSystem.systemObjectId,
-        }));
-        const { digest: digest3 } = await suiClient.signAndExecuteTransaction({
+        await (0, cleanupBlobs_1.cleanupBlobs)({
             signer,
-            transaction: tx,
-        });
-        const receipt3 = await suiClient.waitForTransaction({
-            digest,
-            options: { showEffects: true, showEvents: true },
-        });
-        core.info(`🗑️  Old blobs deleted successfully, tx digest: ${digest3}`);
-        oldBlobObjects.forEach(blobObjectId => {
-            core.info(` - Removed blob object ID: ${blobObjectId}`);
+            suiClient,
+            config,
+            walrusSystem,
+            blobObjectsIds: oldBlobObjects,
         });
     }
     else {
