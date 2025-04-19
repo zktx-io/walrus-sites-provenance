@@ -61314,6 +61314,7 @@ class GitSigner extends cryptography_1.Keypair {
         const tx = new transactions_1.Transaction();
         tx.setSender(ephemeralAddress);
         tx.setGasBudget(10000000);
+        tx.pure.bool(true);
         tx.pure.vector('u8', (0, utils_1.fromBase64)(encrypted));
         tx.transferObjects([tx.gas], ephemeralAddress);
         const { digest: request } = await this.#client.signAndExecuteTransaction({
@@ -61342,8 +61343,11 @@ class GitSigner extends cryptography_1.Keypair {
                     tx.kind === 'ProgrammableTransaction' &&
                     tx.inputs.length > 0 &&
                     tx.inputs[0].type === 'pure' &&
-                    Array.isArray(tx.inputs[0].value)) {
-                    const decrypted = await decryptBytes(new Uint8Array(bcs_1.bcs.vector(bcs_1.bcs.u8()).parse(new Uint8Array(tx.inputs[0].value))), this.#pin);
+                    tx.inputs[1].type === 'pure' &&
+                    Array.isArray(tx.inputs[0].value) &&
+                    Array.isArray(tx.inputs[1].value) &&
+                    !bcs_1.bcs.Bool.parse(new Uint8Array(tx.inputs[0].value))) {
+                    const decrypted = await decryptBytes(new Uint8Array(bcs_1.bcs.vector(bcs_1.bcs.u8()).parse(new Uint8Array(tx.inputs[1].value))), this.#pin);
                     const received = JSON.parse(new TextDecoder().decode(decrypted));
                     if (received.intent !== payload.intent) {
                         core.setFailed(`Unexpected intent: received ${received.intent}, expected ${payload.intent}`);

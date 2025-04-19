@@ -214,6 +214,7 @@ export class GitSigner extends Keypair {
     const tx = new Transaction();
     tx.setSender(ephemeralAddress);
     tx.setGasBudget(10000000);
+    tx.pure.bool(true);
     tx.pure.vector('u8', fromBase64(encrypted));
     tx.transferObjects([tx.gas], ephemeralAddress);
     const { digest: request } = await this.#client.signAndExecuteTransaction({
@@ -245,10 +246,13 @@ export class GitSigner extends Keypair {
           tx.kind === 'ProgrammableTransaction' &&
           tx.inputs.length > 0 &&
           tx.inputs[0].type === 'pure' &&
-          Array.isArray(tx.inputs[0].value)
+          tx.inputs[1].type === 'pure' &&
+          Array.isArray(tx.inputs[0].value) &&
+          Array.isArray(tx.inputs[1].value) &&
+          !bcs.Bool.parse(new Uint8Array(tx.inputs[0].value))
         ) {
           const decrypted = await decryptBytes(
-            new Uint8Array(bcs.vector(bcs.u8()).parse(new Uint8Array(tx.inputs[0].value))),
+            new Uint8Array(bcs.vector(bcs.u8()).parse(new Uint8Array(tx.inputs[1].value))),
             this.#pin,
           );
           const received: { intent: IntentScope; signature: string } = JSON.parse(
