@@ -99,7 +99,7 @@ permissions:
 
 jobs:
   deploy-with-provenance:
-    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.2.9
+    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.3.0
     secrets:
       ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
       # or

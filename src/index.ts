@@ -65,6 +65,9 @@ const main = async (): Promise<void> => {
   core.info('\n📤 Writing blobs to nodes...');
   const blobsWithNodes = await writeBlobs({
     retryLimit: config.write_retry_limit || 5,
+    signer,
+    config,
+    walrusSystem,
     suiClient,
     walrusClient,
     blobs,
