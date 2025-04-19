@@ -60005,8 +60005,7 @@ const writeBlobs = async ({ retryLimit, config, signer, suiClient, walrusClient,
         const stakingState = await walrusClient.stakingState();
         const committee = await (0, getCommittee_1.getCommittee)(suiClient, stakingState.committee);
         const n = systemState.committee.n_shards;
-        const f = Math.floor((n - 1) / 3);
-        const quorum = 2 * f + 1;
+        const quorum = Math.ceil((3 * n) / 4);
         for (const blobId of Object.keys(blobs)) {
             const blob = blobs[blobId];
             const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit + 1, quorum, committee, {
