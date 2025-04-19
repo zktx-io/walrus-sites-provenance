@@ -43,13 +43,15 @@ export const certifyBlobs = async ({
       transaction,
     });
 
-    const receipt = await suiClient.waitForTransaction({
+    const { effects } = await suiClient.waitForTransaction({
       digest,
-      options: { showEffects: true, showEvents: true },
+      options: { showEffects: true },
     });
 
-    if (receipt.errors) {
-      failWithMessage(`Transaction failed: ${JSON.stringify(receipt.errors)}`);
+    if (effects!.status.status !== 'success') {
+      failWithMessage(
+        `Transaction ${digest} is ${effects!.status.status}: ${JSON.stringify(effects!.status.error)}`,
+      );
     } else {
       core.info(`🚀 Certified ${chunk.length} blob(s), tx digest: ${digest}`);
     }

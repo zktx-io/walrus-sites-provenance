@@ -203,16 +203,18 @@ export const registerBlobs = async ({
       transaction,
     });
 
-    const receipt = await suiClient.waitForTransaction({
+    const { effects } = await suiClient.waitForTransaction({
       digest,
-      options: { showEffects: true, showEvents: true },
+      options: { showEffects: true },
     });
 
-    if (receipt.errors) {
-      console.error('Transaction failed:', receipt.errors);
+    if (effects!.status.status !== 'success') {
+      core.setFailed(
+        `Transaction ${digest} is ${effects!.status.status}: ${JSON.stringify(effects!.status.error)}`,
+      );
       throw new Error('Transaction failed');
     } else {
-      const txCreatedIds = receipt.effects?.created?.map(e => e.reference.objectId) ?? [];
+      const txCreatedIds = effects!.created?.map(e => e.reference.objectId) ?? [];
 
       const createdObjects = await getAllObjects(suiClient, {
         ids: txCreatedIds,

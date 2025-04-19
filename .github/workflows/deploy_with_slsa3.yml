@@ -159,7 +159,7 @@ jobs:
           path: ${{ needs.build-site.outputs.output_dir }}/.well-known
 
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.3.0
+        uses: zktx-io/walrus-sites-provenance@v0.3.1
         with:
           config-path: ./site.config.json
         env:

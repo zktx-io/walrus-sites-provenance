@@ -4,6 +4,7 @@ import { Signer } from '@mysten/sui/cryptography';
 import { Transaction } from '@mysten/sui/transactions';
 
 import { SiteConfig } from '../../types';
+import { failWithMessage } from '../../utils/failWithMessage';
 import { WalrusSystem } from '../../utils/loadWalrusSystem';
 
 import { deleteBlobs } from './walrus/deleteBlobs';
@@ -35,12 +36,20 @@ export const cleanupBlobs = async ({
     signer,
     transaction: tx,
   });
-  const receipt = await suiClient.waitForTransaction({
+
+  const { effects } = await suiClient.waitForTransaction({
     digest,
-    options: { showEffects: true, showEvents: true },
+    options: { showEffects: true },
   });
-  core.info(`🗑️  blobs deleted successfully, tx digest: ${digest}`);
-  blobObjectsIds.forEach(blobObjectId => {
-    core.info(` - Removed blob object ID: ${blobObjectId}`);
-  });
+
+  if (effects!.status.status !== 'success') {
+    failWithMessage(
+      `Transaction ${digest} is ${effects!.status.status}: ${JSON.stringify(effects!.status.error)}`,
+    );
+  } else {
+    core.info(`🗑️  blobs deleted successfully, tx digest: ${digest}`);
+    blobObjectsIds.forEach(blobObjectId => {
+      core.info(` - Removed blob object ID: ${blobObjectId}`);
+    });
+  }
 };
