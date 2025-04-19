@@ -6,6 +6,7 @@ import { Transaction } from '@mysten/sui/transactions';
 import { BlobDictionary, SiteConfig } from '../types';
 import { failWithMessage } from '../utils/failWithMessage';
 import { getAllObjects } from '../utils/getAllObjects';
+import { GitSigner } from '../utils/gitSigner';
 import { hexToBase36 } from '../utils/hexToBase36';
 import { WalrusSystem } from '../utils/loadWalrusSystem';
 
@@ -137,7 +138,7 @@ export const createSite = async ({
     core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
     if (isGitSigner) {
       const message = new TextEncoder().encode(JSON.stringify({ url }));
-      await signer.signPersonalMessage(message);
+      await (signer as GitSigner).signPersonalMessage(message, true);
     }
   } else {
     const url = `http://${b36}.localhost:3000`;
@@ -145,7 +146,7 @@ export const createSite = async ({
     core.info(`👉 You can test this Walrus Site locally.`);
     if (isGitSigner) {
       const message = new TextEncoder().encode(JSON.stringify({ url }));
-      await signer.signPersonalMessage(message);
+      await (signer as GitSigner).signPersonalMessage(message, true);
     }
   }
 };

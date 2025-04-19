@@ -60308,7 +60308,7 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
         core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
         if (isGitSigner) {
             const message = new TextEncoder().encode(JSON.stringify({ url }));
-            await signer.signPersonalMessage(message);
+            await signer.signPersonalMessage(message, true);
         }
     }
     else {
@@ -60317,7 +60317,7 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
         core.info(`👉 You can test this Walrus Site locally.`);
         if (isGitSigner) {
             const message = new TextEncoder().encode(JSON.stringify({ url }));
-            await signer.signPersonalMessage(message);
+            await signer.signPersonalMessage(message, true);
         }
     }
 };
