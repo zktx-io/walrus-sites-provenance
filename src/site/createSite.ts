@@ -75,12 +75,12 @@ export const createSite = async ({
     transaction,
   });
 
-  const receipt = await suiClient.waitForTransaction({
+  const { effects } = await suiClient.waitForTransaction({
     digest,
-    options: { showEffects: true, showEvents: true },
+    options: { showEffects: true },
   });
 
-  const txCreatedIds = receipt.effects?.created?.map(e => e.reference.objectId) ?? [];
+  const txCreatedIds = effects!.created?.map(e => e.reference.objectId) ?? [];
 
   const createdObjects = await getAllObjects(suiClient, {
     ids: txCreatedIds,
@@ -95,8 +95,10 @@ export const createSite = async ({
 
   // Log created site object IDs
   let siteObjectId = '';
-  if (receipt.errors || suiSiteObjects.length === 0) {
-    failWithMessage(`❌ Create site failed: ${JSON.stringify(receipt.errors)}`);
+  if (effects!.status.status !== 'success' || suiSiteObjects.length === 0) {
+    failWithMessage(
+      `Transaction ${digest} is ${effects!.status.status}: ${JSON.stringify(effects!.status.error)}`,
+    );
   } else {
     siteObjectId = suiSiteObjects[0].data?.objectId || '';
     core.info(`🚀 Site created successfully, tx digest: ${digest}`);
@@ -114,11 +116,17 @@ export const createSite = async ({
       signer,
       transaction: tx,
     });
-    const receipt2 = await suiClient.waitForTransaction({
+    const { effects: effects2 } = await suiClient.waitForTransaction({
       digest: digest2,
-      options: { showEffects: true, showEvents: true },
+      options: { showEffects: true },
     });
-    core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+    if (effects2!.status.status !== 'success' || suiSiteObjects.length === 0) {
+      failWithMessage(
+        `Transaction ${digest2} is ${effects2!.status.status}: ${JSON.stringify(effects2!.status.error)}`,
+      );
+    } else {
+      core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+    }
   }
 
   const b36 = hexToBase36(siteObjectId);

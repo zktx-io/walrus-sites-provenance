@@ -6,6 +6,7 @@ import { WalrusClient } from '@mysten/walrus';
 
 import { cleanupBlobs } from '../blob/helper/cleanupBlobs';
 import { BlobDictionary, SiteConfig } from '../types';
+import { failWithMessage } from '../utils/failWithMessage';
 import { GitSigner } from '../utils/gitSigner';
 import { hexToBase36 } from '../utils/hexToBase36';
 import { WalrusSystem } from '../utils/loadWalrusSystem';
@@ -88,13 +89,15 @@ export const updateSite = async ({
     transaction,
   });
 
-  const receipt = await suiClient.waitForTransaction({
+  const { effects } = await suiClient.waitForTransaction({
     digest,
-    options: { showEffects: true, showEvents: true },
+    options: { showEffects: true },
   });
 
-  if (receipt.errors) {
-    console.error('❌ Update site failed:', receipt.errors);
+  if (effects!.status.status !== 'success') {
+    core.setFailed(
+      `Transaction ${digest} is ${effects!.status.status}: ${JSON.stringify(effects!.status.error)}`,
+    );
     throw new Error('Update site failed');
   } else {
     core.info(`🚀 Site updated successfully, tx digest: ${digest}`);
@@ -112,11 +115,19 @@ export const updateSite = async ({
       signer,
       transaction: tx,
     });
-    const receipt2 = await suiClient.waitForTransaction({
+
+    const { effects: effects2 } = await suiClient.waitForTransaction({
       digest: digest2,
       options: { showEffects: true, showEvents: true },
     });
-    core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+
+    if (effects2!.status.status !== 'success') {
+      failWithMessage(
+        `Transaction ${digest2} is ${effects2!.status.status}: ${JSON.stringify(effects2!.status.error)}`,
+      );
+    } else {
+      core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+    }
   }
 
   // Cleanup old blobs

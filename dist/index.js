@@ -59063,12 +59063,12 @@ const certifyBlobs = async ({ config, suiClient, walrusClient, blobs, signer, })
             signer,
             transaction,
         });
-        const receipt = await suiClient.waitForTransaction({
+        const { effects } = await suiClient.waitForTransaction({
             digest,
-            options: { showEffects: true, showEvents: true },
+            options: { showEffects: true },
         });
-        if (receipt.errors) {
-            (0, failWithMessage_1.failWithMessage)(`Transaction failed: ${JSON.stringify(receipt.errors)}`);
+        if (effects.status.status !== 'success') {
+            (0, failWithMessage_1.failWithMessage)(`Transaction ${digest} is ${effects.status.status}: ${JSON.stringify(effects.status.error)}`);
         }
         else {
             core.info(`🚀 Certified ${chunk.length} blob(s), tx digest: ${digest}`);
@@ -59329,6 +59329,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cleanupBlobs = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
+const failWithMessage_1 = __nccwpck_require__(60210);
 const deleteBlobs_1 = __nccwpck_require__(16758);
 const cleanupBlobs = async ({ signer, suiClient, config, walrusSystem, blobObjectsIds, }) => {
     const tx = new transactions_1.Transaction();
@@ -59343,14 +59344,19 @@ const cleanupBlobs = async ({ signer, suiClient, config, walrusSystem, blobObjec
         signer,
         transaction: tx,
     });
-    const receipt = await suiClient.waitForTransaction({
+    const { effects } = await suiClient.waitForTransaction({
         digest,
-        options: { showEffects: true, showEvents: true },
+        options: { showEffects: true },
     });
-    core.info(`🗑️  blobs deleted successfully, tx digest: ${digest}`);
-    blobObjectsIds.forEach(blobObjectId => {
-        core.info(` - Removed blob object ID: ${blobObjectId}`);
-    });
+    if (effects.status.status !== 'success') {
+        (0, failWithMessage_1.failWithMessage)(`Transaction ${digest} is ${effects.status.status}: ${JSON.stringify(effects.status.error)}`);
+    }
+    else {
+        core.info(`🗑️  blobs deleted successfully, tx digest: ${digest}`);
+        blobObjectsIds.forEach(blobObjectId => {
+            core.info(` - Removed blob object ID: ${blobObjectId}`);
+        });
+    }
 };
 exports.cleanupBlobs = cleanupBlobs;
 
@@ -59948,16 +59954,16 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walrusSystem, gr
             signer,
             transaction,
         });
-        const receipt = await suiClient.waitForTransaction({
+        const { effects } = await suiClient.waitForTransaction({
             digest,
-            options: { showEffects: true, showEvents: true },
+            options: { showEffects: true },
         });
-        if (receipt.errors) {
-            console.error('Transaction failed:', receipt.errors);
+        if (effects.status.status !== 'success') {
+            core.setFailed(`Transaction ${digest} is ${effects.status.status}: ${JSON.stringify(effects.status.error)}`);
             throw new Error('Transaction failed');
         }
         else {
-            const txCreatedIds = receipt.effects?.created?.map(e => e.reference.objectId) ?? [];
+            const txCreatedIds = effects.created?.map(e => e.reference.objectId) ?? [];
             const createdObjects = await (0, getAllObjects_1.getAllObjects)(suiClient, {
                 ids: txCreatedIds,
                 options: { showType: true, showBcs: true },
@@ -60253,11 +60259,11 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
         signer,
         transaction,
     });
-    const receipt = await suiClient.waitForTransaction({
+    const { effects } = await suiClient.waitForTransaction({
         digest,
-        options: { showEffects: true, showEvents: true },
+        options: { showEffects: true },
     });
-    const txCreatedIds = receipt.effects?.created?.map(e => e.reference.objectId) ?? [];
+    const txCreatedIds = effects.created?.map(e => e.reference.objectId) ?? [];
     const createdObjects = await (0, getAllObjects_1.getAllObjects)(suiClient, {
         ids: txCreatedIds,
         options: { showType: true, showBcs: true },
@@ -60266,8 +60272,8 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
         obj.data?.bcs?.dataType === 'moveObject');
     // Log created site object IDs
     let siteObjectId = '';
-    if (receipt.errors || suiSiteObjects.length === 0) {
-        (0, failWithMessage_1.failWithMessage)(`❌ Create site failed: ${JSON.stringify(receipt.errors)}`);
+    if (effects.status.status !== 'success' || suiSiteObjects.length === 0) {
+        (0, failWithMessage_1.failWithMessage)(`Transaction ${digest} is ${effects.status.status}: ${JSON.stringify(effects.status.error)}`);
     }
     else {
         siteObjectId = suiSiteObjects[0].data?.objectId || '';
@@ -60283,11 +60289,16 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
             signer,
             transaction: tx,
         });
-        const receipt2 = await suiClient.waitForTransaction({
+        const { effects: effects2 } = await suiClient.waitForTransaction({
             digest: digest2,
-            options: { showEffects: true, showEvents: true },
+            options: { showEffects: true },
         });
-        core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+        if (effects2.status.status !== 'success' || suiSiteObjects.length === 0) {
+            (0, failWithMessage_1.failWithMessage)(`Transaction ${digest2} is ${effects2.status.status}: ${JSON.stringify(effects2.status.error)}`);
+        }
+        else {
+            core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+        }
     }
     const b36 = (0, hexToBase36_1.hexToBase36)(siteObjectId);
     core.info(`\n📦 Site object ID: ${siteObjectId}`);
@@ -60627,6 +60638,7 @@ exports.updateSite = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
 const cleanupBlobs_1 = __nccwpck_require__(49754);
+const failWithMessage_1 = __nccwpck_require__(60210);
 const hexToBase36_1 = __nccwpck_require__(88793);
 const addRoutes_1 = __nccwpck_require__(97989);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
@@ -60676,12 +60688,12 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
         signer,
         transaction,
     });
-    const receipt = await suiClient.waitForTransaction({
+    const { effects } = await suiClient.waitForTransaction({
         digest,
-        options: { showEffects: true, showEvents: true },
+        options: { showEffects: true },
     });
-    if (receipt.errors) {
-        console.error('❌ Update site failed:', receipt.errors);
+    if (effects.status.status !== 'success') {
+        core.setFailed(`Transaction ${digest} is ${effects.status.status}: ${JSON.stringify(effects.status.error)}`);
         throw new Error('Update site failed');
     }
     else {
@@ -60697,11 +60709,16 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
             signer,
             transaction: tx,
         });
-        const receipt2 = await suiClient.waitForTransaction({
+        const { effects: effects2 } = await suiClient.waitForTransaction({
             digest: digest2,
             options: { showEffects: true, showEvents: true },
         });
-        core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+        if (effects2.status.status !== 'success') {
+            (0, failWithMessage_1.failWithMessage)(`Transaction ${digest2} is ${effects2.status.status}: ${JSON.stringify(effects2.status.error)}`);
+        }
+        else {
+            core.info(`🚀 Add Resurces successfully, tx digest: ${digest2}`);
+        }
     }
     // Cleanup old blobs
     if (oldBlobObjects.length > 0) {
