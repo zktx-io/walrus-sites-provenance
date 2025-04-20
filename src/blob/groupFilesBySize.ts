@@ -141,13 +141,15 @@ export const groupFilesBySize = (outputDir: string): FileGroup[] => {
 
   const groups: FileGroup[] = [];
 
-  groups.push({
-    groupId: 0,
-    files: [...specialFiles],
-    size: specialFilesSize,
-  });
+  if (specialFiles.length > 0) {
+    groups.push({
+      groupId: 0,
+      files: [...specialFiles],
+      size: specialFilesSize,
+    });
+  }
 
-  let currentGroup: FileGroup = { groupId: 1, files: [], size: 0 };
+  let currentGroup: FileGroup = { groupId: groups.length, files: [], size: 0 };
   const sortedNormalFiles = normalFiles.sort((a, b) => b.size - a.size);
   for (const file of sortedNormalFiles) {
     if (currentGroup.size + file.size > MAX_BLOB_SIZE && currentGroup.files.length > 0) {
