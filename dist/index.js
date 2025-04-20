@@ -59252,12 +59252,14 @@ const groupFilesBySize = (outputDir) => {
         }
     }
     const groups = [];
-    groups.push({
-        groupId: 0,
-        files: [...specialFiles],
-        size: specialFilesSize,
-    });
-    let currentGroup = { groupId: 1, files: [], size: 0 };
+    if (specialFiles.length > 0) {
+        groups.push({
+            groupId: 0,
+            files: [...specialFiles],
+            size: specialFilesSize,
+        });
+    }
+    let currentGroup = { groupId: groups.length, files: [], size: 0 };
     const sortedNormalFiles = normalFiles.sort((a, b) => b.size - a.size);
     for (const file of sortedNormalFiles) {
         if (currentGroup.size + file.size > constants_1.MAX_BLOB_SIZE && currentGroup.files.length > 0) {
