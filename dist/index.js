@@ -59221,7 +59221,7 @@ const groupFilesBySize = (outputDir) => {
         core.setFailed(`❌ Provided path "${siteRoot}" does not exist.`);
         return [];
     }
-    const wellKnown = ['.well-known/walrus-sites.intoto.jsonl'];
+    const wellKnown = ['.well-known/walrus-sites.intoto.jsonl', '.well-known/site.config.json'];
     const allFiles = glob_1.glob.sync(['**/*.*', ...wellKnown], { cwd: siteRoot });
     const isSpecialFile = (relativePath) => wellKnown.includes(relativePath);
     const normalFiles = [];

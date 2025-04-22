@@ -105,7 +105,7 @@ export const groupFilesBySize = (outputDir: string): FileGroup[] => {
     return [];
   }
 
-  const wellKnown = ['.well-known/walrus-sites.intoto.jsonl'];
+  const wellKnown = ['.well-known/walrus-sites.intoto.jsonl', '.well-known/site.config.json'];
   const allFiles = glob.sync(['**/*.*', ...wellKnown], { cwd: siteRoot });
   const isSpecialFile = (relativePath: string) => wellKnown.includes(relativePath);
 
