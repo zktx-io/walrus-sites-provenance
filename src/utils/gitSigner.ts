@@ -190,7 +190,9 @@ export class GitSigner extends Keypair {
             .startsWith('{"secretKey":"suiprivkey');
           const pubKey = await verifyPersonalMessageSignature(
             needHash
-              ? createHash('sha256').update(fromBase64(payload.bytes)).digest()
+              ? new TextEncoder().encode(
+                  toBase64(createHash('sha256').update(fromBase64(payload.bytes)).digest()),
+                )
               : fromBase64(payload.bytes),
             signature,
           );
