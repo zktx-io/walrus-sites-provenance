@@ -61296,7 +61296,7 @@ class GitSigner extends cryptography_1.Keypair {
                         .decode((0, utils_1.fromBase64)(payload.bytes))
                         .startsWith('{"secretKey":"suiprivkey');
                     const pubKey = await (0, verify_1.verifyPersonalMessageSignature)(needHash
-                        ? (0, crypto_1.createHash)('sha256').update((0, utils_1.fromBase64)(payload.bytes)).digest()
+                        ? new TextEncoder().encode((0, utils_1.toBase64)((0, crypto_1.createHash)('sha256').update((0, utils_1.fromBase64)(payload.bytes)).digest()))
                         : (0, utils_1.fromBase64)(payload.bytes), signature);
                     return pubKey.toSuiAddress() === this.#realAddress;
                 }
