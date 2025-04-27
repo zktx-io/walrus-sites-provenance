@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.3.5
+        uses: zktx-io/walrus-sites-provenance@v0.3.6
         with:
           config-path: './site.config.json'
         env:
