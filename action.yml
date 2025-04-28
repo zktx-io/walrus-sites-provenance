@@ -5,12 +5,6 @@ branding:
   icon: 'shield'
   color: 'blue'
 
-inputs:
-  config-path:
-    description: 'Path to the Walrus Site configuration JSON file.'
-    required: false
-    default: './site.config.json'
-
 env:
   GIT_SIGNER_PIN:
     description: 'PIN used to decrypt the signing key, shared with the remote signer UI.'
