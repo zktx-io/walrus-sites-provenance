@@ -7,6 +7,12 @@ description: |
 
 on:
   workflow_call:
+    inputs:
+      working-directory:
+        required: false
+        type: string
+        default: '.'
+
     secrets:
       GIT_SIGNER_PIN:
         required: false
@@ -14,7 +20,32 @@ on:
         required: true
 
 jobs:
+  preprocess:
+    runs-on: ubuntu-latest
+    outputs:
+      working_directory_checked_out: ${{ steps.check.outputs.working_directory_checked_out }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if working directory is not root
+        id: check
+        run: |
+          if [ "${{ inputs.working-directory }}" != "." ]; then
+            echo "working_directory_checked_out=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "working_directory_checked_out=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload working directory as artifact
+        if: ${{ steps.check.outputs.working_directory_checked_out == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-working-directory
+          path: ${{ inputs.working-directory }}
+
   build-site:
+    needs: preprocess
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -25,8 +56,12 @@ jobs:
       base64_hashes: ${{ steps.generate-resources-hashes.outputs.base64_hashes }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Download working directory (only if needed)
+        if: ${{ needs.preprocess.outputs.working_directory_checked_out == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: site-working-directory
+          path: .
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -65,15 +100,11 @@ jobs:
 
           while IFS= read -r -d '' file; do
             FILE_HASH=$(sha256sum "$file" | cut -d ' ' -f 1)
-            REL_PATH="${file#${OUTPUT_DIR}/}"  # Remove 'build/' prefix
+            REL_PATH="${file#${OUTPUT_DIR}/}"  # Relative to build folder
             HASHES+="${FILE_HASH}  ${REL_PATH}"$'\n'
           done < <(find "$OUTPUT_DIR" -type f -print0)
 
           echo "base64_hashes=$(echo -n "$HASHES" | base64 -w0)" >> "$GITHUB_OUTPUT"
-        env:
-          NETWORK: ${{ steps.parse.outputs.network }}
-          EPOCHS: ${{ steps.parse.outputs.epochs }}
-          OUTPUT_DIR: ${{ steps.parse.outputs.output_dir }}
 
       - name: Upload site config
         uses: actions/upload-artifact@v4
@@ -163,9 +194,9 @@ jobs:
           cp ./site.config.json ${{ needs.build-site.outputs.output_dir }}/.well-known
 
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.3.6
+        uses: zktx-io/walrus-sites-provenance@v0.4.0
         with:
-          config-path: ./site.config.json
+          working-directory: .
         env:
           GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
           ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
