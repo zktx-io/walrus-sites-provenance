@@ -6,10 +6,10 @@ branding:
   color: 'blue'
 
 inputs:
-  config-path:
-    description: 'Path to the Walrus Site configuration JSON file.'
+  working-directory:
+    description: 'The working directory for your Walrus Site.'
     required: false
-    default: './site.config.json'
+    default: '.'
 
 env:
   GIT_SIGNER_PIN:
