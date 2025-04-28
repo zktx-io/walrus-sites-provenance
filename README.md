@@ -33,18 +33,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.3.6
-        with:
-          config-path: './site.config.json'
+        uses: zktx-io/walrus-sites-provenance@v0.4.0
         env:
           ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
 ```
 
-## 📁 Inputs
+> ⚠️ Important:
+> When using the GitHub Action directly (without full workflow),
+> make sure your site.config.json is located at the repository root (./site.config.json).
 
-| Input         | Default              | Description                           |
-| ------------- | -------------------- | ------------------------------------- |
-| `config-path` | `./site.config.json` | Path to Walrus deployment config JSON |
+> 👉 For monorepo or working directory support,
+> use the [Full Workflow](./SLSA.md) instead.
 
 ## 🔐 Environment Variables
 
