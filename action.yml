@@ -5,12 +5,6 @@ branding:
   icon: 'shield'
   color: 'blue'
 
-inputs:
-  working-directory:
-    description: 'The working directory for your Walrus Site.'
-    required: false
-    default: '.'
-
 env:
   GIT_SIGNER_PIN:
     description: 'PIN used to decrypt the signing key, shared with the remote signer UI.'
