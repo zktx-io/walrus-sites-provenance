@@ -9,6 +9,12 @@ This guide introduces the advanced features of the Walrus Sites GitHub Action, i
 - 📄 `.intoto.jsonl` structure
 - ✅ End-to-end verification via [notary.wal.app](https://notary.wal.app)
 
+## 📁 Inputs
+
+| Input               | Default | Description                                                             |
+| ------------------- | ------- | ----------------------------------------------------------------------- |
+| `working-directory` | `.`     | Working directory of your Walrus Site (must contain `site.config.json`) |
+
 ## 🔍 Why Provenance?
 
 Provenance ensures:
@@ -99,7 +105,9 @@ permissions:
 
 jobs:
   deploy-with-provenance:
-    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.3.6
+    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.4.0
+    with:
+      working-directory: './my-site-folder'
     secrets:
       ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
       # or
