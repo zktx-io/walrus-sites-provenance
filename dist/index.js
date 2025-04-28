@@ -61482,8 +61482,7 @@ const getDefaultConfig = () => ({
 });
 exports.getDefaultConfig = getDefaultConfig;
 const loadConfig = () => {
-    const configPath = core.getInput('config-path');
-    const resolvedPath = path_1.default.resolve(configPath);
+    const resolvedPath = path_1.default.resolve('./site.config.json');
     if (!fs_1.default.existsSync(resolvedPath)) {
         core.warning(`[walrus] Config file not found. Using default config.`);
         return (0, exports.getDefaultConfig)();
