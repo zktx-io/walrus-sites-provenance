@@ -79,6 +79,7 @@ const main = async (): Promise<void> => {
     config,
     suiClient,
     walrusClient,
+    walrusSystem,
     blobs: blobsWithNodes,
     signer,
   });
