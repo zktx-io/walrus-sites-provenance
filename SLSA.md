@@ -105,7 +105,7 @@ permissions:
 
 jobs:
   deploy-with-provenance:
-    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.4.1
+    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.4.2
     with:
       working-directory: './my-site-folder'
     secrets:
