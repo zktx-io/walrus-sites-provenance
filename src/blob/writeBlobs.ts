@@ -32,7 +32,7 @@ export const writeBlobs = async ({
     const committee = await getCommittee(suiClient, stakingState.committee);
 
     const n = systemState.committee.n_shards;
-    const quorum = Math.ceil((3 * n) / 4);
+    const quorum = Math.ceil((2 * n) / 3) + 1;
 
     for (const blobId of Object.keys(blobs)) {
       const blob = blobs[blobId];
