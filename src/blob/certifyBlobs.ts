@@ -7,53 +7,76 @@ import { WalrusClient } from '@mysten/walrus';
 import { BlobDictionary, SiteConfig } from '../types';
 import { MAX_CMD_CERTIFICATIONS } from '../utils/constants';
 import { failWithMessage } from '../utils/failWithMessage';
+import { WalrusSystem } from '../utils/loadWalrusSystem';
+
+import { cleanupBlobs } from './helper/cleanupBlobs';
 
 export const certifyBlobs = async ({
   config,
   suiClient,
   walrusClient,
+  walrusSystem,
   blobs,
   signer,
 }: {
   config: SiteConfig;
   suiClient: SuiClient;
   walrusClient: WalrusClient;
+  walrusSystem: WalrusSystem;
   blobs: BlobDictionary;
   signer: Signer;
 }) => {
-  for (let i = 0; i < Object.keys(blobs).length; i += MAX_CMD_CERTIFICATIONS) {
-    const chunk = Object.keys(blobs).slice(i, i + MAX_CMD_CERTIFICATIONS);
+  try {
+    for (let i = 0; i < Object.keys(blobs).length; i += MAX_CMD_CERTIFICATIONS) {
+      const chunk = Object.keys(blobs).slice(i, i + MAX_CMD_CERTIFICATIONS);
 
-    const transaction = new Transaction();
-    transaction.setGasBudget(config.gas_budget);
+      const transaction = new Transaction();
+      transaction.setGasBudget(config.gas_budget);
 
-    for (const blobId of chunk) {
-      transaction.add(
-        await walrusClient.certifyBlob({
-          blobId,
-          blobObjectId: blobs[blobId].objectId,
-          confirmations: blobs[blobId].confirmations!,
-          deletable: true,
-        }),
-      );
+      for (const blobId of chunk) {
+        transaction.add(
+          walrusClient.certifyBlob({
+            blobId,
+            blobObjectId: blobs[blobId].objectId,
+            confirmations: blobs[blobId].confirmations!,
+            deletable: true,
+          }),
+        );
+      }
+
+      const { digest } = await suiClient.signAndExecuteTransaction({
+        signer,
+        transaction,
+      });
+
+      const { effects } = await suiClient.waitForTransaction({
+        digest,
+        options: { showEffects: true },
+      });
+
+      if (effects!.status.status !== 'success') {
+        await cleanupBlobs({
+          signer,
+          suiClient,
+          config,
+          walrusSystem,
+          blobObjectsIds: Object.keys(blobs).map(blobId => blobs[blobId].objectId),
+        });
+        failWithMessage(
+          `Transaction ${digest} is ${effects!.status.status}: ${JSON.stringify(effects!.status.error)}`,
+        );
+      } else {
+        core.info(`🚀 Certified ${chunk.length} blob(s), tx digest: ${digest}`);
+      }
     }
-
-    const { digest } = await suiClient.signAndExecuteTransaction({
+  } catch (error) {
+    await cleanupBlobs({
       signer,
-      transaction,
+      suiClient,
+      config,
+      walrusSystem,
+      blobObjectsIds: Object.keys(blobs).map(blobId => blobs[blobId].objectId),
     });
-
-    const { effects } = await suiClient.waitForTransaction({
-      digest,
-      options: { showEffects: true },
-    });
-
-    if (effects!.status.status !== 'success') {
-      failWithMessage(
-        `Transaction ${digest} is ${effects!.status.status}: ${JSON.stringify(effects!.status.error)}`,
-      );
-    } else {
-      core.info(`🚀 Certified ${chunk.length} blob(s), tx digest: ${digest}`);
-    }
+    failWithMessage(`🚫 Failed to certify blobs: ${error}`);
   }
 };
