@@ -58089,33 +58089,53 @@ const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
 const constants_1 = __nccwpck_require__(56156);
 const failWithMessage_1 = __nccwpck_require__(60210);
-const certifyBlobs = async ({ config, suiClient, walrusClient, blobs, signer, }) => {
-    for (let i = 0; i < Object.keys(blobs).length; i += constants_1.MAX_CMD_CERTIFICATIONS) {
-        const chunk = Object.keys(blobs).slice(i, i + constants_1.MAX_CMD_CERTIFICATIONS);
-        const transaction = new transactions_1.Transaction();
-        transaction.setGasBudget(config.gas_budget);
-        for (const blobId of chunk) {
-            transaction.add(await walrusClient.certifyBlob({
-                blobId,
-                blobObjectId: blobs[blobId].objectId,
-                confirmations: blobs[blobId].confirmations,
-                deletable: true,
-            }));
+const cleanupBlobs_1 = __nccwpck_require__(49754);
+const certifyBlobs = async ({ config, suiClient, walrusClient, walrusSystem, blobs, signer, }) => {
+    try {
+        for (let i = 0; i < Object.keys(blobs).length; i += constants_1.MAX_CMD_CERTIFICATIONS) {
+            const chunk = Object.keys(blobs).slice(i, i + constants_1.MAX_CMD_CERTIFICATIONS);
+            const transaction = new transactions_1.Transaction();
+            transaction.setGasBudget(config.gas_budget);
+            for (const blobId of chunk) {
+                transaction.add(walrusClient.certifyBlob({
+                    blobId,
+                    blobObjectId: blobs[blobId].objectId,
+                    confirmations: blobs[blobId].confirmations,
+                    deletable: true,
+                }));
+            }
+            const { digest } = await suiClient.signAndExecuteTransaction({
+                signer,
+                transaction,
+            });
+            const { effects } = await suiClient.waitForTransaction({
+                digest,
+                options: { showEffects: true },
+            });
+            if (effects.status.status !== 'success') {
+                await (0, cleanupBlobs_1.cleanupBlobs)({
+                    signer,
+                    suiClient,
+                    config,
+                    walrusSystem,
+                    blobObjectsIds: Object.keys(blobs).map(blobId => blobs[blobId].objectId),
+                });
+                (0, failWithMessage_1.failWithMessage)(`Transaction ${digest} is ${effects.status.status}: ${JSON.stringify(effects.status.error)}`);
+            }
+            else {
+                core.info(`🚀 Certified ${chunk.length} blob(s), tx digest: ${digest}`);
+            }
         }
-        const { digest } = await suiClient.signAndExecuteTransaction({
+    }
+    catch (error) {
+        await (0, cleanupBlobs_1.cleanupBlobs)({
             signer,
-            transaction,
+            suiClient,
+            config,
+            walrusSystem,
+            blobObjectsIds: Object.keys(blobs).map(blobId => blobs[blobId].objectId),
         });
-        const { effects } = await suiClient.waitForTransaction({
-            digest,
-            options: { showEffects: true },
-        });
-        if (effects.status.status !== 'success') {
-            (0, failWithMessage_1.failWithMessage)(`Transaction ${digest} is ${effects.status.status}: ${JSON.stringify(effects.status.error)}`);
-        }
-        else {
-            core.info(`🚀 Certified ${chunk.length} blob(s), tx digest: ${digest}`);
-        }
+        (0, failWithMessage_1.failWithMessage)(`🚫 Failed to certify blobs: ${error}`);
     }
 };
 exports.certifyBlobs = certifyBlobs;
@@ -59050,7 +59070,7 @@ const writeBlobs = async ({ retryLimit, config, signer, suiClient, walrusClient,
         const stakingState = await walrusClient.stakingState();
         const committee = await (0, getCommittee_1.getCommittee)(suiClient, stakingState.committee);
         const n = systemState.committee.n_shards;
-        const quorum = Math.ceil((2 * n) / 3) + 1;
+        const quorum = Math.ceil((3 * n) / 4);
         for (const blobId of Object.keys(blobs)) {
             const blob = blobs[blobId];
             const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit + 1, quorum, committee, {
@@ -59184,6 +59204,7 @@ const main = async () => {
         config,
         suiClient,
         walrusClient,
+        walrusSystem,
         blobs: blobsWithNodes,
         signer,
     });
