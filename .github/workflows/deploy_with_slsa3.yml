@@ -63,6 +63,10 @@ jobs:
           name: site-working-directory
           path: .
 
+      - name: Checkout repository
+        if: ${{ needs.preprocess.outputs.working_directory_checked_out != 'true' }}
+        uses: actions/checkout@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -194,7 +198,7 @@ jobs:
           cp ./site.config.json ${{ needs.build-site.outputs.output_dir }}/.well-known
 
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.4.1
+        uses: zktx-io/walrus-sites-provenance@v0.4.2
         env:
           GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
           ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
