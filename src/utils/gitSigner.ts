@@ -10,7 +10,7 @@ import {
   SignatureScheme,
   SignatureWithBytes,
 } from '@mysten/sui/cryptography';
-import { getFaucetHost, requestSuiFromFaucetV1 } from '@mysten/sui/faucet';
+import { getFaucetHost, requestSuiFromFaucetV2 } from '@mysten/sui/faucet';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
 import { fromBase64, toBase64 } from '@mysten/sui/utils';
@@ -117,12 +117,12 @@ export class GitSigner extends Keypair {
     const ephemeralKeypair = Ed25519Keypair.generate();
     const ephemeralAddress = ephemeralKeypair.getPublicKey().toSuiAddress();
     const host = getFaucetHost(NETWORK);
-    const res = await requestSuiFromFaucetV1({
+    const res = await requestSuiFromFaucetV2({
       host,
       recipient: ephemeralAddress,
     });
 
-    if (res.error) throw res.error;
+    if (res.status !== 'Success') throw JSON.stringify(res.status);
 
     const client = new SuiClient({ url: getFullnodeUrl(NETWORK) });
 

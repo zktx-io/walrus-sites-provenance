@@ -42,8 +42,8 @@
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@mysten/bcs": "^1.6.0",
-    "@mysten/sui": "^1.26.1",
-    "@mysten/walrus": "^0.0.14",
+    "@mysten/sui": "^1.29.0",
+    "@mysten/walrus": "^0.0.20",
     "glob": "^11.0.1"
   },
   "devDependencies": {

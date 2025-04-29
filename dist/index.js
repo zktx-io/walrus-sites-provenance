@@ -1,849 +1,6 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 18798:
-/***/ ((__unused_webpack_module, exports) => {
-
-Object.defineProperty(exports, "__esModule", ({
-  value: !0
-}));
-
-class GraphQLError extends Error {
-  constructor(e, r, i, n, t, a, o) {
-    if (super(e), this.name = "GraphQLError", this.message = e, t) {
-      this.path = t;
-    }
-    if (r) {
-      this.nodes = Array.isArray(r) ? r : [ r ];
-    }
-    if (i) {
-      this.source = i;
-    }
-    if (n) {
-      this.positions = n;
-    }
-    if (a) {
-      this.originalError = a;
-    }
-    var l = o;
-    if (!l && a) {
-      var d = a.extensions;
-      if (d && "object" == typeof d) {
-        l = d;
-      }
-    }
-    this.extensions = l || {};
-  }
-  toJSON() {
-    return {
-      ...this,
-      message: this.message
-    };
-  }
-  toString() {
-    return this.message;
-  }
-  get [Symbol.toStringTag]() {
-    return "GraphQLError";
-  }
-}
-
-var e;
-
-var r;
-
-function error(e) {
-  return new GraphQLError(`Syntax Error: Unexpected token at ${r} in ${e}`);
-}
-
-function advance(i) {
-  if (i.lastIndex = r, i.test(e)) {
-    return e.slice(r, r = i.lastIndex);
-  }
-}
-
-var i = / +(?=[^\s])/y;
-
-function blockString(e) {
-  var r = e.split("\n");
-  var n = "";
-  var t = 0;
-  var a = 0;
-  var o = r.length - 1;
-  for (var l = 0; l < r.length; l++) {
-    if (i.lastIndex = 0, i.test(r[l])) {
-      if (l && (!t || i.lastIndex < t)) {
-        t = i.lastIndex;
-      }
-      a = a || l, o = l;
-    }
-  }
-  for (var d = a; d <= o; d++) {
-    if (d !== a) {
-      n += "\n";
-    }
-    n += r[d].slice(t).replace(/\\"""/g, '"""');
-  }
-  return n;
-}
-
-function ignored() {
-  for (var i = 0 | e.charCodeAt(r++); 9 === i || 10 === i || 13 === i || 32 === i || 35 === i || 44 === i || 65279 === i; i = 0 | e.charCodeAt(r++)) {
-    if (35 === i) {
-      for (;10 !== (i = e.charCodeAt(r++)) && 13 !== i; ) {}
-    }
-  }
-  r--;
-}
-
-function name() {
-  var i = r;
-  for (var n = 0 | e.charCodeAt(r++); n >= 48 && n <= 57 || n >= 65 && n <= 90 || 95 === n || n >= 97 && n <= 122; n = 0 | e.charCodeAt(r++)) {}
-  if (i === r - 1) {
-    throw error("Name");
-  }
-  var t = e.slice(i, --r);
-  return ignored(), t;
-}
-
-function nameNode() {
-  return {
-    kind: "Name",
-    value: name()
-  };
-}
-
-var n = /(?:"""|(?:[\s\S]*?[^\\])""")/y;
-
-var t = /(?:(?:\.\d+)?[eE][+-]?\d+|\.\d+)/y;
-
-function value(i) {
-  var a;
-  switch (e.charCodeAt(r)) {
-   case 91:
-    r++, ignored();
-    var o = [];
-    for (;93 !== e.charCodeAt(r); ) {
-      o.push(value(i));
-    }
-    return r++, ignored(), {
-      kind: "ListValue",
-      values: o
-    };
-
-   case 123:
-    r++, ignored();
-    var l = [];
-    for (;125 !== e.charCodeAt(r); ) {
-      var d = nameNode();
-      if (58 !== e.charCodeAt(r++)) {
-        throw error("ObjectField");
-      }
-      ignored(), l.push({
-        kind: "ObjectField",
-        name: d,
-        value: value(i)
-      });
-    }
-    return r++, ignored(), {
-      kind: "ObjectValue",
-      fields: l
-    };
-
-   case 36:
-    if (i) {
-      throw error("Variable");
-    }
-    return r++, {
-      kind: "Variable",
-      name: nameNode()
-    };
-
-   case 34:
-    if (34 === e.charCodeAt(r + 1) && 34 === e.charCodeAt(r + 2)) {
-      if (r += 3, null == (a = advance(n))) {
-        throw error("StringValue");
-      }
-      return ignored(), {
-        kind: "StringValue",
-        value: blockString(a.slice(0, -3)),
-        block: !0
-      };
-    } else {
-      var s = r;
-      var u;
-      r++;
-      var c = !1;
-      for (u = 0 | e.charCodeAt(r++); 92 === u && (r++, c = !0) || 10 !== u && 13 !== u && 34 !== u && u; u = 0 | e.charCodeAt(r++)) {}
-      if (34 !== u) {
-        throw error("StringValue");
-      }
-      return a = e.slice(s, r), ignored(), {
-        kind: "StringValue",
-        value: c ? JSON.parse(a) : a.slice(1, -1),
-        block: !1
-      };
-    }
-
-   case 45:
-   case 48:
-   case 49:
-   case 50:
-   case 51:
-   case 52:
-   case 53:
-   case 54:
-   case 55:
-   case 56:
-   case 57:
-    var v = r++;
-    var f;
-    for (;(f = 0 | e.charCodeAt(r++)) >= 48 && f <= 57; ) {}
-    var p = e.slice(v, --r);
-    if (46 === (f = e.charCodeAt(r)) || 69 === f || 101 === f) {
-      if (null == (a = advance(t))) {
-        throw error("FloatValue");
-      }
-      return ignored(), {
-        kind: "FloatValue",
-        value: p + a
-      };
-    } else {
-      return ignored(), {
-        kind: "IntValue",
-        value: p
-      };
-    }
-
-   case 110:
-    if (117 === e.charCodeAt(r + 1) && 108 === e.charCodeAt(r + 2) && 108 === e.charCodeAt(r + 3)) {
-      return r += 4, ignored(), {
-        kind: "NullValue"
-      };
-    } else {
-      break;
-    }
-
-   case 116:
-    if (114 === e.charCodeAt(r + 1) && 117 === e.charCodeAt(r + 2) && 101 === e.charCodeAt(r + 3)) {
-      return r += 4, ignored(), {
-        kind: "BooleanValue",
-        value: !0
-      };
-    } else {
-      break;
-    }
-
-   case 102:
-    if (97 === e.charCodeAt(r + 1) && 108 === e.charCodeAt(r + 2) && 115 === e.charCodeAt(r + 3) && 101 === e.charCodeAt(r + 4)) {
-      return r += 5, ignored(), {
-        kind: "BooleanValue",
-        value: !1
-      };
-    } else {
-      break;
-    }
-  }
-  return {
-    kind: "EnumValue",
-    value: name()
-  };
-}
-
-function arguments_(i) {
-  if (40 === e.charCodeAt(r)) {
-    var n = [];
-    r++, ignored();
-    do {
-      var t = nameNode();
-      if (58 !== e.charCodeAt(r++)) {
-        throw error("Argument");
-      }
-      ignored(), n.push({
-        kind: "Argument",
-        name: t,
-        value: value(i)
-      });
-    } while (41 !== e.charCodeAt(r));
-    return r++, ignored(), n;
-  }
-}
-
-function directives(i) {
-  if (64 === e.charCodeAt(r)) {
-    var n = [];
-    do {
-      r++, n.push({
-        kind: "Directive",
-        name: nameNode(),
-        arguments: arguments_(i)
-      });
-    } while (64 === e.charCodeAt(r));
-    return n;
-  }
-}
-
-function type() {
-  var i = 0;
-  for (;91 === e.charCodeAt(r); ) {
-    i++, r++, ignored();
-  }
-  var n = {
-    kind: "NamedType",
-    name: nameNode()
-  };
-  do {
-    if (33 === e.charCodeAt(r)) {
-      r++, ignored(), n = {
-        kind: "NonNullType",
-        type: n
-      };
-    }
-    if (i) {
-      if (93 !== e.charCodeAt(r++)) {
-        throw error("NamedType");
-      }
-      ignored(), n = {
-        kind: "ListType",
-        type: n
-      };
-    }
-  } while (i--);
-  return n;
-}
-
-function selectionSetStart() {
-  if (123 !== e.charCodeAt(r++)) {
-    throw error("SelectionSet");
-  }
-  return ignored(), selectionSet();
-}
-
-function selectionSet() {
-  var i = [];
-  do {
-    if (46 === e.charCodeAt(r)) {
-      if (46 !== e.charCodeAt(++r) || 46 !== e.charCodeAt(++r)) {
-        throw error("SelectionSet");
-      }
-      switch (r++, ignored(), e.charCodeAt(r)) {
-       case 64:
-        i.push({
-          kind: "InlineFragment",
-          typeCondition: void 0,
-          directives: directives(!1),
-          selectionSet: selectionSetStart()
-        });
-        break;
-
-       case 111:
-        if (110 === e.charCodeAt(r + 1)) {
-          r += 2, ignored(), i.push({
-            kind: "InlineFragment",
-            typeCondition: {
-              kind: "NamedType",
-              name: nameNode()
-            },
-            directives: directives(!1),
-            selectionSet: selectionSetStart()
-          });
-        } else {
-          i.push({
-            kind: "FragmentSpread",
-            name: nameNode(),
-            directives: directives(!1)
-          });
-        }
-        break;
-
-       case 123:
-        r++, ignored(), i.push({
-          kind: "InlineFragment",
-          typeCondition: void 0,
-          directives: void 0,
-          selectionSet: selectionSet()
-        });
-        break;
-
-       default:
-        i.push({
-          kind: "FragmentSpread",
-          name: nameNode(),
-          directives: directives(!1)
-        });
-      }
-    } else {
-      var n = nameNode();
-      var t = void 0;
-      if (58 === e.charCodeAt(r)) {
-        r++, ignored(), t = n, n = nameNode();
-      }
-      var a = arguments_(!1);
-      var o = directives(!1);
-      var l = void 0;
-      if (123 === e.charCodeAt(r)) {
-        r++, ignored(), l = selectionSet();
-      }
-      i.push({
-        kind: "Field",
-        alias: t,
-        name: n,
-        arguments: a,
-        directives: o,
-        selectionSet: l
-      });
-    }
-  } while (125 !== e.charCodeAt(r));
-  return r++, ignored(), {
-    kind: "SelectionSet",
-    selections: i
-  };
-}
-
-function variableDefinitions() {
-  if (ignored(), 40 === e.charCodeAt(r)) {
-    var i = [];
-    r++, ignored();
-    do {
-      if (36 !== e.charCodeAt(r++)) {
-        throw error("Variable");
-      }
-      var n = nameNode();
-      if (58 !== e.charCodeAt(r++)) {
-        throw error("VariableDefinition");
-      }
-      ignored();
-      var t = type();
-      var a = void 0;
-      if (61 === e.charCodeAt(r)) {
-        r++, ignored(), a = value(!0);
-      }
-      ignored(), i.push({
-        kind: "VariableDefinition",
-        variable: {
-          kind: "Variable",
-          name: n
-        },
-        type: t,
-        defaultValue: a,
-        directives: directives(!0)
-      });
-    } while (41 !== e.charCodeAt(r));
-    return r++, ignored(), i;
-  }
-}
-
-function fragmentDefinition() {
-  var i = nameNode();
-  if (111 !== e.charCodeAt(r++) || 110 !== e.charCodeAt(r++)) {
-    throw error("FragmentDefinition");
-  }
-  return ignored(), {
-    kind: "FragmentDefinition",
-    name: i,
-    typeCondition: {
-      kind: "NamedType",
-      name: nameNode()
-    },
-    directives: directives(!1),
-    selectionSet: selectionSetStart()
-  };
-}
-
-function definitions() {
-  var i = [];
-  do {
-    if (123 === e.charCodeAt(r)) {
-      r++, ignored(), i.push({
-        kind: "OperationDefinition",
-        operation: "query",
-        name: void 0,
-        variableDefinitions: void 0,
-        directives: void 0,
-        selectionSet: selectionSet()
-      });
-    } else {
-      var n = name();
-      switch (n) {
-       case "fragment":
-        i.push(fragmentDefinition());
-        break;
-
-       case "query":
-       case "mutation":
-       case "subscription":
-        var t;
-        var a = void 0;
-        if (40 !== (t = e.charCodeAt(r)) && 64 !== t && 123 !== t) {
-          a = nameNode();
-        }
-        i.push({
-          kind: "OperationDefinition",
-          operation: n,
-          name: a,
-          variableDefinitions: variableDefinitions(),
-          directives: directives(!1),
-          selectionSet: selectionSetStart()
-        });
-        break;
-
-       default:
-        throw error("Document");
-      }
-    }
-  } while (r < e.length);
-  return i;
-}
-
-var a = {};
-
-function mapJoin(e, r, i) {
-  var n = "";
-  for (var t = 0; t < e.length; t++) {
-    if (t) {
-      n += r;
-    }
-    n += i(e[t]);
-  }
-  return n;
-}
-
-function printString(e) {
-  return JSON.stringify(e);
-}
-
-function printBlockString(e) {
-  return '"""\n' + e.replace(/"""/g, '\\"""') + '\n"""';
-}
-
-var o = "\n";
-
-var l = {
-  OperationDefinition(e) {
-    var r = e.operation;
-    if (e.name) {
-      r += " " + e.name.value;
-    }
-    if (e.variableDefinitions && e.variableDefinitions.length) {
-      if (!e.name) {
-        r += " ";
-      }
-      r += "(" + mapJoin(e.variableDefinitions, ", ", l.VariableDefinition) + ")";
-    }
-    if (e.directives && e.directives.length) {
-      r += " " + mapJoin(e.directives, " ", l.Directive);
-    }
-    return "query" !== r ? r + " " + l.SelectionSet(e.selectionSet) : l.SelectionSet(e.selectionSet);
-  },
-  VariableDefinition(e) {
-    var r = l.Variable(e.variable) + ": " + _print(e.type);
-    if (e.defaultValue) {
-      r += " = " + _print(e.defaultValue);
-    }
-    if (e.directives && e.directives.length) {
-      r += " " + mapJoin(e.directives, " ", l.Directive);
-    }
-    return r;
-  },
-  Field(e) {
-    var r = e.alias ? e.alias.value + ": " + e.name.value : e.name.value;
-    if (e.arguments && e.arguments.length) {
-      var i = mapJoin(e.arguments, ", ", l.Argument);
-      if (r.length + i.length + 2 > 80) {
-        r += "(" + (o += "  ") + mapJoin(e.arguments, o, l.Argument) + (o = o.slice(0, -2)) + ")";
-      } else {
-        r += "(" + i + ")";
-      }
-    }
-    if (e.directives && e.directives.length) {
-      r += " " + mapJoin(e.directives, " ", l.Directive);
-    }
-    if (e.selectionSet && e.selectionSet.selections.length) {
-      r += " " + l.SelectionSet(e.selectionSet);
-    }
-    return r;
-  },
-  StringValue(e) {
-    if (e.block) {
-      return printBlockString(e.value).replace(/\n/g, o);
-    } else {
-      return printString(e.value);
-    }
-  },
-  BooleanValue: e => "" + e.value,
-  NullValue: e => "null",
-  IntValue: e => e.value,
-  FloatValue: e => e.value,
-  EnumValue: e => e.value,
-  Name: e => e.value,
-  Variable: e => "$" + e.name.value,
-  ListValue: e => "[" + mapJoin(e.values, ", ", _print) + "]",
-  ObjectValue: e => "{" + mapJoin(e.fields, ", ", l.ObjectField) + "}",
-  ObjectField: e => e.name.value + ": " + _print(e.value),
-  Document(e) {
-    if (!e.definitions || !e.definitions.length) {
-      return "";
-    } else {
-      return mapJoin(e.definitions, "\n\n", _print);
-    }
-  },
-  SelectionSet: e => "{" + (o += "  ") + mapJoin(e.selections, o, _print) + (o = o.slice(0, -2)) + "}",
-  Argument: e => e.name.value + ": " + _print(e.value),
-  FragmentSpread(e) {
-    var r = "..." + e.name.value;
-    if (e.directives && e.directives.length) {
-      r += " " + mapJoin(e.directives, " ", l.Directive);
-    }
-    return r;
-  },
-  InlineFragment(e) {
-    var r = "...";
-    if (e.typeCondition) {
-      r += " on " + e.typeCondition.name.value;
-    }
-    if (e.directives && e.directives.length) {
-      r += " " + mapJoin(e.directives, " ", l.Directive);
-    }
-    return r += " " + l.SelectionSet(e.selectionSet);
-  },
-  FragmentDefinition(e) {
-    var r = "fragment " + e.name.value;
-    if (r += " on " + e.typeCondition.name.value, e.directives && e.directives.length) {
-      r += " " + mapJoin(e.directives, " ", l.Directive);
-    }
-    return r + " " + l.SelectionSet(e.selectionSet);
-  },
-  Directive(e) {
-    var r = "@" + e.name.value;
-    if (e.arguments && e.arguments.length) {
-      r += "(" + mapJoin(e.arguments, ", ", l.Argument) + ")";
-    }
-    return r;
-  },
-  NamedType: e => e.name.value,
-  ListType: e => "[" + _print(e.type) + "]",
-  NonNullType: e => _print(e.type) + "!"
-};
-
-var _print = e => l[e.kind](e);
-
-function valueFromASTUntyped(e, r) {
-  switch (e.kind) {
-   case "NullValue":
-    return null;
-
-   case "IntValue":
-    return parseInt(e.value, 10);
-
-   case "FloatValue":
-    return parseFloat(e.value);
-
-   case "StringValue":
-   case "EnumValue":
-   case "BooleanValue":
-    return e.value;
-
-   case "ListValue":
-    var i = [];
-    for (var n = 0, t = e.values.length; n < t; n++) {
-      i.push(valueFromASTUntyped(e.values[n], r));
-    }
-    return i;
-
-   case "ObjectValue":
-    var a = Object.create(null);
-    for (var o = 0, l = e.fields.length; o < l; o++) {
-      var d = e.fields[o];
-      a[d.name.value] = valueFromASTUntyped(d.value, r);
-    }
-    return a;
-
-   case "Variable":
-    return r && r[e.name.value];
-  }
-}
-
-exports.BREAK = a, exports.GraphQLError = GraphQLError, exports.Kind = {
-  NAME: "Name",
-  DOCUMENT: "Document",
-  OPERATION_DEFINITION: "OperationDefinition",
-  VARIABLE_DEFINITION: "VariableDefinition",
-  SELECTION_SET: "SelectionSet",
-  FIELD: "Field",
-  ARGUMENT: "Argument",
-  FRAGMENT_SPREAD: "FragmentSpread",
-  INLINE_FRAGMENT: "InlineFragment",
-  FRAGMENT_DEFINITION: "FragmentDefinition",
-  VARIABLE: "Variable",
-  INT: "IntValue",
-  FLOAT: "FloatValue",
-  STRING: "StringValue",
-  BOOLEAN: "BooleanValue",
-  NULL: "NullValue",
-  ENUM: "EnumValue",
-  LIST: "ListValue",
-  OBJECT: "ObjectValue",
-  OBJECT_FIELD: "ObjectField",
-  DIRECTIVE: "Directive",
-  NAMED_TYPE: "NamedType",
-  LIST_TYPE: "ListType",
-  NON_NULL_TYPE: "NonNullType"
-}, exports.OperationTypeNode = {
-  QUERY: "query",
-  MUTATION: "mutation",
-  SUBSCRIPTION: "subscription"
-}, exports.Source = function Source(e, r, i) {
-  return {
-    body: e,
-    name: r,
-    locationOffset: i || {
-      line: 1,
-      column: 1
-    }
-  };
-}, exports.isSelectionNode = function isSelectionNode(e) {
-  return "Field" === e.kind || "FragmentSpread" === e.kind || "InlineFragment" === e.kind;
-}, exports.parse = function parse(i, n) {
-  if (e = i.body ? i.body : i, r = 0, ignored(), n && n.noLocation) {
-    return {
-      kind: "Document",
-      definitions: definitions()
-    };
-  } else {
-    return {
-      kind: "Document",
-      definitions: definitions(),
-      loc: {
-        start: 0,
-        end: e.length,
-        startToken: void 0,
-        endToken: void 0,
-        source: {
-          body: e,
-          name: "graphql.web",
-          locationOffset: {
-            line: 1,
-            column: 1
-          }
-        }
-      }
-    };
-  }
-}, exports.parseType = function parseType(i, n) {
-  return e = i.body ? i.body : i, r = 0, type();
-}, exports.parseValue = function parseValue(i, n) {
-  return e = i.body ? i.body : i, r = 0, ignored(), value(!1);
-}, exports.print = function print(e) {
-  return o = "\n", l[e.kind] ? l[e.kind](e) : "";
-}, exports.printBlockString = printBlockString, exports.printString = printString, 
-exports.valueFromASTUntyped = valueFromASTUntyped, exports.valueFromTypeNode = function valueFromTypeNode(e, r, i) {
-  if ("Variable" === e.kind) {
-    return i ? valueFromTypeNode(i[e.name.value], r, i) : void 0;
-  } else if ("NonNullType" === r.kind) {
-    return "NullValue" !== e.kind ? valueFromTypeNode(e, r, i) : void 0;
-  } else if ("NullValue" === e.kind) {
-    return null;
-  } else if ("ListType" === r.kind) {
-    if ("ListValue" === e.kind) {
-      var n = [];
-      for (var t = 0, a = e.values.length; t < a; t++) {
-        var o = valueFromTypeNode(e.values[t], r.type, i);
-        if (void 0 === o) {
-          return;
-        } else {
-          n.push(o);
-        }
-      }
-      return n;
-    }
-  } else if ("NamedType" === r.kind) {
-    switch (r.name.value) {
-     case "Int":
-     case "Float":
-     case "String":
-     case "Bool":
-      return r.name.value + "Value" === e.kind ? valueFromASTUntyped(e, i) : void 0;
-
-     default:
-      return valueFromASTUntyped(e, i);
-    }
-  }
-}, exports.visit = function visit(e, r) {
-  var i = [];
-  var n = [];
-  try {
-    var t = function traverse(e, t, o) {
-      var l = !1;
-      var d = r[e.kind] && r[e.kind].enter || r[e.kind] || r.enter;
-      var s = d && d.call(r, e, t, o, n, i);
-      if (!1 === s) {
-        return e;
-      } else if (null === s) {
-        return null;
-      } else if (s === a) {
-        throw a;
-      } else if (s && "string" == typeof s.kind) {
-        l = s !== e, e = s;
-      }
-      if (o) {
-        i.push(o);
-      }
-      var u;
-      var c = {
-        ...e
-      };
-      for (var v in e) {
-        n.push(v);
-        var f = e[v];
-        if (Array.isArray(f)) {
-          var p = [];
-          for (var m = 0; m < f.length; m++) {
-            if (null != f[m] && "string" == typeof f[m].kind) {
-              if (i.push(e), n.push(m), u = traverse(f[m], m, f), n.pop(), i.pop(), null == u) {
-                l = !0;
-              } else {
-                l = l || u !== f[m], p.push(u);
-              }
-            }
-          }
-          f = p;
-        } else if (null != f && "string" == typeof f.kind) {
-          if (void 0 !== (u = traverse(f, v, e))) {
-            l = l || f !== u, f = u;
-          }
-        }
-        if (n.pop(), l) {
-          c[v] = f;
-        }
-      }
-      if (o) {
-        i.pop();
-      }
-      var h = r[e.kind] && r[e.kind].leave || r.leave;
-      var g = h && h.call(r, e, t, o, n, i);
-      if (g === a) {
-        throw a;
-      } else if (void 0 !== g) {
-        return g;
-      } else if (void 0 !== s) {
-        return l ? c : s;
-      } else {
-        return l ? c : e;
-      }
-    }(e);
-    return void 0 !== t && !1 !== t ? t : e;
-  } catch (r) {
-    if (r !== a) {
-      throw r;
-    }
-    return e;
-  }
-};
-//# sourceMappingURL=graphql.web.js.map
-
-
-/***/ }),
-
 /***/ 44914:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -11750,120 +10907,6 @@ function isArrayLike(x) {
 }
 
 module.exports = DataLoader;
-
-/***/ }),
-
-/***/ 56200:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-Object.defineProperty(exports, "__esModule", ({
-  value: !0
-}));
-
-var r = __nccwpck_require__(18798);
-
-var e = 0;
-
-var n = new Set;
-
-function initGraphQLTada() {
-  function graphql(a, t) {
-    var i = r.parse(a).definitions;
-    var o = new Set;
-    for (var s of t || []) {
-      for (var d of s.definitions) {
-        if (d.kind === r.Kind.FRAGMENT_DEFINITION && !o.has(d)) {
-          i.push(d);
-          o.add(d);
-        }
-      }
-    }
-    var u;
-    if ((u = i[0].kind === r.Kind.FRAGMENT_DEFINITION) && i[0].directives) {
-      i[0].directives = i[0].directives.filter((r => "_unmask" !== r.name.value));
-    }
-    var f;
-    return {
-      kind: r.Kind.DOCUMENT,
-      definitions: i,
-      get loc() {
-        if (!f && u) {
-          var r = a + function concatLocSources(r) {
-            try {
-              e++;
-              var a = "";
-              for (var t of r) {
-                if (!n.has(t)) {
-                  n.add(t);
-                  var {loc: i} = t;
-                  if (i) {
-                    a += i.source.body;
-                  }
-                }
-              }
-              return a;
-            } finally {
-              if (0 == --e) {
-                n.clear();
-              }
-            }
-          }(t || []);
-          return {
-            start: 0,
-            end: r.length,
-            source: {
-              body: r,
-              name: "GraphQLTada",
-              locationOffset: {
-                line: 1,
-                column: 1
-              }
-            }
-          };
-        }
-        return f;
-      },
-      set loc(r) {
-        f = r;
-      }
-    };
-  }
-  graphql.scalar = function scalar(r, e) {
-    return e;
-  };
-  graphql.persisted = function persisted(e, n) {
-    return {
-      kind: r.Kind.DOCUMENT,
-      definitions: n ? n.definitions : [],
-      documentId: e
-    };
-  };
-  return graphql;
-}
-
-var a = initGraphQLTada();
-
-exports.graphql = a;
-
-exports.initGraphQLTada = initGraphQLTada;
-
-exports.maskFragments = function maskFragments(r, e) {
-  return e;
-};
-
-exports.parse = function parse(e) {
-  return r.parse(e);
-};
-
-exports.readFragment = function readFragment(...r) {
-  return 2 === r.length ? r[1] : r[0];
-};
-
-exports.unsafe_readResult = function unsafe_readResult(r, e) {
-  return e;
-};
-//# sourceMappingURL=gql-tada.js.map
-
 
 /***/ }),
 
@@ -60007,7 +59050,7 @@ const writeBlobs = async ({ retryLimit, config, signer, suiClient, walrusClient,
         const stakingState = await walrusClient.stakingState();
         const committee = await (0, getCommittee_1.getCommittee)(suiClient, stakingState.committee);
         const n = systemState.committee.n_shards;
-        const quorum = Math.ceil((3 * n) / 4);
+        const quorum = Math.ceil((2 * n) / 3) + 1;
         for (const blobId of Object.keys(blobs)) {
             const blob = blobs[blobId];
             const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit + 1, quorum, committee, {
@@ -61242,12 +60285,12 @@ class GitSigner extends cryptography_1.Keypair {
         const ephemeralKeypair = ed25519_1.Ed25519Keypair.generate();
         const ephemeralAddress = ephemeralKeypair.getPublicKey().toSuiAddress();
         const host = (0, faucet_1.getFaucetHost)(NETWORK);
-        const res = await (0, faucet_1.requestSuiFromFaucetV1)({
+        const res = await (0, faucet_1.requestSuiFromFaucetV2)({
             host,
             recipient: ephemeralAddress,
         });
-        if (res.error)
-            throw res.error;
+        if (res.status !== 'Success')
+            throw JSON.stringify(res.status);
         const client = new client_1.SuiClient({ url: (0, client_1.getFullnodeUrl)(NETWORK) });
         const maxRetries = 5;
         const retryDelay = 1500;
@@ -66487,6 +65530,13 @@ class SuiClient extends import_client.Experimental_BaseClient {
       signal: input?.signal
     });
   }
+  async verifyZkLoginSignature(input) {
+    return await this.transport.request({
+      method: "sui_verifyZkLoginSignature",
+      params: [input.bytes, input.signature, input.intentScope, input.author],
+      signal: input.signal
+    });
+  }
   /**
    * Wait for a transaction block result to be available over the API.
    * This can be used in conjunction with `executeTransactionBlock` to wait for the transaction to
@@ -67926,6 +66976,16 @@ class Experimental_CoreClient extends import_client.Experimental_BaseClient {
     super(...arguments);
     this.core = this;
   }
+  async getObject(options) {
+    const { objectId } = options;
+    const {
+      objects: [result]
+    } = await this.getObjects({ objectIds: [objectId], signal: options.signal });
+    if (result instanceof Error) {
+      throw result;
+    }
+    return { object: result };
+  }
   async getDynamicField(options) {
     const fieldId = (0, import_dynamic_fields.deriveDynamicFieldID)(
       options.parentId,
@@ -67935,7 +66995,8 @@ class Experimental_CoreClient extends import_client.Experimental_BaseClient {
     const {
       objects: [fieldObject]
     } = await this.getObjects({
-      objectIds: [fieldId]
+      objectIds: [fieldId],
+      signal: options.signal
     });
     if (fieldObject instanceof Error) {
       throw fieldObject;
@@ -68049,6 +67110,361 @@ class ObjectError extends SuiClientError {
 
 /***/ }),
 
+/***/ 20234:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var experimental_exports = {};
+__export(experimental_exports, {
+  ClientCache: () => import_cache.ClientCache,
+  Experimental_BaseClient: () => import_client.Experimental_BaseClient,
+  Experimental_CoreClient: () => import_core.Experimental_CoreClient
+});
+module.exports = __toCommonJS(experimental_exports);
+var import_client = __nccwpck_require__(51795);
+var import_core = __nccwpck_require__(57151);
+var import_cache = __nccwpck_require__(9420);
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 53180:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
+var graphql_exports = {};
+__export(graphql_exports, {
+  GraphQLTransport: () => GraphQLTransport
+});
+module.exports = __toCommonJS(graphql_exports);
+var import_core = __nccwpck_require__(57151);
+var import_queries = __nccwpck_require__(33371);
+var import_errors = __nccwpck_require__(4399);
+var import_utils = __nccwpck_require__(5041);
+var import_sui_types = __nccwpck_require__(24818);
+var import_dynamic_fields = __nccwpck_require__(33100);
+var import_utils2 = __nccwpck_require__(36540);
+var _graphqlClient, _GraphQLTransport_instances, graphqlQuery_fn;
+class GraphQLTransport extends import_core.Experimental_CoreClient {
+  constructor(graphqlClient) {
+    super({ network: graphqlClient.network });
+    __privateAdd(this, _GraphQLTransport_instances);
+    __privateAdd(this, _graphqlClient);
+    __privateSet(this, _graphqlClient, graphqlClient);
+  }
+  async getObjects(options) {
+    const objects = [];
+    let hasNextPage = true;
+    let cursor = null;
+    while (hasNextPage) {
+      const objectsPage = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+        query: import_queries.MultiGetObjectsDocument,
+        variables: {
+          objectIds: options.objectIds,
+          cursor
+        }
+      }, (result) => result.objects);
+      objects.push(...objectsPage.nodes);
+      hasNextPage = objectsPage.pageInfo.hasNextPage;
+      cursor = objectsPage.pageInfo.endCursor ?? null;
+    }
+    return {
+      objects: options.objectIds.map((id) => (0, import_sui_types.normalizeSuiAddress)(id)).map(
+        (id) => objects.find((obj) => obj.address === id) ?? new import_errors.ObjectError("notFound", `Object ${id} not found`)
+      ).map((obj) => {
+        if (obj instanceof import_errors.ObjectError) {
+          return obj;
+        }
+        return {
+          id: obj.address,
+          version: obj.version,
+          digest: obj.digest,
+          owner: mapOwner(obj.owner),
+          type: obj.asMoveObject?.contents?.type?.repr,
+          content: (0, import_utils.fromBase64)(obj.asMoveObject?.contents?.bcs)
+        };
+      })
+    };
+  }
+  async getOwnedObjects(options) {
+    const objects = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+      query: import_queries.GetOwnedObjectsDocument,
+      variables: {
+        owner: options.address,
+        limit: options.limit,
+        cursor: options.cursor,
+        filter: options.type ? { type: options.type } : void 0
+      }
+    }, (result) => result.address?.objects);
+    return {
+      objects: objects.nodes.map((obj) => ({
+        id: obj.address,
+        version: obj.version,
+        digest: obj.digest,
+        owner: mapOwner(obj.owner),
+        type: obj.contents?.type?.repr,
+        content: (0, import_utils.fromBase64)(obj.contents?.bcs)
+      })),
+      hasNextPage: objects.pageInfo.hasNextPage,
+      cursor: objects.pageInfo.endCursor ?? null
+    };
+  }
+  async getCoins(options) {
+    const coins = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+      query: import_queries.GetCoinsDocument,
+      variables: {
+        owner: options.address,
+        cursor: options.cursor,
+        first: options.limit,
+        type: options.coinType
+      }
+    }, (result) => result.address?.coins);
+    return {
+      cursor: coins.pageInfo.endCursor ?? null,
+      hasNextPage: coins.pageInfo.hasNextPage,
+      objects: coins.nodes.map((coin) => ({
+        id: coin.address,
+        version: coin.version,
+        digest: coin.digest,
+        owner: mapOwner(coin.owner),
+        type: coin.contents?.type?.repr,
+        balance: coin.coinBalance,
+        content: (0, import_utils.fromBase64)(coin.contents?.bcs)
+      }))
+    };
+  }
+  async getBalance(options) {
+    const result = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+      query: import_queries.GetBalanceDocument,
+      variables: { owner: options.address, type: options.coinType }
+    }, (result2) => result2.address?.balance);
+    return {
+      balance: {
+        coinType: result.coinType.repr,
+        balance: result.totalBalance
+      }
+    };
+  }
+  async getAllBalances(options) {
+    const balances = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+      query: import_queries.GetAllBalancesDocument,
+      variables: { owner: options.address }
+    }, (result) => result.address?.balances);
+    return {
+      cursor: balances.pageInfo.endCursor ?? null,
+      hasNextPage: balances.pageInfo.hasNextPage,
+      balances: balances.nodes.map((balance) => ({
+        coinType: balance.coinType.repr,
+        balance: balance.totalBalance
+      }))
+    };
+  }
+  async getTransaction(options) {
+    const result = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+      query: import_queries.GetTransactionBlockDocument,
+      variables: { digest: options.digest }
+    }, (result2) => result2.transactionBlock);
+    return {
+      transaction: parseTransaction(result)
+    };
+  }
+  async executeTransaction(options) {
+    const result = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+      query: import_queries.ExecuteTransactionBlockDocument,
+      variables: { txBytes: (0, import_utils.toBase64)(options.transaction), signatures: options.signatures }
+    }, (result2) => result2.executeTransactionBlock);
+    if (result.errors) {
+      if (result.errors.length === 1) {
+        throw new Error(result.errors[0]);
+      }
+      throw new AggregateError(result.errors.map((error) => new Error(error)));
+    }
+    return {
+      transaction: parseTransaction(result.effects.transactionBlock)
+    };
+  }
+  async dryRunTransaction(options) {
+    const result = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+      query: import_queries.DryRunTransactionBlockDocument,
+      variables: { txBytes: (0, import_utils.toBase64)(options.transaction) }
+    }, (result2) => result2.dryRunTransactionBlock);
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    return {
+      transaction: parseTransaction(result.transaction)
+    };
+  }
+  async getReferenceGasPrice() {
+    const result = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+      query: import_queries.GetReferenceGasPriceDocument
+    }, (result2) => result2.epoch?.referenceGasPrice);
+    return {
+      referenceGasPrice: result.referenceGasPrice
+    };
+  }
+  async getDynamicFields(options) {
+    const result = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+      query: import_queries.GetDynamicFieldsDocument,
+      variables: { parentId: options.parentId }
+    }, (result2) => result2.owner?.dynamicFields);
+    return {
+      dynamicFields: result.nodes.map((dynamicField) => {
+        const valueType = dynamicField.value?.__typename === "MoveObject" ? dynamicField.value.contents?.type?.repr : dynamicField.value?.type.repr;
+        return {
+          id: (0, import_dynamic_fields.deriveDynamicFieldID)(
+            options.parentId,
+            dynamicField.name?.type.repr,
+            dynamicField.name?.bcs
+          ),
+          type: (0, import_sui_types.normalizeStructTag)(
+            dynamicField.value?.__typename === "MoveObject" ? `0x2::dynamic_field::Field<0x2::dynamic_object_field::Wrapper<${dynamicField.name?.type.repr}>,0x2::object::ID>` : `0x2::dynamic_field::Field<${dynamicField.name?.type.repr},${valueType}>`
+          ),
+          name: {
+            type: dynamicField.name?.type.repr,
+            bcs: (0, import_utils.fromBase64)(dynamicField.name?.bcs)
+          },
+          valueType
+        };
+      }),
+      cursor: result.pageInfo.endCursor ?? null,
+      hasNextPage: result.pageInfo.hasNextPage
+    };
+  }
+  async verifyZkLoginSignature(options) {
+    const intentScope = options.intentScope === "TransactionData" ? import_queries.ZkLoginIntentScope.TransactionData : import_queries.ZkLoginIntentScope.PersonalMessage;
+    const result = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+      query: import_queries.VerifyZkLoginSignatureDocument,
+      variables: {
+        bytes: options.bytes,
+        signature: options.signature,
+        intentScope,
+        author: options.author
+      }
+    }, (result2) => result2.verifyZkloginSignature);
+    return {
+      success: result.success,
+      errors: result.errors
+    };
+  }
+}
+_graphqlClient = new WeakMap();
+_GraphQLTransport_instances = new WeakSet();
+graphqlQuery_fn = async function(options, getData) {
+  const { data, errors } = await __privateGet(this, _graphqlClient).query(options);
+  handleGraphQLErrors(errors);
+  const extractedData = data && (getData ? getData(data) : data);
+  if (extractedData == null) {
+    throw new Error("Missing response data");
+  }
+  return extractedData;
+};
+function handleGraphQLErrors(errors) {
+  if (!errors || errors.length === 0) return;
+  const errorInstances = errors.map((error) => new GraphQLResponseError(error));
+  if (errorInstances.length === 1) {
+    throw errorInstances[0];
+  }
+  throw new AggregateError(errorInstances);
+}
+class GraphQLResponseError extends Error {
+  constructor(error) {
+    super(error.message);
+    this.locations = error.locations;
+  }
+}
+function mapOwner(owner) {
+  switch (owner.__typename) {
+    case "AddressOwner":
+      return { $kind: "AddressOwner", AddressOwner: owner.owner?.asAddress?.address };
+    case "ConsensusV2":
+      return { $kind: "ConsensusV2", ConsensusV2: owner.authenticator.address };
+    case "Immutable":
+      return { $kind: "Immutable", Immutable: true };
+    case "Parent":
+      return { $kind: "ObjectOwner", ObjectOwner: owner.parent?.address };
+    case "Shared":
+      return { $kind: "Shared", Shared: owner.initialSharedVersion };
+  }
+}
+function parseTransaction(transaction) {
+  const objectTypes = {};
+  transaction.effects?.unchangedSharedObjects.nodes.forEach((node) => {
+    if (node.__typename === "SharedObjectRead") {
+      const type = node.object?.asMoveObject?.contents?.type.repr;
+      const address = node.object?.asMoveObject?.address;
+      if (type && address) {
+        objectTypes[address] = type;
+      }
+    }
+  });
+  transaction.effects?.objectChanges.nodes.forEach((node) => {
+    const address = node.address;
+    const type = node.inputState?.asMoveObject?.contents?.type.repr ?? node.outputState?.asMoveObject?.contents?.type.repr;
+    if (address && type) {
+      objectTypes[address] = type;
+    }
+  });
+  return {
+    digest: transaction.digest,
+    effects: (0, import_utils2.parseTransactionEffects)({
+      effects: new Uint8Array(transaction.effects?.bcs),
+      objectTypes
+    }),
+    bcs: transaction.bcs,
+    signatures: transaction.signatures
+  };
+}
+//# sourceMappingURL=graphql.js.map
+
+
+/***/ }),
+
 /***/ 87420:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -68090,6 +67506,7 @@ var import_Transaction = __nccwpck_require__(22545);
 var import_sui_types = __nccwpck_require__(24818);
 var import_core = __nccwpck_require__(57151);
 var import_errors = __nccwpck_require__(4399);
+var import_utils2 = __nccwpck_require__(36540);
 var _jsonRpcClient;
 class JSONRpcTransport extends import_core.Experimental_CoreClient {
   constructor(jsonRpcClient) {
@@ -68107,7 +67524,8 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
           showOwner: true,
           showType: true,
           showBcs: true
-        }
+        },
+        signal: options.signal
       });
       for (const [idx, object] of objects.entries()) {
         if (object.error) {
@@ -68130,7 +67548,8 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
         showOwner: true,
         showType: true,
         showBcs: true
-      }
+      },
+      signal: options.signal
     });
     return {
       objects: objects.data.map((result) => {
@@ -68146,7 +67565,10 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
   async getCoins(options) {
     const coins = await __privateGet(this, _jsonRpcClient).getCoins({
       owner: options.address,
-      coinType: options.coinType
+      coinType: options.coinType,
+      limit: options.limit,
+      cursor: options.cursor,
+      signal: options.signal
     });
     return {
       objects: coins.data.map((coin) => {
@@ -68175,7 +67597,8 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
   async getBalance(options) {
     const balance = await __privateGet(this, _jsonRpcClient).getBalance({
       owner: options.address,
-      coinType: options.coinType
+      coinType: options.coinType,
+      signal: options.signal
     });
     return {
       balance: {
@@ -68186,7 +67609,8 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
   }
   async getAllBalances(options) {
     const balances = await __privateGet(this, _jsonRpcClient).getAllBalances({
-      owner: options.address
+      owner: options.address,
+      signal: options.signal
     });
     return {
       balances: balances.map((balance) => ({
@@ -68205,7 +67629,8 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
         showObjectChanges: true,
         showRawEffects: true,
         showEvents: true
-      }
+      },
+      signal: options.signal
     });
     return {
       transaction: parseTransaction(transaction)
@@ -68220,7 +67645,8 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
         showEvents: true,
         showObjectChanges: true,
         showRawInput: true
-      }
+      },
+      signal: options.signal
     });
     return {
       transaction: parseTransaction(transaction)
@@ -68229,7 +67655,8 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
   async dryRunTransaction(options) {
     const tx = import_Transaction.Transaction.from(options.transaction);
     const result = await __privateGet(this, _jsonRpcClient).dryRunTransactionBlock({
-      transactionBlock: options.transaction
+      transactionBlock: options.transaction,
+      signal: options.signal
     });
     return {
       transaction: {
@@ -68243,8 +67670,10 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
       }
     };
   }
-  async getReferenceGasPrice() {
-    const referenceGasPrice = await __privateGet(this, _jsonRpcClient).getReferenceGasPrice();
+  async getReferenceGasPrice(options) {
+    const referenceGasPrice = await __privateGet(this, _jsonRpcClient).getReferenceGasPrice({
+      signal: options?.signal
+    });
     return {
       referenceGasPrice: String(referenceGasPrice)
     };
@@ -68256,18 +67685,30 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
       cursor: options.cursor
     });
     return {
-      dynamicFields: dynamicFields.data.map((dynamicField) => ({
-        id: dynamicField.objectId,
-        version: dynamicField.version,
-        digest: dynamicField.digest,
-        type: dynamicField.objectType,
-        name: {
-          type: dynamicField.name.type,
-          bcs: (0, import_bcs.fromBase64)(dynamicField.bcsName)
-        }
-      })),
+      dynamicFields: dynamicFields.data.map((dynamicField) => {
+        return {
+          id: dynamicField.objectId,
+          type: dynamicField.objectType,
+          name: {
+            type: dynamicField.name.type,
+            bcs: (0, import_bcs.fromBase64)(dynamicField.bcsName)
+          }
+        };
+      }),
       hasNextPage: dynamicFields.hasNextPage,
       cursor: dynamicFields.nextCursor
+    };
+  }
+  async verifyZkLoginSignature(options) {
+    const result = await __privateGet(this, _jsonRpcClient).verifyZkLoginSignature({
+      bytes: options.bytes,
+      signature: options.signature,
+      intentScope: options.intentScope,
+      author: options.author
+    });
+    return {
+      success: result.success,
+      errors: result.errors
     };
   }
 }
@@ -68325,97 +67766,20 @@ function parseOwner(owner) {
 }
 function parseTransaction(transaction) {
   const parsedTx = import_bcs2.bcs.SenderSignedData.parse((0, import_bcs.fromBase64)(transaction.rawTransaction))[0];
-  return {
-    digest: transaction.digest,
-    effects: parseTransactionEffects({
-      effects: new Uint8Array(transaction.rawEffects),
-      objectChanges: transaction.objectChanges ?? null
-    }),
-    bcs: import_bcs2.bcs.TransactionData.serialize(parsedTx.intentMessage.value).toBytes(),
-    signatures: parsedTx.txSignatures
-  };
-}
-function parseTransactionEffects({
-  effects,
-  epoch,
-  objectChanges
-}) {
-  const parsed = import_bcs2.bcs.TransactionEffects.parse(effects);
   const objectTypes = {};
-  objectChanges?.forEach((change) => {
+  transaction.objectChanges?.forEach((change) => {
     if (change.type !== "published") {
       objectTypes[change.objectId] = change.objectType;
     }
   });
-  switch (parsed.$kind) {
-    case "V1":
-      return parseTransactionEffectsV1({ bytes: effects, effects: parsed.V1, epoch, objectTypes });
-    case "V2":
-      return parseTransactionEffectsV2({ bytes: effects, effects: parsed.V2, epoch, objectTypes });
-    default:
-      throw new Error(
-        `Unknown transaction effects version: ${parsed.$kind}`
-      );
-  }
-}
-function parseTransactionEffectsV1(_) {
-  throw new Error("V1 effects are not supported yet");
-}
-function parseTransactionEffectsV2({
-  bytes,
-  effects,
-  epoch,
-  objectTypes
-}) {
-  const changedObjects = effects.changedObjects.map(
-    ([id, change]) => {
-      return {
-        id,
-        inputState: change.inputState.$kind === "Exist" ? "Exists" : "DoesNotExist",
-        inputVersion: change.inputState.Exist?.[0][0] ?? null,
-        inputDigest: change.inputState.Exist?.[0][1] ?? null,
-        inputOwner: change.inputState.Exist?.[1] ?? null,
-        outputState: change.outputState.$kind === "NotExist" ? "DoesNotExist" : change.outputState.$kind,
-        outputVersion: change.outputState.$kind === "PackageWrite" ? change.outputState.PackageWrite?.[0] : change.outputState.ObjectWrite ? effects.lamportVersion : null,
-        outputDigest: change.outputState.$kind === "PackageWrite" ? change.outputState.PackageWrite?.[1] : change.outputState.ObjectWrite?.[0] ?? null,
-        outputOwner: change.outputState.ObjectWrite ? change.outputState.ObjectWrite[1] : null,
-        idOperation: change.idOperation.$kind,
-        objectType: objectTypes[id] ?? null
-      };
-    }
-  );
   return {
-    bcs: bytes,
-    digest: effects.transactionDigest,
-    version: 2,
-    status: effects.status.$kind === "Success" ? {
-      success: true,
-      error: null
-    } : {
-      success: false,
-      // TODO: add command
-      error: effects.status.Failed.error.$kind
-    },
-    epoch: epoch ?? null,
-    gasUsed: effects.gasUsed,
-    transactionDigest: effects.transactionDigest,
-    gasObject: effects.gasObjectIndex === null ? null : changedObjects[effects.gasObjectIndex] ?? null,
-    eventsDigest: effects.eventsDigest,
-    dependencies: effects.dependencies,
-    lamportVersion: effects.lamportVersion,
-    changedObjects,
-    unchangedSharedObjects: effects.unchangedSharedObjects.map(
-      ([objectId, object]) => {
-        return {
-          kind: object.$kind,
-          objectId,
-          version: object.$kind === "ReadOnlyRoot" ? object.ReadOnlyRoot[0] : object[object.$kind],
-          digest: object.$kind === "ReadOnlyRoot" ? object.ReadOnlyRoot[1] : null,
-          objectType: objectTypes[objectId] ?? null
-        };
-      }
-    ),
-    auxiliaryDataDigest: effects.auxDataDigest
+    digest: transaction.digest,
+    effects: (0, import_utils2.parseTransactionEffects)({
+      effects: new Uint8Array(transaction.rawEffects),
+      objectTypes
+    }),
+    bcs: import_bcs2.bcs.TransactionData.serialize(parsedTx.intentMessage.value).toBytes(),
+    signatures: parsedTx.txSignatures
   };
 }
 function parseTransactionEffectsJson({
@@ -68570,6 +67934,116 @@ const Coin = import_bcs2.bcs.struct("Coin", {
 
 /***/ }),
 
+/***/ 36540:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var utils_exports = {};
+__export(utils_exports, {
+  parseTransactionEffects: () => parseTransactionEffects
+});
+module.exports = __toCommonJS(utils_exports);
+var import_bcs = __nccwpck_require__(56244);
+function parseTransactionEffects({
+  effects,
+  epoch,
+  objectTypes
+}) {
+  const parsed = import_bcs.bcs.TransactionEffects.parse(effects);
+  switch (parsed.$kind) {
+    case "V1":
+      return parseTransactionEffectsV1({ bytes: effects, effects: parsed.V1, epoch, objectTypes });
+    case "V2":
+      return parseTransactionEffectsV2({ bytes: effects, effects: parsed.V2, epoch, objectTypes });
+    default:
+      throw new Error(
+        `Unknown transaction effects version: ${parsed.$kind}`
+      );
+  }
+}
+function parseTransactionEffectsV1(_) {
+  throw new Error("V1 effects are not supported yet");
+}
+function parseTransactionEffectsV2({
+  bytes,
+  effects,
+  epoch,
+  objectTypes
+}) {
+  const changedObjects = effects.changedObjects.map(
+    ([id, change]) => {
+      return {
+        id,
+        inputState: change.inputState.$kind === "Exist" ? "Exists" : "DoesNotExist",
+        inputVersion: change.inputState.Exist?.[0][0] ?? null,
+        inputDigest: change.inputState.Exist?.[0][1] ?? null,
+        inputOwner: change.inputState.Exist?.[1] ?? null,
+        outputState: change.outputState.$kind === "NotExist" ? "DoesNotExist" : change.outputState.$kind,
+        outputVersion: change.outputState.$kind === "PackageWrite" ? change.outputState.PackageWrite?.[0] : change.outputState.ObjectWrite ? effects.lamportVersion : null,
+        outputDigest: change.outputState.$kind === "PackageWrite" ? change.outputState.PackageWrite?.[1] : change.outputState.ObjectWrite?.[0] ?? null,
+        outputOwner: change.outputState.ObjectWrite ? change.outputState.ObjectWrite[1] : null,
+        idOperation: change.idOperation.$kind,
+        objectType: objectTypes[id] ?? null
+      };
+    }
+  );
+  return {
+    bcs: bytes,
+    digest: effects.transactionDigest,
+    version: 2,
+    status: effects.status.$kind === "Success" ? {
+      success: true,
+      error: null
+    } : {
+      success: false,
+      // TODO: add command
+      error: effects.status.Failed.error.$kind
+    },
+    epoch: epoch ?? null,
+    gasUsed: effects.gasUsed,
+    transactionDigest: effects.transactionDigest,
+    gasObject: effects.gasObjectIndex === null ? null : changedObjects[effects.gasObjectIndex] ?? null,
+    eventsDigest: effects.eventsDigest,
+    dependencies: effects.dependencies,
+    lamportVersion: effects.lamportVersion,
+    changedObjects,
+    unchangedSharedObjects: effects.unchangedSharedObjects.map(
+      ([objectId, object]) => {
+        return {
+          kind: object.$kind,
+          objectId,
+          version: object.$kind === "ReadOnlyRoot" ? object.ReadOnlyRoot[0] : object[object.$kind],
+          digest: object.$kind === "ReadOnlyRoot" ? object.ReadOnlyRoot[1] : null,
+          objectType: objectTypes[objectId] ?? null
+        };
+      }
+    ),
+    auxiliaryDataDigest: effects.auxDataDigest
+  };
+}
+//# sourceMappingURL=utils.js.map
+
+
+/***/ }),
+
 /***/ 44130:
 /***/ ((module) => {
 
@@ -68598,7 +68072,8 @@ __export(faucet_exports, {
   getFaucetHost: () => getFaucetHost,
   getFaucetRequestStatus: () => getFaucetRequestStatus,
   requestSuiFromFaucetV0: () => requestSuiFromFaucetV0,
-  requestSuiFromFaucetV1: () => requestSuiFromFaucetV1
+  requestSuiFromFaucetV1: () => requestSuiFromFaucetV1,
+  requestSuiFromFaucetV2: () => requestSuiFromFaucetV2
 });
 module.exports = __toCommonJS(faucet_exports);
 class FaucetRateLimitError extends Error {
@@ -68620,9 +68095,6 @@ async function faucetRequest({ host, path, body, headers, method }) {
   }
   try {
     const parsed = await res.json();
-    if (parsed.error) {
-      throw new Error(`Faucet returns error: ${parsed.error}`);
-    }
     return parsed;
   } catch (e) {
     throw new Error(
@@ -68631,7 +68103,7 @@ async function faucetRequest({ host, path, body, headers, method }) {
   }
 }
 async function requestSuiFromFaucetV0(input) {
-  return faucetRequest({
+  const response = await faucetRequest({
     host: input.host,
     path: "/gas",
     body: {
@@ -68642,9 +68114,13 @@ async function requestSuiFromFaucetV0(input) {
     headers: input.headers,
     method: "POST"
   });
+  if (response.error) {
+    throw new Error(`Faucet request failed: ${response.error}`);
+  }
+  return response;
 }
 async function requestSuiFromFaucetV1(input) {
-  return faucetRequest({
+  const response = await faucetRequest({
     host: input.host,
     path: "/v1/gas",
     body: {
@@ -68655,14 +68131,39 @@ async function requestSuiFromFaucetV1(input) {
     headers: input.headers,
     method: "POST"
   });
+  if (response.error) {
+    throw new Error(`Faucet request failed: ${response.error}`);
+  }
+  return response;
+}
+async function requestSuiFromFaucetV2(input) {
+  const response = await faucetRequest({
+    host: input.host,
+    path: "/v2/gas",
+    body: {
+      FixedAmountRequest: {
+        recipient: input.recipient
+      }
+    },
+    headers: input.headers,
+    method: "POST"
+  });
+  if (response.status !== "Success") {
+    throw new Error(`Faucet request failed: ${response.status.Failure.internal}`);
+  }
+  return response;
 }
 async function getFaucetRequestStatus(input) {
-  return faucetRequest({
+  const response = await faucetRequest({
     host: input.host,
     path: `/v1/status/${input.taskId}`,
     headers: input.headers,
     method: "GET"
   });
+  if (response.error) {
+    throw new Error(`Faucet request failed: ${response.error}`);
+  }
+  return response;
 }
 function getFaucetHost(network) {
   switch (network) {
@@ -68709,7 +68210,8 @@ __export(faucet_exports, {
   getFaucetHost: () => import_faucet.getFaucetHost,
   getFaucetRequestStatus: () => import_faucet.getFaucetRequestStatus,
   requestSuiFromFaucetV0: () => import_faucet.requestSuiFromFaucetV0,
-  requestSuiFromFaucetV1: () => import_faucet.requestSuiFromFaucetV1
+  requestSuiFromFaucetV1: () => import_faucet.requestSuiFromFaucetV1,
+  requestSuiFromFaucetV2: () => import_faucet.requestSuiFromFaucetV2
 });
 module.exports = __toCommonJS(faucet_exports);
 var import_faucet = __nccwpck_require__(44130);
@@ -68754,20 +68256,27 @@ __export(client_exports, {
 });
 module.exports = __toCommonJS(client_exports);
 var import_graphql = __nccwpck_require__(17645);
+var import_experimental = __nccwpck_require__(20234);
+var import_graphql2 = __nccwpck_require__(53180);
 var _url, _queries, _headers, _fetch;
 class SuiGraphQLRequestError extends Error {
 }
-class SuiGraphQLClient {
+class SuiGraphQLClient extends import_experimental.Experimental_BaseClient {
   constructor({
     url,
     fetch: fetchFn = fetch,
     headers = {},
-    queries = {}
+    queries = {},
+    network = "unknown"
   }) {
+    super({
+      network
+    });
     __privateAdd(this, _url);
     __privateAdd(this, _queries);
     __privateAdd(this, _headers);
     __privateAdd(this, _fetch);
+    this.core = new import_graphql2.GraphQLTransport(this);
     __privateSet(this, _url, url);
     __privateSet(this, _queries, queries);
     __privateSet(this, _headers, headers);
@@ -68781,11 +68290,12 @@ class SuiGraphQLClient {
         ...__privateGet(this, _headers)
       },
       body: JSON.stringify({
-        query: typeof options.query === "string" ? String(options.query) : (0, import_graphql.print)(options.query),
+        query: typeof options.query === "string" || options.query instanceof String ? String(options.query) : (0, import_graphql.print)(options.query),
         variables: options.variables,
         extensions: options.extensions,
         operationName: options.operationName
-      })
+      }),
+      signal: options.signal
     });
     if (!res.ok) {
       throw new SuiGraphQLRequestError(`GraphQL request failed: ${res.statusText} (${res.status})`);
@@ -68808,8 +68318,8 @@ _fetch = new WeakMap();
 
 /***/ }),
 
-/***/ 28980:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ 33371:
+/***/ ((module) => {
 
 "use strict";
 
@@ -68829,45 +68339,711 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
-var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var latest_exports = {};
-__export(latest_exports, {
-  graphql: () => graphql,
-  maskFragments: () => import_gql2.maskFragments,
-  readFragment: () => import_gql2.readFragment
+var queries_exports = {};
+__export(queries_exports, {
+  AddressTransactionBlockRelationship: () => AddressTransactionBlockRelationship,
+  DomainFormat: () => DomainFormat,
+  DryRunTransactionBlockDocument: () => DryRunTransactionBlockDocument,
+  ExecuteTransactionBlockDocument: () => ExecuteTransactionBlockDocument,
+  ExecutionStatus: () => ExecutionStatus,
+  Feature: () => Feature,
+  GetAllBalancesDocument: () => GetAllBalancesDocument,
+  GetBalanceDocument: () => GetBalanceDocument,
+  GetCoinsDocument: () => GetCoinsDocument,
+  GetDynamicFieldsDocument: () => GetDynamicFieldsDocument,
+  GetOwnedObjectsDocument: () => GetOwnedObjectsDocument,
+  GetReferenceGasPriceDocument: () => GetReferenceGasPriceDocument,
+  GetTransactionBlockDocument: () => GetTransactionBlockDocument,
+  MoveAbility: () => MoveAbility,
+  MoveVisibility: () => MoveVisibility,
+  Move_Object_FieldsFragmentDoc: () => Move_Object_FieldsFragmentDoc,
+  MultiGetObjectsDocument: () => MultiGetObjectsDocument,
+  ObjectKind: () => ObjectKind,
+  Object_FieldsFragmentDoc: () => Object_FieldsFragmentDoc,
+  Object_Owner_FieldsFragmentDoc: () => Object_Owner_FieldsFragmentDoc,
+  StakeStatus: () => StakeStatus,
+  TransactionBlockKindInput: () => TransactionBlockKindInput,
+  Transaction_FieldsFragmentDoc: () => Transaction_FieldsFragmentDoc,
+  TypedDocumentString: () => TypedDocumentString,
+  VerifyZkLoginSignatureDocument: () => VerifyZkLoginSignatureDocument,
+  ZkLoginIntentScope: () => ZkLoginIntentScope
 });
-module.exports = __toCommonJS(latest_exports);
-var import_gql = __nccwpck_require__(56200);
-__reExport(latest_exports, __nccwpck_require__(3360), module.exports);
-var import_gql2 = __nccwpck_require__(56200);
-const graphql = (0, import_gql.initGraphQLTada)();
-//# sourceMappingURL=index.js.map
-
-
-/***/ }),
-
-/***/ 3360:
-/***/ ((module) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+module.exports = __toCommonJS(queries_exports);
+var AddressTransactionBlockRelationship = /* @__PURE__ */ ((AddressTransactionBlockRelationship2) => {
+  AddressTransactionBlockRelationship2["Affected"] = "AFFECTED";
+  AddressTransactionBlockRelationship2["Sent"] = "SENT";
+  return AddressTransactionBlockRelationship2;
+})(AddressTransactionBlockRelationship || {});
+var DomainFormat = /* @__PURE__ */ ((DomainFormat2) => {
+  DomainFormat2["At"] = "AT";
+  DomainFormat2["Dot"] = "DOT";
+  return DomainFormat2;
+})(DomainFormat || {});
+var ExecutionStatus = /* @__PURE__ */ ((ExecutionStatus2) => {
+  ExecutionStatus2["Failure"] = "FAILURE";
+  ExecutionStatus2["Success"] = "SUCCESS";
+  return ExecutionStatus2;
+})(ExecutionStatus || {});
+var Feature = /* @__PURE__ */ ((Feature2) => {
+  Feature2["Analytics"] = "ANALYTICS";
+  Feature2["Coins"] = "COINS";
+  Feature2["DynamicFields"] = "DYNAMIC_FIELDS";
+  Feature2["MoveRegistry"] = "MOVE_REGISTRY";
+  Feature2["NameService"] = "NAME_SERVICE";
+  Feature2["Subscriptions"] = "SUBSCRIPTIONS";
+  Feature2["SystemState"] = "SYSTEM_STATE";
+  return Feature2;
+})(Feature || {});
+var MoveAbility = /* @__PURE__ */ ((MoveAbility2) => {
+  MoveAbility2["Copy"] = "COPY";
+  MoveAbility2["Drop"] = "DROP";
+  MoveAbility2["Key"] = "KEY";
+  MoveAbility2["Store"] = "STORE";
+  return MoveAbility2;
+})(MoveAbility || {});
+var MoveVisibility = /* @__PURE__ */ ((MoveVisibility2) => {
+  MoveVisibility2["Friend"] = "FRIEND";
+  MoveVisibility2["Private"] = "PRIVATE";
+  MoveVisibility2["Public"] = "PUBLIC";
+  return MoveVisibility2;
+})(MoveVisibility || {});
+var ObjectKind = /* @__PURE__ */ ((ObjectKind2) => {
+  ObjectKind2["Indexed"] = "INDEXED";
+  ObjectKind2["NotIndexed"] = "NOT_INDEXED";
+  return ObjectKind2;
+})(ObjectKind || {});
+var StakeStatus = /* @__PURE__ */ ((StakeStatus2) => {
+  StakeStatus2["Active"] = "ACTIVE";
+  StakeStatus2["Pending"] = "PENDING";
+  StakeStatus2["Unstaked"] = "UNSTAKED";
+  return StakeStatus2;
+})(StakeStatus || {});
+var TransactionBlockKindInput = /* @__PURE__ */ ((TransactionBlockKindInput2) => {
+  TransactionBlockKindInput2["ProgrammableTx"] = "PROGRAMMABLE_TX";
+  TransactionBlockKindInput2["SystemTx"] = "SYSTEM_TX";
+  return TransactionBlockKindInput2;
+})(TransactionBlockKindInput || {});
+var ZkLoginIntentScope = /* @__PURE__ */ ((ZkLoginIntentScope2) => {
+  ZkLoginIntentScope2["PersonalMessage"] = "PERSONAL_MESSAGE";
+  ZkLoginIntentScope2["TransactionData"] = "TRANSACTION_DATA";
+  return ZkLoginIntentScope2;
+})(ZkLoginIntentScope || {});
+class TypedDocumentString extends String {
+  constructor(value, __meta__) {
+    super(value);
+    this.value = value;
+    this.__meta__ = __meta__;
   }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var types_exports = {};
-module.exports = __toCommonJS(types_exports);
-//# sourceMappingURL=types.js.map
+  toString() {
+    return this.value;
+  }
+}
+const Object_Owner_FieldsFragmentDoc = new TypedDocumentString(`
+    fragment OBJECT_OWNER_FIELDS on ObjectOwner {
+  __typename
+  ... on AddressOwner {
+    owner {
+      asObject {
+        address
+      }
+      asAddress {
+        address
+      }
+    }
+  }
+  ... on Parent {
+    parent {
+      address
+    }
+  }
+  ... on Shared {
+    initialSharedVersion
+  }
+  ... on ConsensusV2 {
+    authenticator {
+      ... on Address {
+        address
+      }
+    }
+  }
+}
+    `, { "fragmentName": "OBJECT_OWNER_FIELDS" });
+const Object_FieldsFragmentDoc = new TypedDocumentString(`
+    fragment OBJECT_FIELDS on Object {
+  address
+  digest
+  version
+  asMoveObject {
+    contents {
+      bcs
+      type {
+        repr
+      }
+    }
+  }
+  owner {
+    ...OBJECT_OWNER_FIELDS
+  }
+}
+    fragment OBJECT_OWNER_FIELDS on ObjectOwner {
+  __typename
+  ... on AddressOwner {
+    owner {
+      asObject {
+        address
+      }
+      asAddress {
+        address
+      }
+    }
+  }
+  ... on Parent {
+    parent {
+      address
+    }
+  }
+  ... on Shared {
+    initialSharedVersion
+  }
+  ... on ConsensusV2 {
+    authenticator {
+      ... on Address {
+        address
+      }
+    }
+  }
+}`, { "fragmentName": "OBJECT_FIELDS" });
+const Move_Object_FieldsFragmentDoc = new TypedDocumentString(`
+    fragment MOVE_OBJECT_FIELDS on MoveObject {
+  address
+  digest
+  version
+  contents {
+    bcs
+    type {
+      repr
+    }
+  }
+  owner {
+    ...OBJECT_OWNER_FIELDS
+  }
+}
+    fragment OBJECT_OWNER_FIELDS on ObjectOwner {
+  __typename
+  ... on AddressOwner {
+    owner {
+      asObject {
+        address
+      }
+      asAddress {
+        address
+      }
+    }
+  }
+  ... on Parent {
+    parent {
+      address
+    }
+  }
+  ... on Shared {
+    initialSharedVersion
+  }
+  ... on ConsensusV2 {
+    authenticator {
+      ... on Address {
+        address
+      }
+    }
+  }
+}`, { "fragmentName": "MOVE_OBJECT_FIELDS" });
+const Transaction_FieldsFragmentDoc = new TypedDocumentString(`
+    fragment TRANSACTION_FIELDS on TransactionBlock {
+  digest
+  bcs
+  signatures
+  effects {
+    bcs
+    unchangedSharedObjects {
+      nodes {
+        __typename
+        ... on SharedObjectRead {
+          object {
+            asMoveObject {
+              address
+              contents {
+                type {
+                  repr
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    objectChanges {
+      nodes {
+        address
+        inputState {
+          version
+          asMoveObject {
+            address
+            contents {
+              type {
+                repr
+              }
+            }
+          }
+        }
+        outputState {
+          asMoveObject {
+            address
+            contents {
+              type {
+                repr
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+    `, { "fragmentName": "TRANSACTION_FIELDS" });
+const GetAllBalancesDocument = new TypedDocumentString(`
+    query getAllBalances($owner: SuiAddress!, $limit: Int, $cursor: String) {
+  address(address: $owner) {
+    balances(first: $limit, after: $cursor) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        coinType {
+          repr
+        }
+        coinObjectCount
+        totalBalance
+      }
+    }
+  }
+}
+    `);
+const GetBalanceDocument = new TypedDocumentString(`
+    query getBalance($owner: SuiAddress!, $type: String = "0x2::sui::SUI") {
+  address(address: $owner) {
+    balance(type: $type) {
+      coinType {
+        repr
+      }
+      coinObjectCount
+      totalBalance
+    }
+  }
+}
+    `);
+const GetCoinsDocument = new TypedDocumentString(`
+    query getCoins($owner: SuiAddress!, $first: Int, $cursor: String, $type: String = "0x2::sui::SUI") {
+  address(address: $owner) {
+    address
+    coins(first: $first, after: $cursor, type: $type) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        coinBalance
+        owner {
+          ...OBJECT_OWNER_FIELDS
+        }
+        contents {
+          bcs
+          type {
+            repr
+          }
+        }
+        address
+        version
+        digest
+      }
+    }
+  }
+}
+    fragment OBJECT_OWNER_FIELDS on ObjectOwner {
+  __typename
+  ... on AddressOwner {
+    owner {
+      asObject {
+        address
+      }
+      asAddress {
+        address
+      }
+    }
+  }
+  ... on Parent {
+    parent {
+      address
+    }
+  }
+  ... on Shared {
+    initialSharedVersion
+  }
+  ... on ConsensusV2 {
+    authenticator {
+      ... on Address {
+        address
+      }
+    }
+  }
+}`);
+const GetDynamicFieldsDocument = new TypedDocumentString(`
+    query getDynamicFields($parentId: SuiAddress!, $first: Int, $cursor: String) {
+  owner(address: $parentId) {
+    dynamicFields(first: $first, after: $cursor) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        name {
+          bcs
+          type {
+            repr
+          }
+        }
+        value {
+          __typename
+          ... on MoveValue {
+            type {
+              repr
+            }
+          }
+          ... on MoveObject {
+            contents {
+              type {
+                repr
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+    `);
+const GetReferenceGasPriceDocument = new TypedDocumentString(`
+    query getReferenceGasPrice {
+  epoch {
+    referenceGasPrice
+  }
+}
+    `);
+const GetOwnedObjectsDocument = new TypedDocumentString(`
+    query getOwnedObjects($owner: SuiAddress!, $limit: Int, $cursor: String, $filter: ObjectFilter) {
+  address(address: $owner) {
+    objects(first: $limit, after: $cursor, filter: $filter) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        ...MOVE_OBJECT_FIELDS
+      }
+    }
+  }
+}
+    fragment MOVE_OBJECT_FIELDS on MoveObject {
+  address
+  digest
+  version
+  contents {
+    bcs
+    type {
+      repr
+    }
+  }
+  owner {
+    ...OBJECT_OWNER_FIELDS
+  }
+}
+fragment OBJECT_OWNER_FIELDS on ObjectOwner {
+  __typename
+  ... on AddressOwner {
+    owner {
+      asObject {
+        address
+      }
+      asAddress {
+        address
+      }
+    }
+  }
+  ... on Parent {
+    parent {
+      address
+    }
+  }
+  ... on Shared {
+    initialSharedVersion
+  }
+  ... on ConsensusV2 {
+    authenticator {
+      ... on Address {
+        address
+      }
+    }
+  }
+}`);
+const MultiGetObjectsDocument = new TypedDocumentString(`
+    query multiGetObjects($objectIds: [SuiAddress!]!, $limit: Int, $cursor: String) {
+  objects(first: $limit, after: $cursor, filter: {objectIds: $objectIds}) {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      ...OBJECT_FIELDS
+    }
+  }
+}
+    fragment OBJECT_FIELDS on Object {
+  address
+  digest
+  version
+  asMoveObject {
+    contents {
+      bcs
+      type {
+        repr
+      }
+    }
+  }
+  owner {
+    ...OBJECT_OWNER_FIELDS
+  }
+}
+fragment OBJECT_OWNER_FIELDS on ObjectOwner {
+  __typename
+  ... on AddressOwner {
+    owner {
+      asObject {
+        address
+      }
+      asAddress {
+        address
+      }
+    }
+  }
+  ... on Parent {
+    parent {
+      address
+    }
+  }
+  ... on Shared {
+    initialSharedVersion
+  }
+  ... on ConsensusV2 {
+    authenticator {
+      ... on Address {
+        address
+      }
+    }
+  }
+}`);
+const DryRunTransactionBlockDocument = new TypedDocumentString(`
+    query dryRunTransactionBlock($txBytes: String!) {
+  dryRunTransactionBlock(txBytes: $txBytes) {
+    error
+    transaction {
+      ...TRANSACTION_FIELDS
+    }
+  }
+}
+    fragment TRANSACTION_FIELDS on TransactionBlock {
+  digest
+  bcs
+  signatures
+  effects {
+    bcs
+    unchangedSharedObjects {
+      nodes {
+        __typename
+        ... on SharedObjectRead {
+          object {
+            asMoveObject {
+              address
+              contents {
+                type {
+                  repr
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    objectChanges {
+      nodes {
+        address
+        inputState {
+          version
+          asMoveObject {
+            address
+            contents {
+              type {
+                repr
+              }
+            }
+          }
+        }
+        outputState {
+          asMoveObject {
+            address
+            contents {
+              type {
+                repr
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`);
+const ExecuteTransactionBlockDocument = new TypedDocumentString(`
+    mutation executeTransactionBlock($txBytes: String!, $signatures: [String!]!) {
+  executeTransactionBlock(txBytes: $txBytes, signatures: $signatures) {
+    errors
+    effects {
+      transactionBlock {
+        ...TRANSACTION_FIELDS
+      }
+    }
+  }
+}
+    fragment TRANSACTION_FIELDS on TransactionBlock {
+  digest
+  bcs
+  signatures
+  effects {
+    bcs
+    unchangedSharedObjects {
+      nodes {
+        __typename
+        ... on SharedObjectRead {
+          object {
+            asMoveObject {
+              address
+              contents {
+                type {
+                  repr
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    objectChanges {
+      nodes {
+        address
+        inputState {
+          version
+          asMoveObject {
+            address
+            contents {
+              type {
+                repr
+              }
+            }
+          }
+        }
+        outputState {
+          asMoveObject {
+            address
+            contents {
+              type {
+                repr
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`);
+const GetTransactionBlockDocument = new TypedDocumentString(`
+    query getTransactionBlock($digest: String!) {
+  transactionBlock(digest: $digest) {
+    ...TRANSACTION_FIELDS
+  }
+}
+    fragment TRANSACTION_FIELDS on TransactionBlock {
+  digest
+  bcs
+  signatures
+  effects {
+    bcs
+    unchangedSharedObjects {
+      nodes {
+        __typename
+        ... on SharedObjectRead {
+          object {
+            asMoveObject {
+              address
+              contents {
+                type {
+                  repr
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    objectChanges {
+      nodes {
+        address
+        inputState {
+          version
+          asMoveObject {
+            address
+            contents {
+              type {
+                repr
+              }
+            }
+          }
+        }
+        outputState {
+          asMoveObject {
+            address
+            contents {
+              type {
+                repr
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`);
+const VerifyZkLoginSignatureDocument = new TypedDocumentString(`
+    query verifyZkLoginSignature($bytes: Base64!, $signature: Base64!, $intentScope: ZkLoginIntentScope!, $author: SuiAddress!) {
+  verifyZkloginSignature(
+    bytes: $bytes
+    signature: $signature
+    intentScope: $intentScope
+    author: $author
+  ) {
+    success
+    errors
+  }
+}
+    `);
+//# sourceMappingURL=queries.js.map
 
 
 /***/ }),
@@ -70593,7 +70769,7 @@ var import_object = __nccwpck_require__(53714);
 var import_pure = __nccwpck_require__(80059);
 var import_TransactionData = __nccwpck_require__(31553);
 var import_utils = __nccwpck_require__(16500);
-var _serializationPlugins, _buildPlugins, _intentResolvers, _data, _Transaction_instances, normalizeTransactionArgument_fn, resolveArgument_fn, prepareBuild_fn, runPlugins_fn;
+var _serializationPlugins, _buildPlugins, _intentResolvers, _inputSection, _commandSection, _availableResults, _pendingPromises, _added, _data, _Transaction_instances, fork_fn, addCommand_fn, addInput_fn, normalizeTransactionArgument_fn, resolveArgument_fn, prepareBuild_fn, runPlugins_fn, waitForPendingTasks_fn, sortCommandsAndInputs_fn;
 function createTransactionResult(index, length = Infinity) {
   const baseResult = { $kind: "Result", Result: index };
   const nestedResults = [];
@@ -70656,6 +70832,11 @@ const _Transaction = class _Transaction {
     __privateAdd(this, _serializationPlugins);
     __privateAdd(this, _buildPlugins);
     __privateAdd(this, _intentResolvers, /* @__PURE__ */ new Map());
+    __privateAdd(this, _inputSection, []);
+    __privateAdd(this, _commandSection, []);
+    __privateAdd(this, _availableResults, /* @__PURE__ */ new Set());
+    __privateAdd(this, _pendingPromises, /* @__PURE__ */ new Set());
+    __privateAdd(this, _added, /* @__PURE__ */ new Map());
     __privateAdd(this, _data);
     /**
      * Add a new object input to the transaction.
@@ -70663,7 +70844,7 @@ const _Transaction = class _Transaction {
     this.object = (0, import_object.createObjectMethods)(
       (value) => {
         if (typeof value === "function") {
-          return this.object(value(this));
+          return this.object(this.add(value));
         }
         if (typeof value === "object" && (0, import_valibot.is)(import_internal.Argument, value)) {
           return value;
@@ -70673,13 +70854,10 @@ const _Transaction = class _Transaction {
         if (inserted?.Object?.SharedObject && typeof value === "object" && value.Object?.SharedObject) {
           inserted.Object.SharedObject.mutable = inserted.Object.SharedObject.mutable || value.Object.SharedObject.mutable;
         }
-        return inserted ? { $kind: "Input", Input: __privateGet(this, _data).inputs.indexOf(inserted), type: "object" } : __privateGet(this, _data).addInput(
-          "object",
-          typeof value === "string" ? {
-            $kind: "UnresolvedObject",
-            UnresolvedObject: { objectId: (0, import_sui_types.normalizeSuiAddress)(value) }
-          } : value
-        );
+        return inserted ? { $kind: "Input", Input: __privateGet(this, _data).inputs.indexOf(inserted), type: "object" } : __privateMethod(this, _Transaction_instances, addInput_fn).call(this, "object", typeof value === "string" ? {
+          $kind: "UnresolvedObject",
+          UnresolvedObject: { objectId: (0, import_sui_types.normalizeSuiAddress)(value) }
+        } : value);
       }
     );
     const globalPlugins = getGlobalPluginRegistry();
@@ -70696,6 +70874,8 @@ const _Transaction = class _Transaction {
     __privateSet(tx, _data, import_TransactionData.TransactionDataBuilder.fromKindBytes(
       typeof serialized === "string" ? (0, import_bcs.fromBase64)(serialized) : serialized
     ));
+    __privateSet(tx, _inputSection, __privateGet(tx, _data).inputs);
+    __privateSet(tx, _commandSection, __privateGet(tx, _data).commands);
     return tx;
   }
   /**
@@ -70715,6 +70895,8 @@ const _Transaction = class _Transaction {
     } else {
       __privateSet(newTransaction, _data, import_TransactionData.TransactionDataBuilder.restore(JSON.parse(transaction)));
     }
+    __privateSet(newTransaction, _inputSection, __privateGet(newTransaction, _data).inputs);
+    __privateSet(newTransaction, _commandSection, __privateGet(newTransaction, _data).commands);
     return newTransaction;
   }
   static registerGlobalSerializationPlugin(stepOrStep, step) {
@@ -70798,17 +70980,14 @@ const _Transaction = class _Transaction {
       enumerable: false,
       value: (0, import_pure.createPure)((value) => {
         if ((0, import_bcs.isSerializedBcs)(value)) {
-          return __privateGet(this, _data).addInput("pure", {
+          return __privateMethod(this, _Transaction_instances, addInput_fn).call(this, "pure", {
             $kind: "Pure",
             Pure: {
               bytes: value.toBase64()
             }
           });
         }
-        return __privateGet(this, _data).addInput(
-          "pure",
-          (0, import_valibot.is)(import_internal.NormalizedCallArg, value) ? (0, import_valibot.parse)(import_internal.NormalizedCallArg, value) : value instanceof Uint8Array ? import_Inputs.Inputs.Pure(value) : { $kind: "UnresolvedPure", UnresolvedPure: { value } }
-        );
+        return __privateMethod(this, _Transaction_instances, addInput_fn).call(this, "pure", (0, import_valibot.is)(import_internal.NormalizedCallArg, value) ? (0, import_valibot.parse)(import_internal.NormalizedCallArg, value) : value instanceof Uint8Array ? import_Inputs.Inputs.Pure(value) : { $kind: "UnresolvedPure", UnresolvedPure: { value } });
       })
     });
     return this.pure;
@@ -70838,13 +71017,40 @@ const _Transaction = class _Transaction {
   sharedObjectRef(...args) {
     return this.object(import_Inputs.Inputs.SharedObjectRef(...args));
   }
-  /** Add a transaction to the transaction */
   add(command) {
     if (typeof command === "function") {
-      return command(this);
+      if (__privateGet(this, _added).has(command)) {
+        return __privateGet(this, _added).get(command);
+      }
+      const fork = __privateMethod(this, _Transaction_instances, fork_fn).call(this);
+      const result = command(fork);
+      if (!(result && typeof result === "object" && "then" in result)) {
+        __privateSet(this, _availableResults, __privateGet(fork, _availableResults));
+        __privateGet(this, _added).set(command, result);
+        return result;
+      }
+      const placeholder = __privateMethod(this, _Transaction_instances, addCommand_fn).call(this, {
+        $kind: "$Intent",
+        $Intent: {
+          name: "AsyncTransactionThunk",
+          inputs: {},
+          data: {
+            result: null
+          }
+        }
+      });
+      __privateGet(this, _pendingPromises).add(
+        Promise.resolve(result).then((result2) => {
+          placeholder.$Intent.data.result = result2;
+        })
+      );
+      const txResult = createTransactionResult(__privateGet(this, _data).commands.length - 1);
+      __privateGet(this, _added).set(command, txResult);
+      return txResult;
+    } else {
+      __privateMethod(this, _Transaction_instances, addCommand_fn).call(this, command);
     }
-    const index = __privateGet(this, _data).commands.push(command);
-    return createTransactionResult(index - 1);
+    return createTransactionResult(__privateGet(this, _data).commands.length - 1);
   }
   // Method shorthands:
   splitCoins(coin, amounts) {
@@ -70854,8 +71060,8 @@ const _Transaction = class _Transaction {
         (amount) => typeof amount === "number" || typeof amount === "bigint" || typeof amount === "string" ? this.pure.u64(amount) : __privateMethod(this, _Transaction_instances, normalizeTransactionArgument_fn).call(this, amount)
       )
     );
-    const index = __privateGet(this, _data).commands.push(command);
-    return createTransactionResult(index - 1, amounts.length);
+    __privateMethod(this, _Transaction_instances, addCommand_fn).call(this, command);
+    return createTransactionResult(__privateGet(this, _data).commands.length - 1, amounts.length);
   }
   mergeCoins(destination, sources) {
     return this.add(
@@ -70953,6 +71159,8 @@ const _Transaction = class _Transaction {
     return __privateGet(this, _data).getDigest();
   }
   async prepareForSerialization(options) {
+    await __privateMethod(this, _Transaction_instances, waitForPendingTasks_fn).call(this);
+    __privateMethod(this, _Transaction_instances, sortCommandsAndInputs_fn).call(this);
     const intents = /* @__PURE__ */ new Set();
     for (const command of __privateGet(this, _data).commands) {
       if (command.$Intent) {
@@ -70975,8 +71183,55 @@ const _Transaction = class _Transaction {
 _serializationPlugins = new WeakMap();
 _buildPlugins = new WeakMap();
 _intentResolvers = new WeakMap();
+_inputSection = new WeakMap();
+_commandSection = new WeakMap();
+_availableResults = new WeakMap();
+_pendingPromises = new WeakMap();
+_added = new WeakMap();
 _data = new WeakMap();
 _Transaction_instances = new WeakSet();
+fork_fn = function() {
+  const fork = new _Transaction();
+  __privateSet(fork, _data, __privateGet(this, _data));
+  __privateSet(fork, _serializationPlugins, __privateGet(this, _serializationPlugins));
+  __privateSet(fork, _buildPlugins, __privateGet(this, _buildPlugins));
+  __privateSet(fork, _intentResolvers, __privateGet(this, _intentResolvers));
+  __privateSet(fork, _pendingPromises, __privateGet(this, _pendingPromises));
+  __privateSet(fork, _availableResults, new Set(__privateGet(this, _availableResults)));
+  __privateSet(fork, _added, __privateGet(this, _added));
+  __privateGet(this, _inputSection).push(__privateGet(fork, _inputSection));
+  __privateGet(this, _commandSection).push(__privateGet(fork, _commandSection));
+  return fork;
+};
+addCommand_fn = function(command) {
+  const resultIndex = __privateGet(this, _data).commands.length;
+  __privateGet(this, _commandSection).push(command);
+  __privateGet(this, _availableResults).add(resultIndex);
+  __privateGet(this, _data).commands.push(command);
+  __privateGet(this, _data).mapCommandArguments(resultIndex, (arg) => {
+    if (arg.$kind === "Result" && !__privateGet(this, _availableResults).has(arg.Result)) {
+      throw new Error(
+        `Result { Result: ${arg.Result} } is not available to use the current transaction`
+      );
+    }
+    if (arg.$kind === "NestedResult" && !__privateGet(this, _availableResults).has(arg.NestedResult[0])) {
+      throw new Error(
+        `Result { NestedResult: [${arg.NestedResult[0]}, ${arg.NestedResult[1]}] } is not available to use the current transaction`
+      );
+    }
+    if (arg.$kind === "Input" && arg.Input >= __privateGet(this, _data).inputs.length) {
+      throw new Error(
+        `Input { Input: ${arg.Input} } references an input that does not exist in the current transaction`
+      );
+    }
+    return arg;
+  });
+  return command;
+};
+addInput_fn = function(type, input) {
+  __privateGet(this, _inputSection).push(input);
+  return __privateGet(this, _data).addInput(type, input);
+};
 normalizeTransactionArgument_fn = function(arg) {
   if ((0, import_bcs.isSerializedBcs)(arg)) {
     return this.pure(arg);
@@ -70985,7 +71240,11 @@ normalizeTransactionArgument_fn = function(arg) {
 };
 resolveArgument_fn = function(arg) {
   if (typeof arg === "function") {
-    return (0, import_valibot.parse)(import_internal.Argument, arg(this));
+    const resolved = this.add(arg);
+    if (typeof resolved === "function") {
+      return __privateMethod(this, _Transaction_instances, resolveArgument_fn).call(this, resolved);
+    }
+    return (0, import_valibot.parse)(import_internal.Argument, resolved);
   }
   return (0, import_valibot.parse)(import_internal.Argument, arg);
 };
@@ -71023,6 +71282,67 @@ runPlugins_fn = async function(plugins, options) {
     };
   };
   await createNext(0)();
+  __privateSet(this, _inputSection, __privateGet(this, _data).inputs);
+  __privateSet(this, _commandSection, __privateGet(this, _data).commands);
+};
+waitForPendingTasks_fn = async function() {
+  while (__privateGet(this, _pendingPromises).size > 0) {
+    const newPromise = Promise.all(__privateGet(this, _pendingPromises));
+    __privateGet(this, _pendingPromises).clear();
+    __privateGet(this, _pendingPromises).add(newPromise);
+    await newPromise;
+    __privateGet(this, _pendingPromises).delete(newPromise);
+  }
+};
+sortCommandsAndInputs_fn = function() {
+  const unorderedCommands = __privateGet(this, _data).commands;
+  const unorderedInputs = __privateGet(this, _data).inputs;
+  const orderedCommands = __privateGet(this, _commandSection).flat(Infinity);
+  const orderedInputs = __privateGet(this, _inputSection).flat(Infinity);
+  if (orderedCommands.length !== unorderedCommands.length) {
+    throw new Error("Unexpected number of commands found in transaction data");
+  }
+  if (orderedInputs.length !== unorderedInputs.length) {
+    throw new Error("Unexpected number of inputs found in transaction data");
+  }
+  const filteredCommands = orderedCommands.filter(
+    (cmd) => cmd.$Intent?.name !== "AsyncTransactionThunk"
+  );
+  __privateGet(this, _data).commands = filteredCommands;
+  __privateGet(this, _data).inputs = orderedInputs;
+  __privateSet(this, _commandSection, filteredCommands);
+  __privateSet(this, _inputSection, orderedInputs);
+  function getOriginalIndex(index) {
+    const command = unorderedCommands[index];
+    if (command.$Intent?.name === "AsyncTransactionThunk") {
+      const result = command.$Intent.data.result;
+      if (result == null) {
+        throw new Error("AsyncTransactionThunk has not been resolved");
+      }
+      return getOriginalIndex(result.Result);
+    }
+    const updated = filteredCommands.indexOf(command);
+    if (updated === -1) {
+      throw new Error("Unable to find original index for command");
+    }
+    return updated;
+  }
+  __privateGet(this, _data).mapArguments((arg) => {
+    if (arg.$kind === "Input") {
+      const updated = orderedInputs.indexOf(unorderedInputs[arg.Input]);
+      if (updated === -1) {
+        throw new Error("Input has not been resolved");
+      }
+      return { ...arg, Input: updated };
+    } else if (arg.$kind === "Result") {
+      const updated = getOriginalIndex(arg.Result);
+      return { ...arg, Result: updated };
+    } else if (arg.$kind === "NestedResult") {
+      const updated = getOriginalIndex(arg.NestedResult[0]);
+      return { ...arg, NestedResult: [updated, arg.NestedResult[1]] };
+    }
+    return arg;
+  });
 };
 let Transaction = _Transaction;
 //# sourceMappingURL=Transaction.js.map
@@ -71207,49 +71527,59 @@ class TransactionDataBuilder {
       return arg;
     });
   }
-  mapArguments(fn) {
-    for (const command of this.commands) {
-      switch (command.$kind) {
-        case "MoveCall":
-          command.MoveCall.arguments = command.MoveCall.arguments.map((arg) => fn(arg, command));
-          break;
-        case "TransferObjects":
-          command.TransferObjects.objects = command.TransferObjects.objects.map(
-            (arg) => fn(arg, command)
-          );
-          command.TransferObjects.address = fn(command.TransferObjects.address, command);
-          break;
-        case "SplitCoins":
-          command.SplitCoins.coin = fn(command.SplitCoins.coin, command);
-          command.SplitCoins.amounts = command.SplitCoins.amounts.map((arg) => fn(arg, command));
-          break;
-        case "MergeCoins":
-          command.MergeCoins.destination = fn(command.MergeCoins.destination, command);
-          command.MergeCoins.sources = command.MergeCoins.sources.map((arg) => fn(arg, command));
-          break;
-        case "MakeMoveVec":
-          command.MakeMoveVec.elements = command.MakeMoveVec.elements.map(
-            (arg) => fn(arg, command)
-          );
-          break;
-        case "Upgrade":
-          command.Upgrade.ticket = fn(command.Upgrade.ticket, command);
-          break;
-        case "$Intent":
-          const inputs = command.$Intent.inputs;
-          command.$Intent.inputs = {};
-          for (const [key, value] of Object.entries(inputs)) {
-            command.$Intent.inputs[key] = Array.isArray(value) ? value.map((arg) => fn(arg, command)) : fn(value, command);
-          }
-          break;
-        case "Publish":
-          break;
-        default:
-          throw new Error(`Unexpected transaction kind: ${command.$kind}`);
-      }
+  mapCommandArguments(index, fn) {
+    const command = this.commands[index];
+    switch (command.$kind) {
+      case "MoveCall":
+        command.MoveCall.arguments = command.MoveCall.arguments.map(
+          (arg) => fn(arg, command, index)
+        );
+        break;
+      case "TransferObjects":
+        command.TransferObjects.objects = command.TransferObjects.objects.map(
+          (arg) => fn(arg, command, index)
+        );
+        command.TransferObjects.address = fn(command.TransferObjects.address, command, index);
+        break;
+      case "SplitCoins":
+        command.SplitCoins.coin = fn(command.SplitCoins.coin, command, index);
+        command.SplitCoins.amounts = command.SplitCoins.amounts.map(
+          (arg) => fn(arg, command, index)
+        );
+        break;
+      case "MergeCoins":
+        command.MergeCoins.destination = fn(command.MergeCoins.destination, command, index);
+        command.MergeCoins.sources = command.MergeCoins.sources.map(
+          (arg) => fn(arg, command, index)
+        );
+        break;
+      case "MakeMoveVec":
+        command.MakeMoveVec.elements = command.MakeMoveVec.elements.map(
+          (arg) => fn(arg, command, index)
+        );
+        break;
+      case "Upgrade":
+        command.Upgrade.ticket = fn(command.Upgrade.ticket, command, index);
+        break;
+      case "$Intent":
+        const inputs = command.$Intent.inputs;
+        command.$Intent.inputs = {};
+        for (const [key, value] of Object.entries(inputs)) {
+          command.$Intent.inputs[key] = Array.isArray(value) ? value.map((arg) => fn(arg, command, index)) : fn(value, command, index);
+        }
+        break;
+      case "Publish":
+        break;
+      default:
+        throw new Error(`Unexpected transaction kind: ${command.$kind}`);
     }
   }
-  replaceCommand(index, replacement) {
+  mapArguments(fn) {
+    for (const commandIndex of this.commands.keys()) {
+      this.mapCommandArguments(commandIndex, fn);
+    }
+  }
+  replaceCommand(index, replacement, resultIndex = index) {
     if (!Array.isArray(replacement)) {
       this.commands[index] = replacement;
       return;
@@ -71257,14 +71587,23 @@ class TransactionDataBuilder {
     const sizeDiff = replacement.length - 1;
     this.commands.splice(index, 1, ...replacement);
     if (sizeDiff !== 0) {
-      this.mapArguments((arg) => {
+      this.mapArguments((arg, _command, commandIndex) => {
+        if (commandIndex < index + replacement.length) {
+          return arg;
+        }
         switch (arg.$kind) {
           case "Result":
+            if (arg.Result === index) {
+              arg.Result = resultIndex;
+            }
             if (arg.Result > index) {
               arg.Result += sizeDiff;
             }
             break;
           case "NestedResult":
+            if (arg.NestedResult[0] === index) {
+              arg.NestedResult[0] = resultIndex;
+            }
             if (arg.NestedResult[0] > index) {
               arg.NestedResult[0] += sizeDiff;
             }
@@ -71280,6 +71619,18 @@ class TransactionDataBuilder {
   }
   snapshot() {
     return (0, import_valibot.parse)(import_internal.TransactionData, this);
+  }
+  shallowClone() {
+    return new TransactionDataBuilder({
+      version: this.version,
+      sender: this.sender,
+      expiration: this.expiration,
+      gasData: {
+        ...this.gasData
+      },
+      inputs: [...this.inputs],
+      commands: [...this.commands]
+    });
   }
 }
 //# sourceMappingURL=TransactionData.js.map
@@ -72295,6 +72646,7 @@ __export(parallel_exports, {
 });
 module.exports = __toCommonJS(parallel_exports);
 var import_bcs = __nccwpck_require__(88830);
+var import_utils = __nccwpck_require__(5041);
 var import_bcs2 = __nccwpck_require__(56244);
 var import_Transaction = __nccwpck_require__(22545);
 var import_TransactionData = __nccwpck_require__(31553);
@@ -72353,7 +72705,7 @@ class ParallelTransactionExecutor {
     await __privateMethod(this, _ParallelTransactionExecutor_instances, updateCache_fn).call(this, () => __privateMethod(this, _ParallelTransactionExecutor_instances, waitForLastDigest_fn).call(this));
   }
   async executeTransaction(transaction, options, additionalSignatures = []) {
-    const { promise, resolve, reject } = promiseWithResolvers();
+    const { promise, resolve, reject } = (0, import_utils.promiseWithResolvers)();
     const usedObjects = await __privateMethod(this, _ParallelTransactionExecutor_instances, getUsedObjects_fn).call(this, transaction);
     const execute = () => {
       __privateGet(this, _executeQueue).runTask(() => {
@@ -72632,15 +72984,6 @@ refillCoinPool_fn = async function() {
   __privateGet(this, _sourceCoins).set(gasObject.objectId, gasObject);
   await __privateGet(this, _client).waitForTransaction({ digest: result.digest });
 };
-function promiseWithResolvers() {
-  let resolve;
-  let reject;
-  const promise = new Promise((_resolve, _reject) => {
-    resolve = _resolve;
-    reject = _reject;
-  });
-  return { promise, resolve, reject };
-}
 //# sourceMappingURL=parallel.js.map
 
 
@@ -73023,10 +73366,14 @@ function coinWithBalance({
   balance,
   useGasCoin = true
 }) {
+  let coinResult = null;
   return (tx) => {
+    if (coinResult) {
+      return coinResult;
+    }
     tx.addIntentResolver(COIN_WITH_BALANCE, resolveCoinBalance);
     const coinType = type === "gas" ? type : (0, import_sui_types.normalizeStructTag)(type);
-    return tx.add(
+    coinResult = tx.add(
       import_Commands.Commands.Intent({
         name: COIN_WITH_BALANCE,
         inputs: {},
@@ -73036,6 +73383,7 @@ function coinWithBalance({
         }
       })
     );
+    return coinResult;
   };
 }
 const CoinWithBalanceData = (0, import_valibot.object)({
@@ -73089,7 +73437,7 @@ async function resolveCoinBalance(transactionData, buildOptions, next) {
       continue;
     }
     const { type, balance } = transaction.$Intent.data;
-    if (balance === 0n) {
+    if (balance === 0n && type !== "gas") {
       transactionData.replaceCommand(
         index,
         import_Commands.Commands.MoveCall({ target: "0x2::coin::zero", typeArguments: [type] })
@@ -73200,6 +73548,7 @@ var import_utils = __nccwpck_require__(33973);
 var import_internal = __nccwpck_require__(86921);
 var import_Inputs = __nccwpck_require__(17484);
 var import_serializer = __nccwpck_require__(71649);
+var import_utils2 = __nccwpck_require__(5041);
 const MAX_OBJECTS_PER_FETCH = 50;
 const GAS_SAFE_OVERHEAD = 1000n;
 const MAX_GAS = 5e10;
@@ -73280,7 +73629,7 @@ async function resolveObjectReferences(transactionData, options) {
       objectsToResolve.map((input) => (0, import_utils.normalizeSuiObjectId)(input.UnresolvedObject.objectId))
     )
   ];
-  const objectChunks = dedupedIds.length ? chunk(dedupedIds, MAX_OBJECTS_PER_FETCH) : [];
+  const objectChunks = dedupedIds.length ? (0, import_utils2.chunk)(dedupedIds, MAX_OBJECTS_PER_FETCH) : [];
   const resolved = (await Promise.all(
     objectChunks.map(
       (chunk2) => getClient(options).multiGetObjects({
@@ -73517,12 +73866,6 @@ function getClient(options) {
     );
   }
   return options.client;
-}
-function chunk(arr, size) {
-  return Array.from(
-    { length: Math.ceil(arr.length / size) },
-    (_, i) => arr.slice(i * size, i * size + size)
-  );
 }
 //# sourceMappingURL=json-rpc-resolver.js.map
 
@@ -74808,8 +75151,8 @@ __export(version_exports, {
   TARGETED_RPC_VERSION: () => TARGETED_RPC_VERSION
 });
 module.exports = __toCommonJS(version_exports);
-const PACKAGE_VERSION = "1.27.0";
-const TARGETED_RPC_VERSION = "1.47.0";
+const PACKAGE_VERSION = "1.29.0";
+const TARGETED_RPC_VERSION = "1.49.0";
 //# sourceMappingURL=version.js.map
 
 
@@ -75201,7 +75544,6 @@ var import_utils = __nccwpck_require__(4248);
 var import_publickey = __nccwpck_require__(44822);
 var import_signature_scheme = __nccwpck_require__(74094);
 var import_client = __nccwpck_require__(91210);
-var import_latest = __nccwpck_require__(28980);
 var import_sui_types = __nccwpck_require__(24818);
 var import_jwt_utils = __nccwpck_require__(74217);
 var import_signature = __nccwpck_require__(83154);
@@ -75288,7 +75630,7 @@ const _ZkLoginPublicIdentifier = class _ZkLoginPublicIdentifier extends import_p
       address,
       bytes: (0, import_bcs.toBase64)(message),
       signature: parsedSignature.serializedSignature,
-      intentScope: "PERSONAL_MESSAGE",
+      intentScope: "PersonalMessage",
       client: __privateGet(this, _client)
     });
   }
@@ -75302,7 +75644,7 @@ const _ZkLoginPublicIdentifier = class _ZkLoginPublicIdentifier extends import_p
       address,
       bytes: (0, import_bcs.toBase64)(transaction),
       signature: parsedSignature.serializedSignature,
-      intentScope: "TRANSACTION_DATA",
+      intentScope: "TransactionData",
       client: __privateGet(this, _client)
     });
   }
@@ -75336,24 +75678,6 @@ function toZkLoginPublicIdentifier(addressSeed, iss, options) {
   tmp.set(addressSeedBytesBigEndian, 1 + issBytes.length);
   return new ZkLoginPublicIdentifier(tmp, options);
 }
-const VerifyZkLoginSignatureQuery = (0, import_latest.graphql)(`
-	query Zklogin(
-		$bytes: Base64!
-		$signature: Base64!
-		$intentScope: ZkLoginIntentScope!
-		$author: SuiAddress!
-	) {
-		verifyZkloginSignature(
-			bytes: $bytes
-			signature: $signature
-			intentScope: $intentScope
-			author: $author
-		) {
-			success
-			errors
-		}
-	}
-`);
 function normalizeZkLoginPublicKeyBytes(bytes, legacyAddress = false) {
   const issByteLength = bytes[0] + 1;
   const addressSeed = BigInt(`0x${(0, import_bcs.toHex)(bytes.slice(issByteLength))}`);
@@ -75372,16 +75696,13 @@ async function graphqlVerifyZkLoginSignature({
     url: "https://sui-mainnet.mystenlabs.com/graphql"
   })
 }) {
-  const resp = await client.query({
-    query: VerifyZkLoginSignatureQuery,
-    variables: {
-      bytes,
-      signature,
-      intentScope,
-      author: address
-    }
+  const resp = await client.core.verifyZkLoginSignature({
+    bytes,
+    signature,
+    intentScope,
+    author: address
   });
-  return resp.data?.verifyZkloginSignature.success === true && resp.data?.verifyZkloginSignature.errors.length === 0;
+  return resp.success === true && resp.errors.length === 0;
 }
 function parseSerializedZkLoginSignature(signature) {
   const bytes = typeof signature === "string" ? (0, import_bcs.fromBase64)(signature) : signature;
@@ -75573,6 +75894,261 @@ function normalizeZkLoginIssuer(iss) {
 
 /***/ }),
 
+/***/ 68246:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var b58_exports = {};
+__export(b58_exports, {
+  fromBase58: () => fromBase58,
+  toBase58: () => toBase58
+});
+module.exports = __toCommonJS(b58_exports);
+var import_base = __nccwpck_require__(80628);
+const toBase58 = (buffer) => import_base.base58.encode(buffer);
+const fromBase58 = (str) => import_base.base58.decode(str);
+//# sourceMappingURL=b58.js.map
+
+
+/***/ }),
+
+/***/ 71853:
+/***/ ((module) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var b64_exports = {};
+__export(b64_exports, {
+  fromBase64: () => fromBase64,
+  toBase64: () => toBase64
+});
+module.exports = __toCommonJS(b64_exports);
+function fromBase64(base64String) {
+  return Uint8Array.from(atob(base64String), (char) => char.charCodeAt(0));
+}
+const CHUNK_SIZE = 8192;
+function toBase64(bytes) {
+  if (bytes.length < CHUNK_SIZE) {
+    return btoa(String.fromCharCode(...bytes));
+  }
+  let output = "";
+  for (var i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    const chunk = bytes.slice(i, i + CHUNK_SIZE);
+    output += String.fromCharCode(...chunk);
+  }
+  return btoa(output);
+}
+//# sourceMappingURL=b64.js.map
+
+
+/***/ }),
+
+/***/ 90860:
+/***/ ((module) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var chunk_exports = {};
+__export(chunk_exports, {
+  chunk: () => chunk
+});
+module.exports = __toCommonJS(chunk_exports);
+function chunk(array, size) {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) => {
+    return array.slice(i * size, (i + 1) * size);
+  });
+}
+//# sourceMappingURL=chunk.js.map
+
+
+/***/ }),
+
+/***/ 53264:
+/***/ ((module) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var hex_exports = {};
+__export(hex_exports, {
+  fromHex: () => fromHex,
+  toHex: () => toHex
+});
+module.exports = __toCommonJS(hex_exports);
+function fromHex(hexStr) {
+  const normalized = hexStr.startsWith("0x") ? hexStr.slice(2) : hexStr;
+  const padded = normalized.length % 2 === 0 ? normalized : `0${normalized}`;
+  const intArr = padded.match(/[0-9a-fA-F]{2}/g)?.map((byte) => parseInt(byte, 16)) ?? [];
+  if (intArr.length !== padded.length / 2) {
+    throw new Error(`Invalid hex string ${hexStr}`);
+  }
+  return Uint8Array.from(intArr);
+}
+function toHex(bytes) {
+  return bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, "0"), "");
+}
+//# sourceMappingURL=hex.js.map
+
+
+/***/ }),
+
+/***/ 5041:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var index_exports = {};
+__export(index_exports, {
+  chunk: () => import_chunk.chunk,
+  fromBase58: () => import_b58.fromBase58,
+  fromBase64: () => import_b64.fromBase64,
+  fromHex: () => import_hex.fromHex,
+  promiseWithResolvers: () => import_with_resolver.promiseWithResolvers,
+  toBase58: () => import_b58.toBase58,
+  toBase64: () => import_b64.toBase64,
+  toHex: () => import_hex.toHex
+});
+module.exports = __toCommonJS(index_exports);
+var import_b58 = __nccwpck_require__(68246);
+var import_b64 = __nccwpck_require__(71853);
+var import_hex = __nccwpck_require__(53264);
+var import_chunk = __nccwpck_require__(90860);
+var import_with_resolver = __nccwpck_require__(41556);
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 41556:
+/***/ ((module) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var with_resolver_exports = {};
+__export(with_resolver_exports, {
+  promiseWithResolvers: () => promiseWithResolvers
+});
+module.exports = __toCommonJS(with_resolver_exports);
+function promiseWithResolvers() {
+  let resolver;
+  let rejecter;
+  const promise = new Promise((resolve, reject) => {
+    resolver = resolve;
+    rejecter = reject;
+  });
+  return {
+    promise,
+    resolve: resolver,
+    reject: rejecter
+  };
+}
+//# sourceMappingURL=with-resolver.js.map
+
+
+/***/ }),
+
 /***/ 31037:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -75630,6 +76206,7 @@ var import_utils2 = __nccwpck_require__(7062);
 var import_object_loader = __nccwpck_require__(17639);
 var import_randomness = __nccwpck_require__(13344);
 var import_wasm = __nccwpck_require__(60418);
+var import_utils3 = __nccwpck_require__(5041);
 var _storageNodeClient, _wasmUrl, _packageConfig, _suiClient, _objectLoader, _blobMetadataConcurrencyLimit, _readCommittee, _cache, _WalrusClient_instances, walType_fn, getPackageId_fn, getSystemContract_fn, getSubsidiesContract_fn, getBlobContract_fn, getMetadataContract_fn, wasmBindings_fn, internalReadBlob_fn, getCertificationEpoch_fn, getReadCommittee_fn, forceGetReadCommittee_fn, withWal_fn, writeBlobAttributesForRef_fn, executeTransaction_fn, getCommittee_fn, getActiveCommittee_fn, stakingPool_fn, getNodeByShardIndex_fn, retryOnPossibleEpochChange_fn;
 const _WalrusClient = class _WalrusClient {
   constructor(config) {
@@ -75760,7 +76337,7 @@ const _WalrusClient = class _WalrusClient {
       return await attemptGetMetadata();
     } catch (error) {
       const chunkSize = Math.floor(metadataExecutors.length / __privateGet(this, _blobMetadataConcurrencyLimit));
-      const chunkedExecutors = (0, import_utils2.chunk)(metadataExecutors, chunkSize);
+      const chunkedExecutors = (0, import_utils3.chunk)(metadataExecutors, chunkSize);
       return await new Promise((resolve, reject) => {
         chunkedExecutors.forEach(async (executors) => {
           for (const executor of executors) {
@@ -75809,7 +76386,7 @@ const _WalrusClient = class _WalrusClient {
       }))
     );
     const controller = new AbortController();
-    const chunkedSliverPairIndices = (0, import_utils2.chunk)(sliverPairIndices, minSymbols);
+    const chunkedSliverPairIndices = (0, import_utils3.chunk)(sliverPairIndices, minSymbols);
     const slivers = [];
     const failedNodes = /* @__PURE__ */ new Set();
     let numNotFoundWeight = 0;
@@ -75965,47 +76542,51 @@ const _WalrusClient = class _WalrusClient {
    *
    * @usage
    * ```ts
-   * tx.transferObjects([await client.createStorage({ size: 1000, epochs: 3 })], owner);
+   * tx.transferObjects([client.createStorage({ size: 1000, epochs: 3 })], owner);
    * ```
    */
-  async createStorage({ size, epochs, walCoin, owner }) {
-    const systemObject = await this.systemObject();
-    const systemState = await this.systemState();
-    const encodedSize = (0, import_utils2.encodedBlobLength)(size, systemState.committee.n_shards);
-    const { storageCost } = await this.storageCost(size, epochs);
-    const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
-    const subsidiesContract = __privateGet(this, _packageConfig).subsidiesObjectId ? await __privateMethod(this, _WalrusClient_instances, getSubsidiesContract_fn).call(this) : null;
-    return __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, storageCost, owner, walCoin ?? null, subsidiesContract !== null, (coin, tx) => {
+  createStorage({ size, epochs, walCoin, owner }) {
+    return async (tx) => {
+      const systemObject = await this.systemObject();
+      const systemState = await this.systemState();
+      const encodedSize = (0, import_utils2.encodedBlobLength)(size, systemState.committee.n_shards);
+      const { storageCost } = await this.storageCost(size, epochs);
+      const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
+      const subsidiesContract = __privateGet(this, _packageConfig).subsidiesObjectId ? await __privateMethod(this, _WalrusClient_instances, getSubsidiesContract_fn).call(this) : null;
       return tx.add(
-        subsidiesContract ? subsidiesContract.reserve_space({
-          arguments: [
-            __privateGet(this, _packageConfig).subsidiesObjectId,
-            systemObject.id.id,
-            encodedSize,
-            epochs,
-            coin
-          ]
-        }) : systemContract.reserve_space({
-          arguments: [systemObject.id.id, encodedSize, epochs, coin]
+        __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, storageCost, owner, walCoin ?? null, subsidiesContract !== null, (coin, tx2) => {
+          return tx2.add(
+            subsidiesContract ? subsidiesContract.reserve_space({
+              arguments: [
+                __privateGet(this, _packageConfig).subsidiesObjectId,
+                systemObject.id.id,
+                encodedSize,
+                epochs,
+                coin
+              ]
+            }) : systemContract.reserve_space({
+              arguments: [systemObject.id.id, encodedSize, epochs, coin]
+            })
+          );
         })
       );
-    });
+    };
   }
   /**
    * Create a transaction that creates a storage object
    *
    * @usage
    * ```ts
-   * const tx = await client.createStorageTransaction({ size: 1000, epochs: 3, owner: signer.toSuiAddress() });
+   * const tx = client.createStorageTransaction({ size: 1000, epochs: 3, owner: signer.toSuiAddress() });
    * ```
    */
-  async createStorageTransaction({
+  createStorageTransaction({
     transaction = new import_transactions.Transaction(),
     size,
     epochs,
     owner
   }) {
-    transaction.transferObjects([await this.createStorage({ size, epochs, owner })], owner);
+    transaction.transferObjects([this.createStorage({ size, epochs, owner })], owner);
     return transaction;
   }
   /**
@@ -76020,7 +76601,7 @@ const _WalrusClient = class _WalrusClient {
     signer,
     ...options
   }) {
-    const transaction = await this.createStorageTransaction({
+    const transaction = this.createStorageTransaction({
       ...options,
       owner: options.transaction?.getData().sender ?? signer.toSuiAddress()
     });
@@ -76034,7 +76615,9 @@ const _WalrusClient = class _WalrusClient {
       (object) => !(object instanceof Error) && object.type === blobType
     );
     if (suiBlobObject instanceof Error || !suiBlobObject) {
-      throw new import_error.WalrusClientError("Storage object not found in transaction effects");
+      throw new import_error.WalrusClientError(
+        `Storage object not found in transaction effects for transaction (${digest})`
+      );
     }
     return {
       digest,
@@ -76046,10 +76629,10 @@ const _WalrusClient = class _WalrusClient {
    *
    * @usage
    * ```ts
-   * tx.transferObjects([await client.registerBlob({ size: 1000, epochs: 3, blobId, rootHash, deletable: true })], owner);
+   * tx.transferObjects([client.registerBlob({ size: 1000, epochs: 3, blobId, rootHash, deletable: true })], owner);
    * ```
    */
-  async registerBlob({
+  registerBlob({
     size,
     epochs,
     blobId,
@@ -76059,47 +76642,52 @@ const _WalrusClient = class _WalrusClient {
     owner,
     attributes
   }) {
-    const storage = await this.createStorage({ size, epochs, walCoin, owner });
-    const { writeCost } = await this.storageCost(size, epochs);
-    const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
-    const writeAttributes = attributes ? await __privateMethod(this, _WalrusClient_instances, writeBlobAttributesForRef_fn).call(this, {
-      attributes,
-      existingAttributes: null
-    }) : null;
-    return __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, writeCost, owner, walCoin ?? null, false, (writeCoin, tx) => {
-      const blob = tx.add(
-        systemContract.register_blob({
-          arguments: [
-            tx.object(__privateGet(this, _packageConfig).systemObjectId),
-            storage,
-            (0, import_bcs2.blobIdToInt)(blobId),
-            BigInt(import_bcs.bcs.u256().parse(rootHash)),
-            size,
-            1,
-            deletable,
-            writeCoin
-          ]
+    return async (tx) => {
+      const { writeCost } = await this.storageCost(size, epochs);
+      const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
+      return tx.add(
+        __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, writeCost, owner, walCoin ?? null, false, async (writeCoin, tx2) => {
+          const blob = tx2.add(
+            systemContract.register_blob({
+              arguments: [
+                tx2.object(__privateGet(this, _packageConfig).systemObjectId),
+                this.createStorage({ size, epochs, walCoin, owner }),
+                (0, import_bcs2.blobIdToInt)(blobId),
+                BigInt(import_bcs.bcs.u256().parse(rootHash)),
+                size,
+                1,
+                deletable,
+                writeCoin
+              ]
+            })
+          );
+          if (attributes) {
+            tx2.add(
+              __privateMethod(this, _WalrusClient_instances, writeBlobAttributesForRef_fn).call(this, {
+                attributes,
+                existingAttributes: null,
+                blob
+              })
+            );
+          }
+          return blob;
         })
       );
-      if (writeAttributes) {
-        tx.add((tx2) => writeAttributes(tx2, blob));
-      }
-      return blob;
-    });
+    };
   }
   /**
    * Create a transaction that registers a blob
    *
    * @usage
    * ```ts
-   * const tx = await client.registerBlobTransaction({ size: 1000, epochs: 3, blobId, rootHash, deletable: true });
+   * const tx = client.registerBlobTransaction({ size: 1000, epochs: 3, blobId, rootHash, deletable: true });
    * ```
    */
-  async registerBlobTransaction({
+  registerBlobTransaction({
     transaction = new import_transactions.Transaction(),
     ...options
   }) {
-    const registration = transaction.add(await this.registerBlob(options));
+    const registration = transaction.add(this.registerBlob(options));
     transaction.transferObjects([registration], options.owner);
     return transaction;
   }
@@ -76115,7 +76703,7 @@ const _WalrusClient = class _WalrusClient {
     signer,
     ...options
   }) {
-    const transaction = await this.registerBlobTransaction({
+    const transaction = this.registerBlobTransaction({
       ...options,
       owner: options.owner ?? options.transaction?.getData().sender ?? signer.toSuiAddress()
     });
@@ -76129,7 +76717,9 @@ const _WalrusClient = class _WalrusClient {
       (object) => !(object instanceof Error) && object.type === blobType
     );
     if (suiBlobObject instanceof Error || !suiBlobObject) {
-      throw new import_error.WalrusClientError("Blob object not found in transaction effects");
+      throw new import_error.WalrusClientError(
+        `Blob object not found in transaction effects for transaction (${digest})`
+      );
     }
     return {
       digest,
@@ -76141,54 +76731,54 @@ const _WalrusClient = class _WalrusClient {
    *
    * @usage
    * ```ts
-   * tx.add(await client.certifyBlob({ blobId, blobObjectId, confirmations }));
+   * tx.add(client.certifyBlob({ blobId, blobObjectId, confirmations }));
    * ```
    */
-  async certifyBlob({ blobId, blobObjectId, confirmations, deletable }) {
-    const systemState = await this.systemState();
-    const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
-    if (confirmations.length !== systemState.committee.members.length) {
-      throw new import_error.WalrusClientError(
-        "Invalid number of confirmations. Confirmations array must contain an entry for each node"
-      );
-    }
-    const confirmationMessage = import_bcs2.StorageConfirmation.serialize({
-      intent: import_bcs2.IntentType.BLOB_CERT_MSG,
-      epoch: systemState.committee.epoch,
-      messageContents: {
-        blobId,
-        blobType: deletable ? {
-          Deletable: {
-            objectId: blobObjectId
-          }
-        } : {
-          Permanent: null
-        }
+  certifyBlob({ blobId, blobObjectId, confirmations, deletable }) {
+    return async (tx) => {
+      const systemState = await this.systemState();
+      const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
+      if (confirmations.length !== systemState.committee.members.length) {
+        throw new import_error.WalrusClientError(
+          "Invalid number of confirmations. Confirmations array must contain an entry for each node"
+        );
       }
-    }).toBase64();
-    const bindings = await __privateMethod(this, _WalrusClient_instances, wasmBindings_fn).call(this);
-    const verifySignature = bindings.getVerifySignature();
-    const filteredConfirmations = confirmations.map((confirmation, index) => {
-      const isValid = confirmation?.serializedMessage === confirmationMessage && verifySignature(
-        confirmation,
-        new Uint8Array(committee.nodes[index].info.public_key.bytes)
+      const confirmationMessage = import_bcs2.StorageConfirmation.serialize({
+        intent: import_bcs2.IntentType.BLOB_CERT_MSG,
+        epoch: systemState.committee.epoch,
+        messageContents: {
+          blobId,
+          blobType: deletable ? {
+            Deletable: {
+              objectId: blobObjectId
+            }
+          } : {
+            Permanent: null
+          }
+        }
+      }).toBase64();
+      const bindings = await __privateMethod(this, _WalrusClient_instances, wasmBindings_fn).call(this);
+      const verifySignature = bindings.getVerifySignature();
+      const filteredConfirmations = confirmations.map((confirmation, index) => {
+        const isValid = confirmation?.serializedMessage === confirmationMessage && verifySignature(
+          confirmation,
+          new Uint8Array(committee.nodes[index].info.public_key.bytes)
+        );
+        return isValid ? {
+          index,
+          ...confirmation
+        } : null;
+      }).filter((confirmation) => confirmation !== null);
+      if (!(0, import_utils2.isQuorum)(filteredConfirmations.length, systemState.committee.members.length)) {
+        throw new import_error.NotEnoughBlobConfirmationsError(
+          `Too many invalid confirmations received for blob (${filteredConfirmations.length} of ${systemState.committee.members.length})`
+        );
+      }
+      const combinedSignature = bindings.combineSignatures(
+        filteredConfirmations,
+        filteredConfirmations.map(({ index }) => index)
       );
-      return isValid ? {
-        index,
-        ...confirmation
-      } : null;
-    }).filter((confirmation) => confirmation !== null);
-    if (!(0, import_utils2.isQuorum)(filteredConfirmations.length, systemState.committee.members.length)) {
-      throw new import_error.NotEnoughBlobConfirmationsError(
-        `Too many invalid confirmations received for blob (${filteredConfirmations.length} of ${systemState.committee.members.length})`
-      );
-    }
-    const combinedSignature = bindings.combineSignatures(
-      filteredConfirmations,
-      filteredConfirmations.map(({ index }) => index)
-    );
-    const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
-    return (tx) => {
+      const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
       tx.add(
         systemContract.certify_blob({
           arguments: [
@@ -76210,17 +76800,17 @@ const _WalrusClient = class _WalrusClient {
    *
    * @usage
    * ```ts
-   * const tx = await client.certifyBlobTransaction({ blobId, blobObjectId, confirmations });
+   * const tx = client.certifyBlobTransaction({ blobId, blobObjectId, confirmations });
    * ```
    */
-  async certifyBlobTransaction({
+  certifyBlobTransaction({
     transaction = new import_transactions.Transaction(),
     blobId,
     blobObjectId,
     confirmations,
     deletable
   }) {
-    transaction.add(await this.certifyBlob({ blobId, blobObjectId, confirmations, deletable }));
+    transaction.add(this.certifyBlob({ blobId, blobObjectId, confirmations, deletable }));
     return transaction;
   }
   /**
@@ -76235,7 +76825,7 @@ const _WalrusClient = class _WalrusClient {
     signer,
     ...options
   }) {
-    const transaction = await this.certifyBlobTransaction(options);
+    const transaction = this.certifyBlobTransaction(options);
     const { digest } = await __privateMethod(this, _WalrusClient_instances, executeTransaction_fn).call(this, transaction, signer, "certify blob");
     return { digest };
   }
@@ -76248,9 +76838,9 @@ const _WalrusClient = class _WalrusClient {
    * tx.transferObjects([storage], owner);
    * ```
    */
-  async deleteBlob({ blobObjectId }) {
-    const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
-    return (tx) => {
+  deleteBlob({ blobObjectId }) {
+    return async (tx) => {
+      const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
       const storage = tx.add(
         systemContract.delete_blob({
           arguments: [tx.object(__privateGet(this, _packageConfig).systemObjectId), tx.object(blobObjectId)]
@@ -76264,15 +76854,15 @@ const _WalrusClient = class _WalrusClient {
    *
    * @usage
    * ```ts
-   * const tx = await client.deleteBlobTransaction({ blobObjectId, owner });
+   * const tx = client.deleteBlobTransaction({ blobObjectId, owner });
    * ```
    */
-  async deleteBlobTransaction({
+  deleteBlobTransaction({
     owner,
     blobObjectId,
     transaction = new import_transactions.Transaction()
   }) {
-    const storage = transaction.add(await this.deleteBlob({ blobObjectId }));
+    const storage = transaction.add(this.deleteBlob({ blobObjectId }));
     transaction.transferObjects([storage], owner);
     return transaction;
   }
@@ -76289,7 +76879,7 @@ const _WalrusClient = class _WalrusClient {
     transaction = new import_transactions.Transaction(),
     blobObjectId
   }) {
-    const { digest } = await __privateMethod(this, _WalrusClient_instances, executeTransaction_fn).call(this, await this.deleteBlobTransaction({
+    const { digest } = await __privateMethod(this, _WalrusClient_instances, executeTransaction_fn).call(this, this.deleteBlobTransaction({
       blobObjectId,
       transaction,
       owner: transaction.getData().sender ?? signer.toSuiAddress()
@@ -76301,48 +76891,51 @@ const _WalrusClient = class _WalrusClient {
    *
    * @usage
    * ```ts
-   * const tx = await client.extendBlobTransaction({ blobObjectId, epochs });
+   * const tx = client.extendBlobTransaction({ blobObjectId, epochs });
    * ```
    */
-  async extendBlob({ blobObjectId, epochs, endEpoch, walCoin, owner }) {
-    const blob = await __privateGet(this, _objectLoader).load(blobObjectId, (0, import_blob.Blob)());
-    const numEpochs = typeof epochs === "number" ? epochs : endEpoch - blob.storage.end_epoch;
-    if (numEpochs <= 0) {
-      return (_tx) => {
-      };
-    }
-    const { storageCost } = await this.storageCost(Number(blob.storage.storage_size), numEpochs);
-    const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
-    const subsidiesContract = __privateGet(this, _packageConfig).subsidiesObjectId ? await __privateMethod(this, _WalrusClient_instances, getSubsidiesContract_fn).call(this) : null;
-    return __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, storageCost, owner, walCoin ?? null, subsidiesContract !== null, (coin, tx) => {
-      tx.add(
-        subsidiesContract ? subsidiesContract.extend_blob({
-          arguments: [
-            __privateGet(this, _packageConfig).subsidiesObjectId,
-            __privateGet(this, _packageConfig).systemObjectId,
-            blobObjectId,
-            numEpochs,
-            coin
-          ]
-        }) : systemContract.extend_blob({
-          arguments: [__privateGet(this, _packageConfig).systemObjectId, blobObjectId, numEpochs, coin]
+  extendBlob({ blobObjectId, epochs, endEpoch, walCoin, owner }) {
+    return async (tx) => {
+      const blob = await __privateGet(this, _objectLoader).load(blobObjectId, (0, import_blob.Blob)());
+      const numEpochs = typeof epochs === "number" ? epochs : endEpoch - blob.storage.end_epoch;
+      if (numEpochs <= 0) {
+        return;
+      }
+      const { storageCost } = await this.storageCost(Number(blob.storage.storage_size), numEpochs);
+      const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
+      const subsidiesContract = __privateGet(this, _packageConfig).subsidiesObjectId ? await __privateMethod(this, _WalrusClient_instances, getSubsidiesContract_fn).call(this) : null;
+      return tx.add(
+        __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, storageCost, owner, walCoin ?? null, subsidiesContract !== null, async (coin, tx2) => {
+          tx2.add(
+            subsidiesContract ? subsidiesContract.extend_blob({
+              arguments: [
+                __privateGet(this, _packageConfig).subsidiesObjectId,
+                __privateGet(this, _packageConfig).systemObjectId,
+                blobObjectId,
+                numEpochs,
+                coin
+              ]
+            }) : systemContract.extend_blob({
+              arguments: [__privateGet(this, _packageConfig).systemObjectId, blobObjectId, numEpochs, coin]
+            })
+          );
         })
       );
-    });
+    };
   }
   /**
    * Create a transaction that extends a blob
    *
    * @usage
    * ```ts
-   * const tx = await client.extendBlobTransaction({ blobObjectId, epochs });
+   * const tx = client.extendBlobTransaction({ blobObjectId, epochs });
    * ```
    */
   async extendBlobTransaction({
     transaction = new import_transactions.Transaction(),
     ...options
   }) {
-    transaction.add(await this.extendBlob(options));
+    transaction.add(this.extendBlob(options));
     return transaction;
   }
   /**
@@ -76381,18 +76974,20 @@ const _WalrusClient = class _WalrusClient {
    *
    * @usage
    * ```ts
-   * tx.add(await client.writeBlobAttributes({ blobObjectId, attributes: { key: 'value', keyToRemove: null } }));
+   * tx.add(client.writeBlobAttributes({ blobObjectId, attributes: { key: 'value', keyToRemove: null } }));
    * ```
    */
-  async writeBlobAttributes({ blobObject, blobObjectId, attributes }) {
-    const existingAttributes = blobObjectId ? await this.readBlobAttributes({ blobObjectId }) : null;
-    const writeAttributes = await __privateMethod(this, _WalrusClient_instances, writeBlobAttributesForRef_fn).call(this, {
-      attributes,
-      existingAttributes
-    });
-    return (tx) => {
+  writeBlobAttributes({ blobObject, blobObjectId, attributes }) {
+    return async (tx) => {
+      const existingAttributes = blobObjectId ? await this.readBlobAttributes({ blobObjectId }) : null;
       const blob = blobObject ?? tx.object(blobObjectId);
-      tx.add((tx2) => writeAttributes(tx2, blob));
+      tx.add(
+        __privateMethod(this, _WalrusClient_instances, writeBlobAttributesForRef_fn).call(this, {
+          attributes,
+          existingAttributes,
+          blob
+        })
+      );
     };
   }
   /**
@@ -76403,7 +76998,7 @@ const _WalrusClient = class _WalrusClient {
    *
    * @usage
    * ```ts
-   * const tx = await client.writeBlobAttributesTransaction({ blobObjectId, attributes: { key: 'value', keyToRemove: null } });
+   * const tx = client.writeBlobAttributesTransaction({ blobObjectId, attributes: { key: 'value', keyToRemove: null } });
    * ```
    */
   async writeBlobAttributesTransaction({
@@ -76824,16 +77419,16 @@ forceGetReadCommittee_fn = async function({ blobId, signal }) {
   }
   return await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
 };
-withWal_fn = async function(amount, owner, source, withSubsidies, fn) {
-  const walType = await __privateMethod(this, _WalrusClient_instances, walType_fn).call(this);
-  return (tx) => {
+withWal_fn = function(amount, owner, source, withSubsidies, fn) {
+  return async (tx) => {
+    const walType = await __privateMethod(this, _WalrusClient_instances, walType_fn).call(this);
     const coin = source ? tx.splitCoins(source, [amount])[0] : tx.add(
       (0, import_transactions.coinWithBalance)({
         balance: amount,
         type: walType
       })
     );
-    const result = fn(coin, tx);
+    const result = await fn(coin, tx);
     if (withSubsidies) {
       if (source) {
         tx.mergeCoins(source, [coin]);
@@ -76850,13 +77445,14 @@ withWal_fn = async function(amount, owner, source, withSubsidies, fn) {
     return result;
   };
 };
-writeBlobAttributesForRef_fn = async function({
+writeBlobAttributesForRef_fn = function({
   attributes,
-  existingAttributes
+  existingAttributes,
+  blob
 }) {
-  const blobContract = await __privateMethod(this, _WalrusClient_instances, getBlobContract_fn).call(this);
-  const metadataContract = await __privateMethod(this, _WalrusClient_instances, getMetadataContract_fn).call(this);
-  return (tx, blob) => {
+  return async (tx) => {
+    const blobContract = await __privateMethod(this, _WalrusClient_instances, getBlobContract_fn).call(this);
+    const metadataContract = await __privateMethod(this, _WalrusClient_instances, getMetadataContract_fn).call(this);
     if (!existingAttributes) {
       tx.add(
         blobContract.add_metadata({
@@ -76900,7 +77496,7 @@ executeTransaction_fn = async function(transaction, signer, action) {
     signatures: [signature]
   });
   if (effects?.status.error) {
-    throw new import_error.WalrusClientError(`Failed to ${action}: ${effects?.status.error}`);
+    throw new import_error.WalrusClientError(`Failed to ${action} (${digest}): ${effects?.status.error}`);
   }
   await __privateGet(this, _suiClient).core.waitForTransaction({
     digest
@@ -82353,8 +82949,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var utils_exports = {};
 __export(utils_exports, {
   getPureBcsSchema: () => getPureBcsSchema,
-  normalizeMoveArguments: () => normalizeMoveArguments,
-  promiseWithResolver: () => promiseWithResolver
+  normalizeMoveArguments: () => normalizeMoveArguments
 });
 module.exports = __toCommonJS(utils_exports);
 var import_bcs = __nccwpck_require__(56244);
@@ -82424,19 +83019,6 @@ function normalizeMoveArguments(args, argTypes) {
     throw new Error(`Invalid argument ${JSON.stringify(arg)} for type ${type}`);
   }
   return normalizedArgs;
-}
-function promiseWithResolver() {
-  let resolver;
-  let rejecter;
-  const promise = new Promise((resolve, reject) => {
-    resolver = resolve;
-    rejecter = reject;
-  });
-  return {
-    promise,
-    resolve: resolver,
-    reject: rejecter
-  };
 }
 //# sourceMappingURL=index.js.map
 
@@ -82587,14 +83169,16 @@ module.exports = __toCommonJS(client_exports);
 var import_bcs = __nccwpck_require__(2246);
 var import_error = __nccwpck_require__(98831);
 var import_utils = __nccwpck_require__(11776);
-var _fetch, _timeout, _StorageNodeClient_instances, request_fn;
+var _fetch, _timeout, _onError, _StorageNodeClient_instances, request_fn;
 class StorageNodeClient {
-  constructor({ fetch: overriddenFetch, timeout } = {}) {
+  constructor({ fetch: overriddenFetch, timeout, onError } = {}) {
     __privateAdd(this, _StorageNodeClient_instances);
     __privateAdd(this, _fetch);
     __privateAdd(this, _timeout);
+    __privateAdd(this, _onError);
     __privateSet(this, _fetch, overriddenFetch ?? globalThis.fetch);
     __privateSet(this, _timeout, timeout ?? 3e4);
+    __privateSet(this, _onError, onError);
   }
   /**
    * Gets the metadata associated with a Walrus blob.
@@ -82707,8 +83291,10 @@ class StorageNodeClient {
 }
 _fetch = new WeakMap();
 _timeout = new WeakMap();
+_onError = new WeakMap();
 _StorageNodeClient_instances = new WeakSet();
 request_fn = async function(path, options) {
+  var _a, _b, _c;
   const { nodeUrl, signal, timeout, ...init } = options;
   if (signal?.aborted) {
     throw new import_error.UserAbortError();
@@ -82725,15 +83311,20 @@ request_fn = async function(path, options) {
       throw new import_error.UserAbortError();
     }
     if (error instanceof Error && error.name === "AbortError") {
-      throw new import_error.ConnectionTimeoutError();
+      const error2 = new import_error.ConnectionTimeoutError();
+      (_a = __privateGet(this, _onError)) == null ? void 0 : _a.call(this, error2);
+      throw error2;
     }
+    (_b = __privateGet(this, _onError)) == null ? void 0 : _b.call(this, error);
     throw error;
   }
   if (!response.ok) {
     const errorText = await response.text().catch((reason) => reason);
     const errorJSON = safeParseJSON(errorText);
     const errorMessage = errorJSON ? void 0 : errorText;
-    throw import_error.StorageNodeAPIError.generate(response.status, errorJSON, errorMessage);
+    const error = import_error.StorageNodeAPIError.generate(response.status, errorJSON, errorMessage);
+    (_c = __privateGet(this, _onError)) == null ? void 0 : _c.call(this, error);
+    throw error;
   }
   return response;
 };
@@ -83116,7 +83707,6 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var utils_exports = {};
 __export(utils_exports, {
-  chunk: () => chunk,
   encodedBlobLength: () => encodedBlobLength,
   getMaxFaultyNodes: () => getMaxFaultyNodes,
   getShardIndicesByNodeId: () => getShardIndicesByNodeId,
@@ -83217,11 +83807,6 @@ function nodesByShardIndex(committee) {
     }
   }
   return nodesByShardIndex2;
-}
-function chunk(array, size) {
-  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) => {
-    return array.slice(i * size, (i + 1) * size);
-  });
 }
 function toTypeString(type) {
   if (typeof type === "string") {
