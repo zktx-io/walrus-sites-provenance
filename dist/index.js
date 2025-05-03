@@ -58107,6 +58107,7 @@ const certifyBlobs = async ({ config, suiClient, walrusClient, walrusSystem, blo
             const { input } = await suiClient.dryRunTransactionBlock({
                 transactionBlock: await transaction.build({ client: suiClient }),
             });
+            transaction.setSender(signer.toSuiAddress());
             transaction.setGasBudget(parseInt(input.gasData.budget));
             const { digest } = await suiClient.signAndExecuteTransaction({
                 signer,
@@ -58412,6 +58413,7 @@ const cleanupBlobs = async ({ signer, suiClient, config, walrusSystem, blobObjec
     const { input } = await suiClient.dryRunTransactionBlock({
         transactionBlock: await transaction.build({ client: suiClient }),
     });
+    transaction.setSender(signer.toSuiAddress());
     transaction.setGasBudget(parseInt(input.gasData.budget));
     const { digest } = await suiClient.signAndExecuteTransaction({
         signer,
@@ -59026,6 +59028,7 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walrusSystem, gr
         const { input } = await suiClient.dryRunTransactionBlock({
             transactionBlock: await transaction.build({ client: suiClient }),
         });
+        transaction.setSender(signer.toSuiAddress());
         transaction.setGasBudget(parseInt(input.gasData.budget));
         const { digest } = await suiClient.signAndExecuteTransaction({
             signer,
@@ -59333,6 +59336,7 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
     const { input } = await suiClient.dryRunTransactionBlock({
         transactionBlock: await transaction.build({ client: suiClient }),
     });
+    transaction.setSender(signer.toSuiAddress());
     transaction.setGasBudget(parseInt(input.gasData.budget));
     // Execute transaction
     const { digest } = await suiClient.signAndExecuteTransaction({
@@ -59367,6 +59371,7 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
         const { input: input2 } = await suiClient.dryRunTransactionBlock({
             transactionBlock: await tx.build({ client: suiClient }),
         });
+        tx.setSender(signer.toSuiAddress());
         tx.setGasBudget(parseInt(input2.gasData.budget));
         const { digest: digest2 } = await suiClient.signAndExecuteTransaction({
             signer,
@@ -59769,6 +59774,7 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
     const { input } = await suiClient.dryRunTransactionBlock({
         transactionBlock: await transaction.build({ client: suiClient }),
     });
+    transaction.setSender(signer.toSuiAddress());
     transaction.setGasBudget(parseInt(input.gasData.budget));
     // Execute transaction
     const { digest } = await suiClient.signAndExecuteTransaction({
@@ -59794,6 +59800,7 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
         const { input: input2 } = await suiClient.dryRunTransactionBlock({
             transactionBlock: await tx.build({ client: suiClient }),
         });
+        tx.setSender(signer.toSuiAddress());
         tx.setGasBudget(parseInt(input2.gasData.budget));
         const { digest: digest2 } = await suiClient.signAndExecuteTransaction({
             signer,

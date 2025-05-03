@@ -47,6 +47,7 @@ export const certifyBlobs = async ({
       const { input } = await suiClient.dryRunTransactionBlock({
         transactionBlock: await transaction.build({ client: suiClient }),
       });
+      transaction.setSender(signer.toSuiAddress());
       transaction.setGasBudget(parseInt(input.gasData.budget));
 
       const { digest } = await suiClient.signAndExecuteTransaction({

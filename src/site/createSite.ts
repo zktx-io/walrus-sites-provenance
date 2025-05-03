@@ -72,6 +72,7 @@ export const createSite = async ({
   const { input } = await suiClient.dryRunTransactionBlock({
     transactionBlock: await transaction.build({ client: suiClient }),
   });
+  transaction.setSender(signer.toSuiAddress());
   transaction.setGasBudget(parseInt(input.gasData.budget));
 
   // Execute transaction
@@ -120,6 +121,7 @@ export const createSite = async ({
     const { input: input2 } = await suiClient.dryRunTransactionBlock({
       transactionBlock: await tx.build({ client: suiClient }),
     });
+    tx.setSender(signer.toSuiAddress());
     tx.setGasBudget(parseInt(input2.gasData.budget));
 
     const { digest: digest2 } = await suiClient.signAndExecuteTransaction({
