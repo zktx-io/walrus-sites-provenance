@@ -20,7 +20,7 @@ export const getOldBlobObjects = async ({
 }): Promise<string[]> => {
   const blobIds = await getUsedBlobIdsFromSite({
     suiClient,
-    siteObjectId: config.object_id!,
+    siteObjectId: config.site_obj_id!,
   });
   const usedBlobSet: Set<string> = new Set(blobIds);
   const allOwnedObjects: SuiObjectResponse[] = [];

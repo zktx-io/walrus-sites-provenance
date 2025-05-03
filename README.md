@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.4.4
+        uses: zktx-io/walrus-sites-provenance@v0.4.5
         env:
           ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
 ```
@@ -73,7 +73,7 @@ Your `site.config.json` defines how the Walrus Site will be deployed or updated.
   "path": "./dist",
   "gas_budget": 100000000,
   "write_retry_limit": 3,
-  "object_id": "0xexisting_site_object_id"
+  "site_obj_id": "0xexisting_site_object_id"
 }
 ```
 
@@ -89,10 +89,10 @@ Your `site.config.json` defines how the Walrus Site will be deployed or updated.
 | `path`              | `string`                   | ✅       | Directory containing your built static site                       |
 | `gas_budget`        | `number`                   | ✅       | Max gas to use for on-chain transactions                          |
 | `write_retry_limit` | `number`                   | ❌       | Number of times to retry failed blob writes                       |
-| `object_id`         | `string`                   | ❌       | Existing site object ID to update (set this when updating a site) |
+| `site_obj_id`       | `string`                   | ❌       | Existing site object ID to update (set this when updating a site) |
 
-> ✅ Leave `object_id` empty when deploying a new site.  
-> ↻ Set `object_id` only when **updating** an existing site deployment.
+> ✅ Leave `site_obj_id` empty when deploying a new site.  
+> ↻ Set `site_obj_id` only when **updating** an existing site deployment.
 
 #### 🖼 `metadata` (Optional)
 

@@ -85,7 +85,7 @@ const main = async (): Promise<void> => {
   });
 
   // STEP 5: Create Site with Resources
-  if (config.object_id) {
+  if (config.site_obj_id) {
     core.info('\n🛠️ Update Site with Resources...');
     await updateSite({
       config,
@@ -93,7 +93,7 @@ const main = async (): Promise<void> => {
       walrusClient,
       walrusSystem,
       blobs,
-      siteObjectId: config.object_id,
+      siteObjectId: config.site_obj_id,
       signer,
       isGitSigner,
     });
