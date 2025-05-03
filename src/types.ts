@@ -79,5 +79,5 @@ export interface SiteConfig {
   path: string;
   gas_budget: number;
   write_retry_limit?: number;
-  object_id?: string;
+  site_obj_id?: string;
 }
