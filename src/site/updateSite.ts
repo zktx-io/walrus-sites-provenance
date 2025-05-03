@@ -37,7 +37,6 @@ export const updateSite = async ({
   isGitSigner: boolean;
 }) => {
   const transaction = new Transaction();
-  transaction.setGasBudget(config.gas_budget);
 
   // Get old blob object IDs
   const oldBlobObjects = await getOldBlobObjects({
@@ -83,6 +82,12 @@ export const updateSite = async ({
     }),
   );
 
+  // dry run transaction to estimate gas
+  const { input } = await suiClient.dryRunTransactionBlock({
+    transactionBlock: await transaction.build({ client: suiClient }),
+  });
+  transaction.setGasBudget(parseInt(input.gasData.budget));
+
   // Execute transaction
   const { digest } = await suiClient.signAndExecuteTransaction({
     signer,
@@ -105,12 +110,15 @@ export const updateSite = async ({
 
   if (batchedCommands.length > 1) {
     const tx = new Transaction();
-    tx.setGasBudget(config.gas_budget);
     batchedCommands
       .slice(1)
       .forEach(batch =>
         batch.forEach(option => tx.add(registerResources({ ...option, site: siteObjectId }))),
       );
+    const { input: input2 } = await suiClient.dryRunTransactionBlock({
+      transactionBlock: await tx.build({ client: suiClient }),
+    });
+    tx.setGasBudget(parseInt(input2.gasData.budget));
     const { digest: digest2 } = await suiClient.signAndExecuteTransaction({
       signer,
       transaction: tx,

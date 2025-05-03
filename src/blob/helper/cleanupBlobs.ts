@@ -22,9 +22,8 @@ export const cleanupBlobs = async ({
   walrusSystem: WalrusSystem;
   blobObjectsIds: string[];
 }) => {
-  const tx = new Transaction();
-  tx.setGasBudget(config.gas_budget);
-  tx.add(
+  const transaction = new Transaction();
+  transaction.add(
     deleteBlobs({
       owner: config.owner,
       packageId: walrusSystem.blobPackageId,
@@ -32,9 +31,16 @@ export const cleanupBlobs = async ({
       systemObjectId: walrusSystem.systemObjectId,
     }),
   );
+
+  // dry run transaction to estimate gas
+  const { input } = await suiClient.dryRunTransactionBlock({
+    transactionBlock: await transaction.build({ client: suiClient }),
+  });
+  transaction.setGasBudget(parseInt(input.gasData.budget));
+
   const { digest } = await suiClient.signAndExecuteTransaction({
     signer,
-    transaction: tx,
+    transaction,
   });
 
   const { effects } = await suiClient.waitForTransaction({

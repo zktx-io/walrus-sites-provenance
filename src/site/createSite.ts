@@ -30,7 +30,6 @@ export const createSite = async ({
   isGitSigner: boolean;
 }) => {
   const transaction = new Transaction();
-  transaction.setGasBudget(config.gas_budget);
 
   // Create metadata object
   const metadata = transaction.moveCall({
@@ -70,6 +69,11 @@ export const createSite = async ({
   // Transfer site to owner
   transaction.transferObjects([site], config.owner);
 
+  const { input } = await suiClient.dryRunTransactionBlock({
+    transactionBlock: await transaction.build({ client: suiClient }),
+  });
+  transaction.setGasBudget(parseInt(input.gasData.budget));
+
   // Execute transaction
   const { digest } = await suiClient.signAndExecuteTransaction({
     signer,
@@ -107,12 +111,17 @@ export const createSite = async ({
 
   if (batchedCommands.length > 1) {
     const tx = new Transaction();
-    tx.setGasBudget(config.gas_budget);
     batchedCommands
       .slice(1)
       .forEach(batch =>
         batch.forEach(option => tx.add(registerResources({ ...option, site: siteObjectId }))),
       );
+
+    const { input: input2 } = await suiClient.dryRunTransactionBlock({
+      transactionBlock: await tx.build({ client: suiClient }),
+    });
+    tx.setGasBudget(parseInt(input2.gasData.budget));
+
     const { digest: digest2 } = await suiClient.signAndExecuteTransaction({
       signer,
       transaction: tx,

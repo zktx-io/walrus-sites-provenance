@@ -19,7 +19,6 @@ export const getDefaultConfig = (): SiteConfig => ({
   },
   epochs: 30,
   path: './dist',
-  gas_budget: 100000000,
 });
 
 export const loadConfig = (): SiteConfig => {

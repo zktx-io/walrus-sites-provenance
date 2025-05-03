@@ -31,7 +31,6 @@ export const certifyBlobs = async ({
       const chunk = Object.keys(blobs).slice(i, i + MAX_CMD_CERTIFICATIONS);
 
       const transaction = new Transaction();
-      transaction.setGasBudget(config.gas_budget);
 
       for (const blobId of chunk) {
         transaction.add(
@@ -43,6 +42,12 @@ export const certifyBlobs = async ({
           }),
         );
       }
+
+      // dry run transaction to estimate gas
+      const { input } = await suiClient.dryRunTransactionBlock({
+        transactionBlock: await transaction.build({ client: suiClient }),
+      });
+      transaction.setGasBudget(parseInt(input.gasData.budget));
 
       const { digest } = await suiClient.signAndExecuteTransaction({
         signer,
