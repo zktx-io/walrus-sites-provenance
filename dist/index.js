@@ -59209,7 +59209,7 @@ const main = async () => {
         signer,
     });
     // STEP 5: Create Site with Resources
-    if (config.object_id) {
+    if (config.site_obj_id) {
         core.info('\n🛠️ Update Site with Resources...');
         await (0, updateSite_1.updateSite)({
             config,
@@ -59217,7 +59217,7 @@ const main = async () => {
             walrusClient,
             walrusSystem,
             blobs,
-            siteObjectId: config.object_id,
+            siteObjectId: config.site_obj_id,
             signer,
             isGitSigner,
         });
@@ -59482,7 +59482,7 @@ const getUsedBlobIdsFromSite_1 = __nccwpck_require__(72601);
 const getOldBlobObjects = async ({ packageId, config, suiClient, walrusClient, }) => {
     const blobIds = await (0, getUsedBlobIdsFromSite_1.getUsedBlobIdsFromSite)({
         suiClient,
-        siteObjectId: config.object_id,
+        siteObjectId: config.site_obj_id,
     });
     const usedBlobSet = new Set(blobIds);
     const allOwnedObjects = [];
