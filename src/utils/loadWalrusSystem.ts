@@ -5,6 +5,7 @@ import {
   MAINNET_WALRUS_PACKAGE_CONFIG,
   TESTNET_WALRUS_PACKAGE_CONFIG,
 } from '@mysten/walrus';
+
 import { Network } from '../types';
 
 export interface WalrusSystem {
