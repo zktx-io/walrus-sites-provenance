@@ -69,10 +69,11 @@ export const createSite = async ({
   // Transfer site to owner
   transaction.transferObjects([site], config.owner);
 
+  // dry run transaction to estimate gas
+  transaction.setSender(signer.toSuiAddress());
   const { input } = await suiClient.dryRunTransactionBlock({
     transactionBlock: await transaction.build({ client: suiClient }),
   });
-  transaction.setSender(signer.toSuiAddress());
   transaction.setGasBudget(parseInt(input.gasData.budget));
 
   // Execute transaction
@@ -118,10 +119,11 @@ export const createSite = async ({
         batch.forEach(option => tx.add(registerResources({ ...option, site: siteObjectId }))),
       );
 
+    // dry run transaction to estimate gas
+    tx.setSender(signer.toSuiAddress());
     const { input: input2 } = await suiClient.dryRunTransactionBlock({
       transactionBlock: await tx.build({ client: suiClient }),
     });
-    tx.setSender(signer.toSuiAddress());
     tx.setGasBudget(parseInt(input2.gasData.budget));
 
     const { digest: digest2 } = await suiClient.signAndExecuteTransaction({
