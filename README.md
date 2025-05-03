@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.4.5
+        uses: zktx-io/walrus-sites-provenance@v0.4.6
         env:
           ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
 ```
@@ -71,7 +71,6 @@ Your `site.config.json` defines how the Walrus Site will be deployed or updated.
   },
   "epochs": 30,
   "path": "./dist",
-  "gas_budget": 100000000,
   "write_retry_limit": 3,
   "site_obj_id": "0xexisting_site_object_id"
 }
@@ -87,7 +86,6 @@ Your `site.config.json` defines how the Walrus Site will be deployed or updated.
 | `metadata`          | `object`                   | ❌       | Descriptive site metadata (see below)                             |
 | `epochs`            | `number`                   | ✅       | How long the site should be stored (in epochs)                    |
 | `path`              | `string`                   | ✅       | Directory containing your built static site                       |
-| `gas_budget`        | `number`                   | ✅       | Max gas to use for on-chain transactions                          |
 | `write_retry_limit` | `number`                   | ❌       | Number of times to retry failed blob writes                       |
 | `site_obj_id`       | `string`                   | ❌       | Existing site object ID to update (set this when updating a site) |
 
