@@ -17,6 +17,7 @@ import { fromBase64, toBase64 } from '@mysten/sui/utils';
 import { verifyPersonalMessageSignature, verifyTransactionSignature } from '@mysten/sui/verify';
 
 import { sleep } from '../blob/helper/writeBlobHelper';
+import { Network } from '../types';
 
 const NETWORK = 'devnet';
 const SALT_LENGTH = 16;
@@ -24,7 +25,7 @@ const IV_LENGTH = 12;
 
 interface Payload {
   intent: IntentScope;
-  network: 'testnet' | 'mainnet';
+  network: Network;
   address: string;
   bytes: string;
 }
@@ -87,7 +88,7 @@ export class GitSigner extends Keypair {
   readonly #ephemeralKeypair: Ed25519Keypair;
   readonly #pin: string;
   readonly #client: SuiClient;
-  readonly #network: 'mainnet' | 'testnet';
+  readonly #network: Network;
 
   sign(bytes: Uint8Array): Promise<Uint8Array> {
     throw new Error('Remote signer: sign is not implemented.');
@@ -110,7 +111,7 @@ export class GitSigner extends Keypair {
   }
 
   static async CreateSigner(
-    network: 'mainnet' | 'testnet',
+    network: Network,
     address: string,
     pin: string,
   ): Promise<{ ephemeralAddress: string; secretKey: string; signer: GitSigner }> {
@@ -163,7 +164,7 @@ export class GitSigner extends Keypair {
     ephemeralKeypair,
     client,
   }: {
-    network: 'mainnet' | 'testnet';
+    network: Network;
     realAddress: string;
     pin: string;
     ephemeralKeypair: Ed25519Keypair;

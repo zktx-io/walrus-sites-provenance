@@ -58095,7 +58095,6 @@ const certifyBlobs = async ({ config, suiClient, walrusClient, walrusSystem, blo
         for (let i = 0; i < Object.keys(blobs).length; i += constants_1.MAX_CMD_CERTIFICATIONS) {
             const chunk = Object.keys(blobs).slice(i, i + constants_1.MAX_CMD_CERTIFICATIONS);
             const transaction = new transactions_1.Transaction();
-            transaction.setGasBudget(config.gas_budget);
             for (const blobId of chunk) {
                 transaction.add(walrusClient.certifyBlob({
                     blobId,
@@ -58104,6 +58103,11 @@ const certifyBlobs = async ({ config, suiClient, walrusClient, walrusSystem, blo
                     deletable: true,
                 }));
             }
+            // dry run transaction to estimate gas
+            const { input } = await suiClient.dryRunTransactionBlock({
+                transactionBlock: await transaction.build({ client: suiClient }),
+            });
+            transaction.setGasBudget(parseInt(input.gasData.budget));
             const { digest } = await suiClient.signAndExecuteTransaction({
                 signer,
                 transaction,
@@ -58397,17 +58401,21 @@ const transactions_1 = __nccwpck_require__(59417);
 const failWithMessage_1 = __nccwpck_require__(60210);
 const deleteBlobs_1 = __nccwpck_require__(16758);
 const cleanupBlobs = async ({ signer, suiClient, config, walrusSystem, blobObjectsIds, }) => {
-    const tx = new transactions_1.Transaction();
-    tx.setGasBudget(config.gas_budget);
-    tx.add((0, deleteBlobs_1.deleteBlobs)({
+    const transaction = new transactions_1.Transaction();
+    transaction.add((0, deleteBlobs_1.deleteBlobs)({
         owner: config.owner,
         packageId: walrusSystem.blobPackageId,
         blobObjectsIds,
         systemObjectId: walrusSystem.systemObjectId,
     }));
+    // dry run transaction to estimate gas
+    const { input } = await suiClient.dryRunTransactionBlock({
+        transactionBlock: await transaction.build({ client: suiClient }),
+    });
+    transaction.setGasBudget(parseInt(input.gasData.budget));
     const { digest } = await suiClient.signAndExecuteTransaction({
         signer,
-        transaction: tx,
+        transaction,
     });
     const { effects } = await suiClient.waitForTransaction({
         digest,
@@ -58965,7 +58973,6 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walrusSystem, gr
         const chunk = registrations.slice(i, i + constants_1.MAX_CMD_REGISTRATIONS);
         const transaction = new transactions_1.Transaction();
         const systemObject = transaction.object(walrusSystem.systemObjectId);
-        transaction.setGasBudget(config.gas_budget);
         const coin = transaction.object(allWalTokenIds[0]);
         if (allWalTokenIds.length > 1) {
             transaction.mergeCoins(coin, allWalTokenIds.slice(1).map(id => transaction.object(id)));
@@ -59015,6 +59022,11 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walrusSystem, gr
             }));
         });
         transaction.transferObjects([...regisered, ...storageCoins, ...writeCoins], config.owner);
+        // dry run transaction to estimate gas
+        const { input } = await suiClient.dryRunTransactionBlock({
+            transactionBlock: await transaction.build({ client: suiClient }),
+        });
+        transaction.setGasBudget(parseInt(input.gasData.budget));
         const { digest } = await suiClient.signAndExecuteTransaction({
             signer,
             transaction,
@@ -59289,7 +59301,6 @@ const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const registerResources_1 = __nccwpck_require__(12318);
 const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGitSigner, }) => {
     const transaction = new transactions_1.Transaction();
-    transaction.setGasBudget(config.gas_budget);
     // Create metadata object
     const metadata = transaction.moveCall({
         target: `${walrusSystem.sitePackageId}::metadata::new_metadata`,
@@ -59319,6 +59330,10 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
     transaction.add((0, addRoutes_1.addRoutes)({ packageId: walrusSystem.sitePackageId, site, blobs, isUpdate: false }));
     // Transfer site to owner
     transaction.transferObjects([site], config.owner);
+    const { input } = await suiClient.dryRunTransactionBlock({
+        transactionBlock: await transaction.build({ client: suiClient }),
+    });
+    transaction.setGasBudget(parseInt(input.gasData.budget));
     // Execute transaction
     const { digest } = await suiClient.signAndExecuteTransaction({
         signer,
@@ -59346,10 +59361,13 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
     }
     if (batchedCommands.length > 1) {
         const tx = new transactions_1.Transaction();
-        tx.setGasBudget(config.gas_budget);
         batchedCommands
             .slice(1)
             .forEach(batch => batch.forEach(option => tx.add((0, registerResources_1.registerResources)({ ...option, site: siteObjectId }))));
+        const { input: input2 } = await suiClient.dryRunTransactionBlock({
+            transactionBlock: await tx.build({ client: suiClient }),
+        });
+        tx.setGasBudget(parseInt(input2.gasData.budget));
         const { digest: digest2 } = await suiClient.signAndExecuteTransaction({
             signer,
             transaction: tx,
@@ -59712,7 +59730,6 @@ const getResourceObjects_1 = __nccwpck_require__(53098);
 const registerResources_1 = __nccwpck_require__(12318);
 const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs, siteObjectId, signer, isGitSigner, }) => {
     const transaction = new transactions_1.Transaction();
-    transaction.setGasBudget(config.gas_budget);
     // Get old blob object IDs
     const oldBlobObjects = await (0, getOldBlobObjects_1.getOldBlobObjects)({
         packageId: walrusSystem.blobPackageId,
@@ -59748,6 +59765,11 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
         blobs,
         isUpdate: true,
     }));
+    // dry run transaction to estimate gas
+    const { input } = await suiClient.dryRunTransactionBlock({
+        transactionBlock: await transaction.build({ client: suiClient }),
+    });
+    transaction.setGasBudget(parseInt(input.gasData.budget));
     // Execute transaction
     const { digest } = await suiClient.signAndExecuteTransaction({
         signer,
@@ -59766,10 +59788,13 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
     }
     if (batchedCommands.length > 1) {
         const tx = new transactions_1.Transaction();
-        tx.setGasBudget(config.gas_budget);
         batchedCommands
             .slice(1)
             .forEach(batch => batch.forEach(option => tx.add((0, registerResources_1.registerResources)({ ...option, site: siteObjectId }))));
+        const { input: input2 } = await suiClient.dryRunTransactionBlock({
+            transactionBlock: await tx.build({ client: suiClient }),
+        });
+        tx.setGasBudget(parseInt(input2.gasData.budget));
         const { digest: digest2 } = await suiClient.signAndExecuteTransaction({
             signer,
             transaction: tx,
@@ -60542,7 +60567,6 @@ const getDefaultConfig = () => ({
     },
     epochs: 30,
     path: './dist',
-    gas_budget: 100000000,
 });
 exports.getDefaultConfig = getDefaultConfig;
 const loadConfig = () => {

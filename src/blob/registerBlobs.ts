@@ -130,7 +130,6 @@ export const registerBlobs = async ({
     const chunk = registrations.slice(i, i + MAX_CMD_REGISTRATIONS);
     const transaction = new Transaction();
     const systemObject = transaction.object(walrusSystem.systemObjectId);
-    transaction.setGasBudget(config.gas_budget);
 
     const coin = transaction.object(allWalTokenIds[0]);
 
@@ -197,6 +196,12 @@ export const registerBlobs = async ({
     });
 
     transaction.transferObjects([...regisered, ...storageCoins, ...writeCoins], config.owner);
+
+    // dry run transaction to estimate gas
+    const { input } = await suiClient.dryRunTransactionBlock({
+      transactionBlock: await transaction.build({ client: suiClient }),
+    });
+    transaction.setGasBudget(parseInt(input.gasData.budget));
 
     const { digest } = await suiClient.signAndExecuteTransaction({
       signer,

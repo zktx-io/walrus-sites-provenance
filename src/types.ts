@@ -1,5 +1,7 @@
 import { SliversForNode } from '@mysten/walrus';
 
+export type Network = 'mainnet' | 'testnet';
+
 export interface FileInfo {
   name: string;
   path: string;
@@ -64,7 +66,7 @@ export interface BlobDictionary {
 }
 
 export interface SiteConfig {
-  network: 'mainnet' | 'testnet';
+  network: Network;
   owner: string;
   site_name: string;
   metadata: {
@@ -77,7 +79,6 @@ export interface SiteConfig {
   };
   epochs: number;
   path: string;
-  gas_budget: number;
   write_retry_limit?: number;
   site_obj_id?: string;
 }

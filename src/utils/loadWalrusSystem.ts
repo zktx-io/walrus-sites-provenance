@@ -6,6 +6,8 @@ import {
   TESTNET_WALRUS_PACKAGE_CONFIG,
 } from '@mysten/walrus';
 
+import { Network } from '../types';
+
 export interface WalrusSystem {
   walCoinType: string;
   systemObjectId: string;
@@ -104,7 +106,7 @@ const getSubsidiesPackageId = async (
 };
 
 export const loadWalrusSystem = async (
-  network: 'mainnet' | 'testnet',
+  network: Network,
   suiClient: SuiClient,
   walrusClient: WalrusClient,
 ): Promise<WalrusSystem> => {
