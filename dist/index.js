@@ -60270,6 +60270,7 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitSigner = void 0;
 const crypto_1 = __nccwpck_require__(76982);
@@ -60365,7 +60366,7 @@ class GitSigner extends cryptography_1.Keypair {
         return {
             ephemeralAddress,
             secretKey: ephemeralKeypair.getSecretKey(),
-            signer: new GitSigner({
+            signer: new _a({
                 network,
                 realAddress: address,
                 ephemeralKeypair,
@@ -60407,14 +60408,24 @@ class GitSigner extends cryptography_1.Keypair {
             return false;
         }
     }
+    static #splitUint8Array(input, chunkSize = 16380) {
+        const chunks = [];
+        for (let i = 0; i < input.length; i += chunkSize) {
+            chunks.push(input.slice(i, i + chunkSize));
+        }
+        return chunks;
+    }
     async #sendRequest(payload, isEnd) {
         const encrypted = await encryptBytes(new TextEncoder().encode(JSON.stringify(payload)), this.#pin);
+        const chunks = _a.#splitUint8Array((0, utils_1.fromBase64)(encrypted));
         const ephemeralAddress = this.#ephemeralKeypair.getPublicKey().toSuiAddress();
         const tx = new transactions_1.Transaction();
         tx.setSender(ephemeralAddress);
         tx.setGasBudget(10000000);
         tx.pure.bool(true);
-        tx.pure.vector('u8', (0, utils_1.fromBase64)(encrypted));
+        chunks.forEach(chunk => {
+            tx.pure.vector('u8', chunk);
+        });
         tx.transferObjects([tx.gas], ephemeralAddress);
         const { digest: request } = await this.#client.signAndExecuteTransaction({
             transaction: tx,
@@ -60493,6 +60504,7 @@ class GitSigner extends cryptography_1.Keypair {
     }
 }
 exports.GitSigner = GitSigner;
+_a = GitSigner;
 
 
 /***/ }),
