@@ -144,18 +144,18 @@ export const createSite = async ({
   }
 
   const b36 = hexToBase36(siteObjectId);
-  core.info(`\n📦 Site object ID: ${siteObjectId}`);
   if (config.network === 'mainnet') {
-    const url = `http://${b36}.localhost:3000`;
-    core.info(`🌐 ${url}`);
-    core.info(`👉 You can now register this site on SuiNS using the object ID above.`);
+    const url = `http://${b36}.wal.app`;
+    core.info(`\n🌐 ${url}`);
+    core.info(`⚠️ To perform upgrades later, add this to your site.config.json:`);
+    core.info(`  "site_obj_id": "${siteObjectId}"`);
     if (isGitSigner) {
       const message = new TextEncoder().encode(JSON.stringify({ url }));
       await (signer as GitSigner).signPersonalMessage(message, true);
     }
   } else {
     const url = `http://${b36}.localhost:3000`;
-    core.info(`🌐 ${url}`);
+    core.info(`\n🌐 ${url}`);
     core.info(`👉 You can test this Walrus Site locally.`);
     if (isGitSigner) {
       const message = new TextEncoder().encode(JSON.stringify({ url }));
