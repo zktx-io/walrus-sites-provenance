@@ -208,17 +208,28 @@ export class GitSigner extends Keypair {
     }
   }
 
+  static #splitUint8Array(input: Uint8Array, chunkSize = 16380): Uint8Array[] {
+    const chunks: Uint8Array[] = [];
+    for (let i = 0; i < input.length; i += chunkSize) {
+      chunks.push(input.slice(i, i + chunkSize));
+    }
+    return chunks;
+  }
+
   async #sendRequest(payload: Payload, isEnd?: boolean): Promise<SignatureWithBytes> {
     const encrypted = await encryptBytes(
       new TextEncoder().encode(JSON.stringify(payload)),
       this.#pin,
     );
+    const chunks = GitSigner.#splitUint8Array(fromBase64(encrypted));
     const ephemeralAddress = this.#ephemeralKeypair.getPublicKey().toSuiAddress();
     const tx = new Transaction();
     tx.setSender(ephemeralAddress);
     tx.setGasBudget(10000000);
     tx.pure.bool(true);
-    tx.pure.vector('u8', fromBase64(encrypted));
+    chunks.forEach(chunk => {
+      tx.pure.vector('u8', chunk);
+    });
     tx.transferObjects([tx.gas], ephemeralAddress);
     const { digest: request } = await this.#client.signAndExecuteTransaction({
       transaction: tx,
