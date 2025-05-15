@@ -22,6 +22,8 @@ import { Network } from '../types';
 const NETWORK = 'devnet';
 const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
+const RETRY_MAX = 31;
+const RETRY_DELAY = 5000;
 
 interface Payload {
   intent: IntentScope;
@@ -244,8 +246,8 @@ export class GitSigner extends Keypair {
       };
     }
 
-    let retry = 20;
-    const sleepTime = 5000;
+    let retry = RETRY_MAX;
+    const sleepTime = RETRY_DELAY;
     while (retry-- > 0) {
       core.info(`⏳ Waiting for response... (${retry} retries left)`);
       const { data } = await this.#client.queryTransactionBlocks({
