@@ -197,8 +197,8 @@ jobs:
         run: |
           cp ./site.config.json ${{ needs.build-site.outputs.output_dir }}/.well-known
 
-      - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.4.11
+      - name: Deploy to Walrus Sites (SIGN)
+        uses: zktx-io/walrus-sites-provenance@v0.4.12
         env:
           GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
           ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
