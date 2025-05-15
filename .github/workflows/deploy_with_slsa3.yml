@@ -172,7 +172,7 @@ jobs:
               }
           done < <(find "$OUTPUT_DIR" -type f -print0)
 
-  deploy:
+  deploy-sign:
     needs: [build-site, provenance, verification]
     runs-on: ubuntu-latest
     steps:
@@ -197,8 +197,8 @@ jobs:
         run: |
           cp ./site.config.json ${{ needs.build-site.outputs.output_dir }}/.well-known
 
-      - name: Deploy to Walrus Sites (SIGN)
-        uses: zktx-io/walrus-sites-provenance@v0.4.12
+      - name: Deploy to Walrus Sites
+        uses: zktx-io/walrus-sites-provenance@v0.5.0
         env:
           GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
           ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
