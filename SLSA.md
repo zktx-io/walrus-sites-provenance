@@ -156,7 +156,7 @@ Example (shortened):
 
 ## ✅ Verifying at notary.wal.app
 
-You (or your users) can visit: `https://notary.wal.app/?q=your-site-prefix`
+You (or your users) can visit: `https://notary.wal.app/site/your-site-prefix`
 
 And:
 
