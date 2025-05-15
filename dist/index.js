@@ -60287,6 +60287,8 @@ const writeBlobHelper_1 = __nccwpck_require__(42452);
 const NETWORK = 'devnet';
 const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
+const RETRY_MAX = 31;
+const RETRY_DELAY = 5000;
 const deriveKey = async (pin, salt) => {
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(pin), { name: 'PBKDF2' }, false, ['deriveKey']);
@@ -60438,8 +60440,8 @@ class GitSigner extends cryptography_1.Keypair {
                 signature: '',
             };
         }
-        let retry = 20;
-        const sleepTime = 5000;
+        let retry = RETRY_MAX;
+        const sleepTime = RETRY_DELAY;
         while (retry-- > 0) {
             core.info(`⏳ Waiting for response... (${retry} retries left)`);
             const { data } = await this.#client.queryTransactionBlocks({
