@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.5.0
+        uses: zktx-io/walrus-sites-provenance@v0.5.3
         env:
           ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
 ```
