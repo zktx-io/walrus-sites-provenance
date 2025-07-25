@@ -9,7 +9,7 @@ import { Committee, StakingPool } from './contracts';
 const getShardIndicesByNodeId = (committee: InferBcsType<ReturnType<typeof Committee>>) => {
   const shardIndicesByNodeId = new Map<string, number[]>();
 
-  for (const node of committee.pos0.contents) {
+  for (const node of committee[0].contents) {
     if (!shardIndicesByNodeId.has(node.key)) {
       shardIndicesByNodeId.set(node.key, []);
     }
@@ -65,7 +65,7 @@ const getStakingPool = async (
   SuiClient: SuiClient,
   committee: InferBcsType<ReturnType<typeof Committee>>,
 ): Promise<InferBcsType<ReturnType<typeof StakingPool>>[]> => {
-  const nodeIds = committee.pos0.contents.map((node: { key: string; value: number[] }) => node.key);
+  const nodeIds = committee[0].contents.map((node: { key: string; value: number[] }) => node.key);
   return await loadManyOrThrow(SuiClient, nodeIds, StakingPool() as any);
 };
 

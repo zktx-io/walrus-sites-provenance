@@ -79,15 +79,16 @@ const VotingParams = () => {
   });
 };
 
-const VecMap = <T0 extends BcsType<any>, T1 extends BcsType<any>>(...typeParameters: [T0, T1]) => {
-  return bcs.struct('VecMap', {
-    contents: bcs.vector(Entry(typeParameters[0], typeParameters[1])),
-  });
-};
 const Entry = <T0 extends BcsType<any>, T1 extends BcsType<any>>(...typeParameters: [T0, T1]) => {
   return bcs.struct('Entry', {
     key: typeParameters[0],
     value: typeParameters[1],
+  });
+};
+
+const VecMap = <T0 extends BcsType<any>, T1 extends BcsType<any>>(...typeParameters: [T0, T1]) => {
+  return bcs.struct('VecMap', {
+    contents: bcs.vector(Entry(typeParameters[0], typeParameters[1])),
   });
 };
 
@@ -126,7 +127,5 @@ export const StakingPool = () => {
 };
 
 export const Committee = () => {
-  return bcs.struct('Committee', {
-    pos0: VecMap(bcs.Address, bcs.vector(bcs.u16())),
-  });
+  return bcs.tuple([VecMap(bcs.Address, bcs.vector(bcs.u16()))], { name: 'Committee' });
 };
