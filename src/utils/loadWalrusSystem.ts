@@ -92,19 +92,6 @@ const getWalCoinType = async (suiClient: SuiClient, packageId: string): Promise<
   return normalizeStructTag(coinType);
 };
 
-const getSubsidiesPackageId = async (
-  suiClient: SuiClient,
-  subsidiesObjectId: string,
-): Promise<string> => {
-  const subsidiesObject = await suiClient.getObject({
-    id: subsidiesObjectId,
-    options: { showType: true },
-  });
-  const subsidiesPackageId = parseStructTag(subsidiesObject.data?.type!).address;
-
-  return subsidiesPackageId;
-};
-
 export const loadWalrusSystem = async (
   network: Network,
   suiClient: SuiClient,
@@ -125,7 +112,7 @@ export const loadWalrusSystem = async (
           : MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
       options: { showType: true },
     });
-    subsidiesPackageId = parseStructTag(subsidiesObject.data?.type!).address;
+    subsidiesPackageId = (subsidiesObject.data?.content as any).fields.package_id;
   }
 
   return network === 'testnet'
