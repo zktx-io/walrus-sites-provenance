@@ -3304,10 +3304,6 @@ function handleError(f, args) {
     }
 }
 
-function isLikeNone(x) {
-    return x === undefined || x === null;
-}
-
 function debugString(val) {
     // primitive types
     const type = typeof val;
@@ -3382,10 +3378,8 @@ function getStringFromWasm0(ptr, len) {
     return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
 }
 
-function takeFromExternrefTable0(idx) {
-    const value = wasm.__wbindgen_export_4.get(idx);
-    wasm.__externref_table_dealloc(idx);
-    return value;
+function isLikeNone(x) {
+    return x === undefined || x === null;
 }
 
 function passArray8ToWasm0(arg, malloc) {
@@ -3393,6 +3387,12 @@ function passArray8ToWasm0(arg, malloc) {
     getUint8ArrayMemory0().set(arg, ptr / 1);
     WASM_VECTOR_LEN = arg.length;
     return ptr;
+}
+
+function takeFromExternrefTable0(idx) {
+    const value = wasm.__wbindgen_export_4.get(idx);
+    wasm.__externref_table_dealloc(idx);
+    return value;
 }
 /**
  * @param {Uint8Array} signature
@@ -3451,31 +3451,6 @@ module.exports.bls12381_min_pk_verify_aggregate = function(public_keys, msg, sig
         throw takeFromExternrefTable0(ret[1]);
     }
     return ret[0] !== 0;
-};
-
-/**
- * @param {any} msg
- * @returns {any}
- */
-module.exports.rs_encode = function(msg) {
-    const ret = wasm.rs_encode(msg);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-};
-
-/**
- * @param {any} original
- * @param {any} recovery
- * @returns {any}
- */
-module.exports.rs_decode = function(original, recovery) {
-    const ret = wasm.rs_decode(original, recovery);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
 };
 
 const BlobEncoderFinalization = (typeof FinalizationRegistry === 'undefined')
@@ -3688,13 +3663,6 @@ module.exports.__wbindgen_bigint_from_u64 = function(arg0) {
     return ret;
 };
 
-module.exports.__wbindgen_bigint_get_as_i64 = function(arg0, arg1) {
-    const v = arg1;
-    const ret = typeof(v) === 'bigint' ? v : undefined;
-    getDataViewMemory0().setBigInt64(arg0 + 8 * 1, isLikeNone(ret) ? BigInt(0) : ret, true);
-    getDataViewMemory0().setInt32(arg0 + 4 * 0, !isLikeNone(ret), true);
-};
-
 module.exports.__wbindgen_boolean_get = function(arg0) {
     const v = arg0;
     const ret = typeof(v) === 'boolean' ? (v ? 1 : 0) : 2;
@@ -3730,11 +3698,6 @@ module.exports.__wbindgen_init_externref_table = function() {
     ;
 };
 
-module.exports.__wbindgen_is_bigint = function(arg0) {
-    const ret = typeof(arg0) === 'bigint';
-    return ret;
-};
-
 module.exports.__wbindgen_is_function = function(arg0) {
     const ret = typeof(arg0) === 'function';
     return ret;
@@ -3748,11 +3711,6 @@ module.exports.__wbindgen_is_object = function(arg0) {
 
 module.exports.__wbindgen_is_undefined = function(arg0) {
     const ret = arg0 === undefined;
-    return ret;
-};
-
-module.exports.__wbindgen_jsval_eq = function(arg0, arg1) {
-    const ret = arg0 === arg1;
     return ret;
 };
 
@@ -3823,19 +3781,14 @@ exports.createCurve = createCurve;
  * @module
  */
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const hmac_1 = __nccwpck_require__(11494);
-const utils_1 = __nccwpck_require__(4248);
-const weierstrass_js_1 = __nccwpck_require__(3396);
+const weierstrass_ts_1 = __nccwpck_require__(3396);
 /** connects noble-curves to noble-hashes */
 function getHash(hash) {
-    return {
-        hash,
-        hmac: (key, ...msgs) => (0, hmac_1.hmac)(hash, key, (0, utils_1.concatBytes)(...msgs)),
-        randomBytes: utils_1.randomBytes,
-    };
+    return { hash };
 }
+/** @deprecated use new `weierstrass()` and `ecdsa()` methods */
 function createCurve(curveDef, defHash) {
-    const create = (hash) => (0, weierstrass_js_1.weierstrass)({ ...curveDef, ...getHash(hash) });
+    const create = (hash) => (0, weierstrass_ts_1.weierstrass)({ ...curveDef, hash: hash });
     return { ...create(defHash), create };
 }
 //# sourceMappingURL=_shortw_utils.js.map
@@ -3848,33 +3801,72 @@ function createCurve(curveDef, defHash) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.wNAF = wNAF;
+exports.wNAF = void 0;
+exports.negateCt = negateCt;
+exports.normalizeZ = normalizeZ;
+exports.mulEndoUnsafe = mulEndoUnsafe;
 exports.pippenger = pippenger;
 exports.precomputeMSMUnsafe = precomputeMSMUnsafe;
 exports.validateBasic = validateBasic;
+exports._createCurveFields = _createCurveFields;
 /**
  * Methods for elliptic curve multiplication by scalars.
- * Contains wNAF, pippenger
+ * Contains wNAF, pippenger.
  * @module
  */
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const modular_js_1 = __nccwpck_require__(49542);
-const utils_js_1 = __nccwpck_require__(43901);
+const utils_ts_1 = __nccwpck_require__(28816);
+const modular_ts_1 = __nccwpck_require__(49542);
 const _0n = BigInt(0);
 const _1n = BigInt(1);
-function constTimeNegate(condition, item) {
+function negateCt(condition, item) {
     const neg = item.negate();
     return condition ? neg : item;
+}
+/**
+ * Takes a bunch of Projective Points but executes only one
+ * inversion on all of them. Inversion is very slow operation,
+ * so this improves performance massively.
+ * Optimization: converts a list of projective points to a list of identical points with Z=1.
+ */
+function normalizeZ(c, points) {
+    const invertedZs = (0, modular_ts_1.FpInvertBatch)(c.Fp, points.map((p) => p.Z));
+    return points.map((p, i) => c.fromAffine(p.toAffine(invertedZs[i])));
 }
 function validateW(W, bits) {
     if (!Number.isSafeInteger(W) || W <= 0 || W > bits)
         throw new Error('invalid window size, expected [1..' + bits + '], got W=' + W);
 }
-function calcWOpts(W, bits) {
-    validateW(W, bits);
-    const windows = Math.ceil(bits / W) + 1; // +1, because
-    const windowSize = 2 ** (W - 1); // -1 because we skip zero
-    return { windows, windowSize };
+function calcWOpts(W, scalarBits) {
+    validateW(W, scalarBits);
+    const windows = Math.ceil(scalarBits / W) + 1; // W=8 33. Not 32, because we skip zero
+    const windowSize = 2 ** (W - 1); // W=8 128. Not 256, because we skip zero
+    const maxNumber = 2 ** W; // W=8 256
+    const mask = (0, utils_ts_1.bitMask)(W); // W=8 255 == mask 0b11111111
+    const shiftBy = BigInt(W); // W=8 8
+    return { windows, windowSize, mask, maxNumber, shiftBy };
+}
+function calcOffsets(n, window, wOpts) {
+    const { windowSize, mask, maxNumber, shiftBy } = wOpts;
+    let wbits = Number(n & mask); // extract W bits.
+    let nextN = n >> shiftBy; // shift number by W bits.
+    // What actually happens here:
+    // const highestBit = Number(mask ^ (mask >> 1n));
+    // let wbits2 = wbits - 1; // skip zero
+    // if (wbits2 & highestBit) { wbits2 ^= Number(mask); // (~);
+    // split if bits > max: +224 => 256-32
+    if (wbits > windowSize) {
+        // we skip zero, which means instead of `>= size-1`, we do `> size`
+        wbits -= maxNumber; // -32, can be maxNumber - wbits, but then we need to set isNeg here.
+        nextN += _1n; // +256 (carry)
+    }
+    const offsetStart = window * windowSize;
+    const offset = offsetStart + Math.abs(wbits) - 1; // -1 because we skip zero
+    const isZero = wbits === 0; // is current window slice a 0?
+    const isNeg = wbits < 0; // is current window slice negative?
+    const isNegF = window % 2 !== 0; // fake random statement for noise
+    const offsetF = offsetStart; // fake offset for noise
+    return { nextN, offset, isZero, isNeg, isNegF, offsetF };
 }
 function validateMSMPoints(points, c) {
     if (!Array.isArray(points))
@@ -3893,14 +3885,25 @@ function validateMSMScalars(scalars, field) {
     });
 }
 // Since points in different groups cannot be equal (different object constructor),
-// we can have single place to store precomputes
+// we can have single place to store precomputes.
+// Allows to make points frozen / immutable.
 const pointPrecomputes = new WeakMap();
-const pointWindowSizes = new WeakMap(); // This allows use make points immutable (nothing changes inside)
+const pointWindowSizes = new WeakMap();
 function getW(P) {
+    // To disable precomputes:
+    // return 1;
     return pointWindowSizes.get(P) || 1;
+}
+function assert0(n) {
+    if (n !== _0n)
+        throw new Error('invalid wNAF');
 }
 /**
  * Elliptic curve multiplication of Point by scalar. Fragile.
+ * Table generation takes **30MB of ram and 10ms on high-end CPU**,
+ * but may take much longer on slow devices. Actual generation will happen on
+ * first call of `multiply()`. By default, `BASE` point is precomputed.
+ *
  * Scalars should always be less than curve order: this should be checked inside of a curve itself.
  * Creates precomputation tables for fast multiplication:
  * - private scalar is split by fixed size windows of W bits
@@ -3913,182 +3916,183 @@ function getW(P) {
  * @todo Research returning 2d JS array of windows, instead of a single window.
  * This would allow windows to be in different memory locations
  */
-function wNAF(c, bits) {
-    return {
-        constTimeNegate,
-        hasPrecomputes(elm) {
-            return getW(elm) !== 1;
-        },
-        // non-const time multiplication ladder
-        unsafeLadder(elm, n, p = c.ZERO) {
-            let d = elm;
-            while (n > _0n) {
-                if (n & _1n)
-                    p = p.add(d);
-                d = d.double();
-                n >>= _1n;
-            }
-            return p;
-        },
-        /**
-         * Creates a wNAF precomputation window. Used for caching.
-         * Default window size is set by `utils.precompute()` and is equal to 8.
-         * Number of precomputed points depends on the curve size:
-         * 2^(𝑊−1) * (Math.ceil(𝑛 / 𝑊) + 1), where:
-         * - 𝑊 is the window size
-         * - 𝑛 is the bitlength of the curve order.
-         * For a 256-bit curve and window size 8, the number of precomputed points is 128 * 33 = 4224.
-         * @param elm Point instance
-         * @param W window size
-         * @returns precomputed point tables flattened to a single array
-         */
-        precomputeWindow(elm, W) {
-            const { windows, windowSize } = calcWOpts(W, bits);
-            const points = [];
-            let p = elm;
-            let base = p;
-            for (let window = 0; window < windows; window++) {
-                base = p;
+class wNAF {
+    // Parametrized with a given Point class (not individual point)
+    constructor(Point, bits) {
+        this.BASE = Point.BASE;
+        this.ZERO = Point.ZERO;
+        this.Fn = Point.Fn;
+        this.bits = bits;
+    }
+    // non-const time multiplication ladder
+    _unsafeLadder(elm, n, p = this.ZERO) {
+        let d = elm;
+        while (n > _0n) {
+            if (n & _1n)
+                p = p.add(d);
+            d = d.double();
+            n >>= _1n;
+        }
+        return p;
+    }
+    /**
+     * Creates a wNAF precomputation window. Used for caching.
+     * Default window size is set by `utils.precompute()` and is equal to 8.
+     * Number of precomputed points depends on the curve size:
+     * 2^(𝑊−1) * (Math.ceil(𝑛 / 𝑊) + 1), where:
+     * - 𝑊 is the window size
+     * - 𝑛 is the bitlength of the curve order.
+     * For a 256-bit curve and window size 8, the number of precomputed points is 128 * 33 = 4224.
+     * @param point Point instance
+     * @param W window size
+     * @returns precomputed point tables flattened to a single array
+     */
+    precomputeWindow(point, W) {
+        const { windows, windowSize } = calcWOpts(W, this.bits);
+        const points = [];
+        let p = point;
+        let base = p;
+        for (let window = 0; window < windows; window++) {
+            base = p;
+            points.push(base);
+            // i=1, bc we skip 0
+            for (let i = 1; i < windowSize; i++) {
+                base = base.add(p);
                 points.push(base);
-                // =1, because we skip zero
-                for (let i = 1; i < windowSize; i++) {
-                    base = base.add(p);
-                    points.push(base);
-                }
-                p = base.double();
             }
-            return points;
-        },
-        /**
-         * Implements ec multiplication using precomputed tables and w-ary non-adjacent form.
-         * @param W window size
-         * @param precomputes precomputed tables
-         * @param n scalar (we don't check here, but should be less than curve order)
-         * @returns real and fake (for const-time) points
-         */
-        wNAF(W, precomputes, n) {
-            // TODO: maybe check that scalar is less than group order? wNAF behavious is undefined otherwise
-            // But need to carefully remove other checks before wNAF. ORDER == bits here
-            const { windows, windowSize } = calcWOpts(W, bits);
-            let p = c.ZERO;
-            let f = c.BASE;
-            const mask = BigInt(2 ** W - 1); // Create mask with W ones: 0b1111 for W=4 etc.
-            const maxNumber = 2 ** W;
-            const shiftBy = BigInt(W);
-            for (let window = 0; window < windows; window++) {
-                const offset = window * windowSize;
-                // Extract W bits.
-                let wbits = Number(n & mask);
-                // Shift number by W bits.
-                n >>= shiftBy;
-                // If the bits are bigger than max size, we'll split those.
-                // +224 => 256 - 32
-                if (wbits > windowSize) {
-                    wbits -= maxNumber;
-                    n += _1n;
-                }
-                // This code was first written with assumption that 'f' and 'p' will never be infinity point:
-                // since each addition is multiplied by 2 ** W, it cannot cancel each other. However,
-                // there is negate now: it is possible that negated element from low value
-                // would be the same as high element, which will create carry into next window.
-                // It's not obvious how this can fail, but still worth investigating later.
-                // Check if we're onto Zero point.
-                // Add random point inside current window to f.
-                const offset1 = offset;
-                const offset2 = offset + Math.abs(wbits) - 1; // -1 because we skip zero
-                const cond1 = window % 2 !== 0;
-                const cond2 = wbits < 0;
-                if (wbits === 0) {
-                    // The most important part for const-time getPublicKey
-                    f = f.add(constTimeNegate(cond1, precomputes[offset1]));
-                }
-                else {
-                    p = p.add(constTimeNegate(cond2, precomputes[offset2]));
-                }
+            p = base.double();
+        }
+        return points;
+    }
+    /**
+     * Implements ec multiplication using precomputed tables and w-ary non-adjacent form.
+     * More compact implementation:
+     * https://github.com/paulmillr/noble-secp256k1/blob/47cb1669b6e506ad66b35fe7d76132ae97465da2/index.ts#L502-L541
+     * @returns real and fake (for const-time) points
+     */
+    wNAF(W, precomputes, n) {
+        // Scalar should be smaller than field order
+        if (!this.Fn.isValid(n))
+            throw new Error('invalid scalar');
+        // Accumulators
+        let p = this.ZERO;
+        let f = this.BASE;
+        // This code was first written with assumption that 'f' and 'p' will never be infinity point:
+        // since each addition is multiplied by 2 ** W, it cannot cancel each other. However,
+        // there is negate now: it is possible that negated element from low value
+        // would be the same as high element, which will create carry into next window.
+        // It's not obvious how this can fail, but still worth investigating later.
+        const wo = calcWOpts(W, this.bits);
+        for (let window = 0; window < wo.windows; window++) {
+            // (n === _0n) is handled and not early-exited. isEven and offsetF are used for noise
+            const { nextN, offset, isZero, isNeg, isNegF, offsetF } = calcOffsets(n, window, wo);
+            n = nextN;
+            if (isZero) {
+                // bits are 0: add garbage to fake point
+                // Important part for const-time getPublicKey: add random "noise" point to f.
+                f = f.add(negateCt(isNegF, precomputes[offsetF]));
             }
-            // JIT-compiler should not eliminate f here, since it will later be used in normalizeZ()
-            // Even if the variable is still unused, there are some checks which will
-            // throw an exception, so compiler needs to prove they won't happen, which is hard.
-            // At this point there is a way to F be infinity-point even if p is not,
-            // which makes it less const-time: around 1 bigint multiply.
-            return { p, f };
-        },
-        /**
-         * Implements ec unsafe (non const-time) multiplication using precomputed tables and w-ary non-adjacent form.
-         * @param W window size
-         * @param precomputes precomputed tables
-         * @param n scalar (we don't check here, but should be less than curve order)
-         * @param acc accumulator point to add result of multiplication
-         * @returns point
-         */
-        wNAFUnsafe(W, precomputes, n, acc = c.ZERO) {
-            const { windows, windowSize } = calcWOpts(W, bits);
-            const mask = BigInt(2 ** W - 1); // Create mask with W ones: 0b1111 for W=4 etc.
-            const maxNumber = 2 ** W;
-            const shiftBy = BigInt(W);
-            for (let window = 0; window < windows; window++) {
-                const offset = window * windowSize;
-                if (n === _0n)
-                    break; // No need to go over empty scalar
-                // Extract W bits.
-                let wbits = Number(n & mask);
-                // Shift number by W bits.
-                n >>= shiftBy;
-                // If the bits are bigger than max size, we'll split those.
-                // +224 => 256 - 32
-                if (wbits > windowSize) {
-                    wbits -= maxNumber;
-                    n += _1n;
-                }
-                if (wbits === 0)
-                    continue;
-                let curr = precomputes[offset + Math.abs(wbits) - 1]; // -1 because we skip zero
-                if (wbits < 0)
-                    curr = curr.negate();
-                // NOTE: by re-using acc, we can save a lot of additions in case of MSM
-                acc = acc.add(curr);
+            else {
+                // bits are 1: add to result point
+                p = p.add(negateCt(isNeg, precomputes[offset]));
             }
-            return acc;
-        },
-        getPrecomputes(W, P, transform) {
-            // Calculate precomputes on a first run, reuse them after
-            let comp = pointPrecomputes.get(P);
-            if (!comp) {
-                comp = this.precomputeWindow(P, W);
-                if (W !== 1)
-                    pointPrecomputes.set(P, transform(comp));
+        }
+        assert0(n);
+        // Return both real and fake points: JIT won't eliminate f.
+        // At this point there is a way to F be infinity-point even if p is not,
+        // which makes it less const-time: around 1 bigint multiply.
+        return { p, f };
+    }
+    /**
+     * Implements ec unsafe (non const-time) multiplication using precomputed tables and w-ary non-adjacent form.
+     * @param acc accumulator point to add result of multiplication
+     * @returns point
+     */
+    wNAFUnsafe(W, precomputes, n, acc = this.ZERO) {
+        const wo = calcWOpts(W, this.bits);
+        for (let window = 0; window < wo.windows; window++) {
+            if (n === _0n)
+                break; // Early-exit, skip 0 value
+            const { nextN, offset, isZero, isNeg } = calcOffsets(n, window, wo);
+            n = nextN;
+            if (isZero) {
+                // Window bits are 0: skip processing.
+                // Move to next window.
+                continue;
             }
-            return comp;
-        },
-        wNAFCached(P, n, transform) {
-            const W = getW(P);
-            return this.wNAF(W, this.getPrecomputes(W, P, transform), n);
-        },
-        wNAFCachedUnsafe(P, n, transform, prev) {
-            const W = getW(P);
-            if (W === 1)
-                return this.unsafeLadder(P, n, prev); // For W=1 ladder is ~x2 faster
-            return this.wNAFUnsafe(W, this.getPrecomputes(W, P, transform), n, prev);
-        },
-        // We calculate precomputes for elliptic curve point multiplication
-        // using windowed method. This specifies window size and
-        // stores precomputed values. Usually only base point would be precomputed.
-        setWindowSize(P, W) {
-            validateW(W, bits);
-            pointWindowSizes.set(P, W);
-            pointPrecomputes.delete(P);
-        },
-    };
+            else {
+                const item = precomputes[offset];
+                acc = acc.add(isNeg ? item.negate() : item); // Re-using acc allows to save adds in MSM
+            }
+        }
+        assert0(n);
+        return acc;
+    }
+    getPrecomputes(W, point, transform) {
+        // Calculate precomputes on a first run, reuse them after
+        let comp = pointPrecomputes.get(point);
+        if (!comp) {
+            comp = this.precomputeWindow(point, W);
+            if (W !== 1) {
+                // Doing transform outside of if brings 15% perf hit
+                if (typeof transform === 'function')
+                    comp = transform(comp);
+                pointPrecomputes.set(point, comp);
+            }
+        }
+        return comp;
+    }
+    cached(point, scalar, transform) {
+        const W = getW(point);
+        return this.wNAF(W, this.getPrecomputes(W, point, transform), scalar);
+    }
+    unsafe(point, scalar, transform, prev) {
+        const W = getW(point);
+        if (W === 1)
+            return this._unsafeLadder(point, scalar, prev); // For W=1 ladder is ~x2 faster
+        return this.wNAFUnsafe(W, this.getPrecomputes(W, point, transform), scalar, prev);
+    }
+    // We calculate precomputes for elliptic curve point multiplication
+    // using windowed method. This specifies window size and
+    // stores precomputed values. Usually only base point would be precomputed.
+    createCache(P, W) {
+        validateW(W, this.bits);
+        pointWindowSizes.set(P, W);
+        pointPrecomputes.delete(P);
+    }
+    hasCache(elm) {
+        return getW(elm) !== 1;
+    }
+}
+exports.wNAF = wNAF;
+/**
+ * Endomorphism-specific multiplication for Koblitz curves.
+ * Cost: 128 dbl, 0-256 adds.
+ */
+function mulEndoUnsafe(Point, point, k1, k2) {
+    let acc = point;
+    let p1 = Point.ZERO;
+    let p2 = Point.ZERO;
+    while (k1 > _0n || k2 > _0n) {
+        if (k1 & _1n)
+            p1 = p1.add(acc);
+        if (k2 & _1n)
+            p2 = p2.add(acc);
+        acc = acc.double();
+        k1 >>= _1n;
+        k2 >>= _1n;
+    }
+    return { p1, p2 };
 }
 /**
  * Pippenger algorithm for multi-scalar multiplication (MSM, Pa + Qb + Rc + ...).
- * 30x faster vs naive addition on L=4096, 10x faster with precomputes.
+ * 30x faster vs naive addition on L=4096, 10x faster than precomputes.
  * For N=254bit, L=1, it does: 1024 ADD + 254 DBL. For L=5: 1536 ADD + 254 DBL.
  * Algorithmically constant-time (for same L), even when 1 point + scalar, or when scalar = 0.
  * @param c Curve Point constructor
  * @param fieldN field over CURVE.N - important that it's not over CURVE.P
  * @param points array of L curve points
- * @param scalars array of L scalars (aka private keys / bigints)
+ * @param scalars array of L scalars (aka secret keys / bigints)
  */
 function pippenger(c, fieldN, points, scalars) {
     // If we split scalars by some window (let's say 8 bits), every chunk will only
@@ -4099,20 +4103,29 @@ function pippenger(c, fieldN, points, scalars) {
     // 0 is accepted in scalars
     validateMSMPoints(points, c);
     validateMSMScalars(scalars, fieldN);
-    if (points.length !== scalars.length)
+    const plength = points.length;
+    const slength = scalars.length;
+    if (plength !== slength)
         throw new Error('arrays of points and scalars must have equal length');
+    // if (plength === 0) throw new Error('array must be of length >= 2');
     const zero = c.ZERO;
-    const wbits = (0, utils_js_1.bitLen)(BigInt(points.length));
-    const windowSize = wbits > 12 ? wbits - 3 : wbits > 4 ? wbits - 2 : wbits ? 2 : 1; // in bits
-    const MASK = (1 << windowSize) - 1;
-    const buckets = new Array(MASK + 1).fill(zero); // +1 for zero array
+    const wbits = (0, utils_ts_1.bitLen)(BigInt(plength));
+    let windowSize = 1; // bits
+    if (wbits > 12)
+        windowSize = wbits - 3;
+    else if (wbits > 4)
+        windowSize = wbits - 2;
+    else if (wbits > 0)
+        windowSize = 2;
+    const MASK = (0, utils_ts_1.bitMask)(windowSize);
+    const buckets = new Array(Number(MASK) + 1).fill(zero); // +1 for zero array
     const lastBits = Math.floor((fieldN.BITS - 1) / windowSize) * windowSize;
     let sum = zero;
     for (let i = lastBits; i >= 0; i -= windowSize) {
         buckets.fill(zero);
-        for (let j = 0; j < scalars.length; j++) {
+        for (let j = 0; j < slength; j++) {
             const scalar = scalars[j];
-            const wbits = Number((scalar >> BigInt(i)) & BigInt(MASK));
+            const wbits = Number((scalar >> BigInt(i)) & MASK);
             buckets[wbits] = buckets[wbits].add(points[j]);
         }
         let resI = zero; // not using this will do small speed-up, but will lose ct
@@ -4176,7 +4189,7 @@ function precomputeMSMUnsafe(c, fieldN, points, windowSize) {
     const zero = c.ZERO;
     const tableSize = 2 ** windowSize - 1; // table size (without zero)
     const chunks = Math.ceil(fieldN.BITS / windowSize); // chunks of item
-    const MASK = BigInt((1 << windowSize) - 1);
+    const MASK = (0, utils_ts_1.bitMask)(windowSize);
     const tables = points.map((p) => {
         const res = [];
         for (let i = 0, acc = p; i < tableSize; i++) {
@@ -4207,9 +4220,11 @@ function precomputeMSMUnsafe(c, fieldN, points, windowSize) {
         return res;
     };
 }
+// TODO: remove
+/** @deprecated */
 function validateBasic(curve) {
-    (0, modular_js_1.validateField)(curve.Fp);
-    (0, utils_js_1.validateObject)(curve, {
+    (0, modular_ts_1.validateField)(curve.Fp);
+    (0, utils_ts_1.validateObject)(curve, {
         n: 'bigint',
         h: 'bigint',
         Gx: 'field',
@@ -4220,10 +4235,41 @@ function validateBasic(curve) {
     });
     // Set defaults
     return Object.freeze({
-        ...(0, modular_js_1.nLength)(curve.n, curve.nBitLength),
+        ...(0, modular_ts_1.nLength)(curve.n, curve.nBitLength),
         ...curve,
         ...{ p: curve.Fp.ORDER },
     });
+}
+function createField(order, field) {
+    if (field) {
+        if (field.ORDER !== order)
+            throw new Error('Field.ORDER must match order: Fp == p, Fn == n');
+        (0, modular_ts_1.validateField)(field);
+        return field;
+    }
+    else {
+        return (0, modular_ts_1.Field)(order);
+    }
+}
+/** Validates CURVE opts and creates fields */
+function _createCurveFields(type, CURVE, curveOpts = {}) {
+    if (!CURVE || typeof CURVE !== 'object')
+        throw new Error(`expected valid ${type} CURVE object`);
+    for (const p of ['p', 'n', 'h']) {
+        const val = CURVE[p];
+        if (!(typeof val === 'bigint' && val > _0n))
+            throw new Error(`CURVE.${p} must be positive bigint`);
+    }
+    const Fp = createField(CURVE.p, curveOpts.Fp);
+    const Fn = createField(CURVE.n, curveOpts.Fn);
+    const _b = type === 'weierstrass' ? 'b' : 'd';
+    const params = ['Gx', 'Gy', 'a', _b];
+    for (const p of params) {
+        // @ts-ignore
+        if (!Fp.isValid(CURVE[p]))
+            throw new Error(`CURVE.${p} must be valid field element of CURVE.Fp`);
+    }
+    return { Fp, Fn };
 }
 //# sourceMappingURL=curve.js.map
 
@@ -4235,105 +4281,90 @@ function validateBasic(curve) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PrimeEdwardsPoint = void 0;
+exports.edwards = edwards;
+exports.eddsa = eddsa;
 exports.twistedEdwards = twistedEdwards;
 /**
  * Twisted Edwards curve. The formula is: ax² + y² = 1 + dx²y².
  * For design rationale of types / exports, see weierstrass module documentation.
+ * Untwisted Edwards curves exist, but they aren't used in real-world protocols.
  * @module
  */
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const curve_js_1 = __nccwpck_require__(78015);
-const modular_js_1 = __nccwpck_require__(49542);
-const ut = __nccwpck_require__(43901);
-const utils_js_1 = __nccwpck_require__(43901);
+const utils_ts_1 = __nccwpck_require__(28816);
+const curve_ts_1 = __nccwpck_require__(78015);
+const modular_ts_1 = __nccwpck_require__(49542);
 // Be friendly to bad ECMAScript parsers by not using bigint literals
 // prettier-ignore
 const _0n = BigInt(0), _1n = BigInt(1), _2n = BigInt(2), _8n = BigInt(8);
-// verification rule is either zip215 or rfc8032 / nist186-5. Consult fromHex:
-const VERIFY_DEFAULT = { zip215: true };
-function validateOpts(curve) {
-    const opts = (0, curve_js_1.validateBasic)(curve);
-    ut.validateObject(curve, {
-        hash: 'function',
-        a: 'bigint',
-        d: 'bigint',
-        randomBytes: 'function',
-    }, {
-        adjustScalarBytes: 'function',
-        domain: 'function',
-        uvRatio: 'function',
-        mapToCurve: 'function',
-    });
-    // Set defaults
-    return Object.freeze({ ...opts });
+function isEdValidXY(Fp, CURVE, x, y) {
+    const x2 = Fp.sqr(x);
+    const y2 = Fp.sqr(y);
+    const left = Fp.add(Fp.mul(CURVE.a, x2), y2);
+    const right = Fp.add(Fp.ONE, Fp.mul(CURVE.d, Fp.mul(x2, y2)));
+    return Fp.eql(left, right);
 }
-/**
- * Creates Twisted Edwards curve with EdDSA signatures.
- * @example
- * import { Field } from '@noble/curves/abstract/modular';
- * // Before that, define BigInt-s: a, d, p, n, Gx, Gy, h
- * const curve = twistedEdwards({ a, d, Fp: Field(p), n, Gx, Gy, h })
- */
-function twistedEdwards(curveDef) {
-    const CURVE = validateOpts(curveDef);
-    const { Fp, n: CURVE_ORDER, prehash: prehash, hash: cHash, randomBytes, nByteLength, h: cofactor, } = CURVE;
+function edwards(CURVE, curveOpts = {}) {
+    const { Fp, Fn } = (0, curve_ts_1._createCurveFields)('edwards', CURVE, curveOpts);
+    const { h: cofactor, n: CURVE_ORDER } = CURVE;
+    (0, utils_ts_1._validateObject)(curveOpts, {}, { uvRatio: 'function' });
     // Important:
     // There are some places where Fp.BYTES is used instead of nByteLength.
     // So far, everything has been tested with curves of Fp.BYTES == nByteLength.
     // TODO: test and find curves which behave otherwise.
-    const MASK = _2n << (BigInt(nByteLength * 8) - _1n);
-    const modP = Fp.create; // Function overrides
-    const Fn = (0, modular_js_1.Field)(CURVE.n, CURVE.nBitLength);
+    const MASK = _2n << (BigInt(Fn.BYTES * 8) - _1n);
+    const modP = (n) => Fp.create(n); // Function overrides
     // sqrt(u/v)
-    const uvRatio = CURVE.uvRatio ||
+    const uvRatio = curveOpts.uvRatio ||
         ((u, v) => {
             try {
-                return { isValid: true, value: Fp.sqrt(u * Fp.inv(v)) };
+                return { isValid: true, value: Fp.sqrt(Fp.div(u, v)) };
             }
             catch (e) {
                 return { isValid: false, value: _0n };
             }
         });
-    const adjustScalarBytes = CURVE.adjustScalarBytes || ((bytes) => bytes); // NOOP
-    const domain = CURVE.domain ||
-        ((data, ctx, phflag) => {
-            (0, utils_js_1.abool)('phflag', phflag);
-            if (ctx.length || phflag)
-                throw new Error('Contexts/pre-hash are not supported');
-            return data;
-        }); // NOOP
-    // 0 <= n < MASK
-    // Coordinates larger than Fp.ORDER are allowed for zip215
-    function aCoordinate(title, n) {
-        ut.aInRange('coordinate ' + title, n, _0n, MASK);
+    // Validate whether the passed curve params are valid.
+    // equation ax² + y² = 1 + dx²y² should work for generator point.
+    if (!isEdValidXY(Fp, CURVE, CURVE.Gx, CURVE.Gy))
+        throw new Error('bad curve params: generator point');
+    /**
+     * Asserts coordinate is valid: 0 <= n < MASK.
+     * Coordinates >= Fp.ORDER are allowed for zip215.
+     */
+    function acoord(title, n, banZero = false) {
+        const min = banZero ? _1n : _0n;
+        (0, utils_ts_1.aInRange)('coordinate ' + title, n, min, MASK);
+        return n;
     }
-    function assertPoint(other) {
+    function aextpoint(other) {
         if (!(other instanceof Point))
             throw new Error('ExtendedPoint expected');
     }
     // Converts Extended point to default (x, y) coordinates.
     // Can accept precomputed Z^-1 - for example, from invertBatch.
-    const toAffineMemo = (0, utils_js_1.memoized)((p, iz) => {
-        const { ex: x, ey: y, ez: z } = p;
+    const toAffineMemo = (0, utils_ts_1.memoized)((p, iz) => {
+        const { X, Y, Z } = p;
         const is0 = p.is0();
         if (iz == null)
-            iz = is0 ? _8n : Fp.inv(z); // 8 was chosen arbitrarily
-        const ax = modP(x * iz);
-        const ay = modP(y * iz);
-        const zz = modP(z * iz);
+            iz = is0 ? _8n : Fp.inv(Z); // 8 was chosen arbitrarily
+        const x = modP(X * iz);
+        const y = modP(Y * iz);
+        const zz = Fp.mul(Z, iz);
         if (is0)
             return { x: _0n, y: _1n };
         if (zz !== _1n)
             throw new Error('invZ was invalid');
-        return { x: ax, y: ay };
+        return { x, y };
     });
-    const assertValidMemo = (0, utils_js_1.memoized)((p) => {
+    const assertValidMemo = (0, utils_ts_1.memoized)((p) => {
         const { a, d } = CURVE;
         if (p.is0())
             throw new Error('bad point: ZERO'); // TODO: optimize, with vars below?
         // Equation in affine coordinates: ax² + y² = 1 + dx²y²
         // Equation in projective coordinates (X/Z, Y/Z, Z):  (aX² + Y²)Z² = Z⁴ + dX²Y²
-        const { ex: X, ey: Y, ez: Z, et: T } = p;
+        const { X, Y, Z, T } = p;
         const X2 = modP(X * X); // X²
         const Y2 = modP(Y * Y); // Y²
         const Z2 = modP(Z * Z); // Z²
@@ -4350,18 +4381,14 @@ function twistedEdwards(curveDef) {
             throw new Error('bad point: equation left != right (2)');
         return true;
     });
-    // Extended Point works in extended coordinates: (x, y, z, t) ∋ (x=x/z, y=y/z, t=xy).
+    // Extended Point works in extended coordinates: (X, Y, Z, T) ∋ (x=X/Z, y=Y/Z, T=xy).
     // https://en.wikipedia.org/wiki/Twisted_Edwards_curve#Extended_coordinates
     class Point {
-        constructor(ex, ey, ez, et) {
-            this.ex = ex;
-            this.ey = ey;
-            this.ez = ez;
-            this.et = et;
-            aCoordinate('x', ex);
-            aCoordinate('y', ey);
-            aCoordinate('z', ez);
-            aCoordinate('t', et);
+        constructor(X, Y, Z, T) {
+            this.X = acoord('x', X);
+            this.Y = acoord('y', Y);
+            this.Z = acoord('z', Z, true);
+            this.T = acoord('t', T);
             Object.freeze(this);
         }
         get x() {
@@ -4370,36 +4397,51 @@ function twistedEdwards(curveDef) {
         get y() {
             return this.toAffine().y;
         }
+        // TODO: remove
+        get ex() {
+            return this.X;
+        }
+        get ey() {
+            return this.Y;
+        }
+        get ez() {
+            return this.Z;
+        }
+        get et() {
+            return this.T;
+        }
+        static normalizeZ(points) {
+            return (0, curve_ts_1.normalizeZ)(Point, points);
+        }
+        static msm(points, scalars) {
+            return (0, curve_ts_1.pippenger)(Point, Fn, points, scalars);
+        }
+        _setWindowSize(windowSize) {
+            this.precompute(windowSize);
+        }
         static fromAffine(p) {
             if (p instanceof Point)
                 throw new Error('extended point not allowed');
             const { x, y } = p || {};
-            aCoordinate('x', x);
-            aCoordinate('y', y);
+            acoord('x', x);
+            acoord('y', y);
             return new Point(x, y, _1n, modP(x * y));
         }
-        static normalizeZ(points) {
-            const toInv = Fp.invertBatch(points.map((p) => p.ez));
-            return points.map((p, i) => p.toAffine(toInv[i])).map(Point.fromAffine);
+        precompute(windowSize = 8, isLazy = true) {
+            wnaf.createCache(this, windowSize);
+            if (!isLazy)
+                this.multiply(_2n); // random number
+            return this;
         }
-        // Multiscalar Multiplication
-        static msm(points, scalars) {
-            return (0, curve_js_1.pippenger)(Point, Fn, points, scalars);
-        }
-        // "Private method", don't use it directly
-        _setWindowSize(windowSize) {
-            wnaf.setWindowSize(this, windowSize);
-        }
-        // Not required for fromHex(), which always creates valid points.
-        // Could be useful for fromAffine().
+        // Useful in fromAffine() - not for fromBytes(), which always created valid points.
         assertValidity() {
             assertValidMemo(this);
         }
         // Compare one point to another.
         equals(other) {
-            assertPoint(other);
-            const { ex: X1, ey: Y1, ez: Z1 } = this;
-            const { ex: X2, ey: Y2, ez: Z2 } = other;
+            aextpoint(other);
+            const { X: X1, Y: Y1, Z: Z1 } = this;
+            const { X: X2, Y: Y2, Z: Z2 } = other;
             const X1Z2 = modP(X1 * Z2);
             const X2Z1 = modP(X2 * Z1);
             const Y1Z2 = modP(Y1 * Z2);
@@ -4411,14 +4453,14 @@ function twistedEdwards(curveDef) {
         }
         negate() {
             // Flips point sign to a negative one (-x, y in affine coords)
-            return new Point(modP(-this.ex), this.ey, this.ez, modP(-this.et));
+            return new Point(modP(-this.X), this.Y, this.Z, modP(-this.T));
         }
         // Fast algo for doubling Extended Point.
         // https://hyperelliptic.org/EFD/g1p/auto-twisted-extended.html#doubling-dbl-2008-hwcd
         // Cost: 4M + 4S + 1*a + 6add + 1*2.
         double() {
             const { a } = CURVE;
-            const { ex: X1, ey: Y1, ez: Z1 } = this;
+            const { X: X1, Y: Y1, Z: Z1 } = this;
             const A = modP(X1 * X1); // A = X12
             const B = modP(Y1 * Y1); // B = Y12
             const C = modP(_2n * modP(Z1 * Z1)); // C = 2*Z12
@@ -4438,31 +4480,10 @@ function twistedEdwards(curveDef) {
         // https://hyperelliptic.org/EFD/g1p/auto-twisted-extended.html#addition-add-2008-hwcd
         // Cost: 9M + 1*a + 1*d + 7add.
         add(other) {
-            assertPoint(other);
+            aextpoint(other);
             const { a, d } = CURVE;
-            const { ex: X1, ey: Y1, ez: Z1, et: T1 } = this;
-            const { ex: X2, ey: Y2, ez: Z2, et: T2 } = other;
-            // Faster algo for adding 2 Extended Points when curve's a=-1.
-            // http://hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-4
-            // Cost: 8M + 8add + 2*2.
-            // Note: It does not check whether the `other` point is valid.
-            if (a === BigInt(-1)) {
-                const A = modP((Y1 - X1) * (Y2 + X2));
-                const B = modP((Y1 + X1) * (Y2 - X2));
-                const F = modP(B - A);
-                if (F === _0n)
-                    return this.double(); // Same point. Tests say it doesn't affect timing
-                const C = modP(Z1 * _2n * T2);
-                const D = modP(T1 * _2n * Z2);
-                const E = D + C;
-                const G = B + A;
-                const H = D - C;
-                const X3 = modP(E * F);
-                const Y3 = modP(G * H);
-                const T3 = modP(E * H);
-                const Z3 = modP(F * G);
-                return new Point(X3, Y3, Z3, T3);
-            }
+            const { X: X1, Y: Y1, Z: Z1, T: T1 } = this;
+            const { X: X2, Y: Y2, Z: Z2, T: T2 } = other;
             const A = modP(X1 * X2); // A = X1*X2
             const B = modP(Y1 * Y2); // B = Y1*Y2
             const C = modP(T1 * d * T2); // C = T1*d*T2
@@ -4480,15 +4501,12 @@ function twistedEdwards(curveDef) {
         subtract(other) {
             return this.add(other.negate());
         }
-        wNAF(n) {
-            return wnaf.wNAFCached(this, n, Point.normalizeZ);
-        }
         // Constant-time multiplication.
         multiply(scalar) {
             const n = scalar;
-            ut.aInRange('scalar', n, _1n, CURVE_ORDER); // 1 <= scalar < L
-            const { p, f } = this.wNAF(n);
-            return Point.normalizeZ([p, f])[0];
+            (0, utils_ts_1.aInRange)('scalar', n, _1n, CURVE_ORDER); // 1 <= scalar < L
+            const { p, f } = wnaf.cached(this, n, (p) => (0, curve_ts_1.normalizeZ)(Point, p));
+            return (0, curve_ts_1.normalizeZ)(Point, [p, f])[0];
         }
         // Non-constant-time multiplication. Uses double-and-add algorithm.
         // It's faster, but should only be used when you don't care about
@@ -4497,12 +4515,12 @@ function twistedEdwards(curveDef) {
         // Accepts optional accumulator to merge with multiply (important for sparse scalars)
         multiplyUnsafe(scalar, acc = Point.ZERO) {
             const n = scalar;
-            ut.aInRange('scalar', n, _0n, CURVE_ORDER); // 0 <= scalar < L
+            (0, utils_ts_1.aInRange)('scalar', n, _0n, CURVE_ORDER); // 0 <= scalar < L
             if (n === _0n)
-                return I;
+                return Point.ZERO;
             if (this.is0() || n === _1n)
                 return this;
-            return wnaf.wNAFCachedUnsafe(this, n, Point.normalizeZ, acc);
+            return wnaf.unsafe(this, n, (p) => (0, curve_ts_1.normalizeZ)(Point, p), acc);
         }
         // Checks if point is of small order.
         // If you add something to small order point, you will have "dirty"
@@ -4514,36 +4532,39 @@ function twistedEdwards(curveDef) {
         // Multiplies point by curve order and checks if the result is 0.
         // Returns `false` is the point is dirty.
         isTorsionFree() {
-            return wnaf.unsafeLadder(this, CURVE_ORDER).is0();
+            return wnaf.unsafe(this, CURVE_ORDER).is0();
         }
         // Converts Extended point to default (x, y) coordinates.
         // Can accept precomputed Z^-1 - for example, from invertBatch.
-        toAffine(iz) {
-            return toAffineMemo(this, iz);
+        toAffine(invertedZ) {
+            return toAffineMemo(this, invertedZ);
         }
         clearCofactor() {
-            const { h: cofactor } = CURVE;
             if (cofactor === _1n)
                 return this;
             return this.multiplyUnsafe(cofactor);
+        }
+        static fromBytes(bytes, zip215 = false) {
+            (0, utils_ts_1.abytes)(bytes);
+            return Point.fromHex(bytes, zip215);
         }
         // Converts hash string or Uint8Array to Point.
         // Uses algo from RFC8032 5.1.3.
         static fromHex(hex, zip215 = false) {
             const { d, a } = CURVE;
             const len = Fp.BYTES;
-            hex = (0, utils_js_1.ensureBytes)('pointHex', hex, len); // copy hex to a new array
-            (0, utils_js_1.abool)('zip215', zip215);
+            hex = (0, utils_ts_1.ensureBytes)('pointHex', hex, len); // copy hex to a new array
+            (0, utils_ts_1.abool)('zip215', zip215);
             const normed = hex.slice(); // copy again, we'll manipulate it
             const lastByte = hex[len - 1]; // select last byte
             normed[len - 1] = lastByte & ~0x80; // clear last bit
-            const y = ut.bytesToNumberLE(normed);
+            const y = (0, utils_ts_1.bytesToNumberLE)(normed);
             // zip215=true is good for consensus-critical apps. =false follows RFC8032 / NIST186-5.
             // RFC8032 prohibits >= p, but ZIP215 doesn't
             // zip215=true:  0 <= y < MASK (2^256 for ed25519)
             // zip215=false: 0 <= y < P (2^255-19 for ed25519)
             const max = zip215 ? MASK : Fp.ORDER;
-            ut.aInRange('pointHex.y', y, _0n, max);
+            (0, utils_ts_1.aInRange)('pointHex.y', y, _0n, max);
             // Ed25519: x² = (y²-1)/(dy²+1) mod p. Ed448: x² = (y²-1)/(dy²-1) mod p. Generic case:
             // ax²+y²=1+dx²y² => y²-1=dx²y²-ax² => y²-1=x²(dy²-a) => x²=(y²-1)/(dy²-a)
             const y2 = modP(y * y); // denominator is always non-0 mod p.
@@ -4561,68 +4582,185 @@ function twistedEdwards(curveDef) {
                 x = modP(-x); // if x_0 != x mod 2, set x = p-x
             return Point.fromAffine({ x, y });
         }
-        static fromPrivateKey(privKey) {
-            return getExtendedPublicKey(privKey).point;
-        }
-        toRawBytes() {
+        toBytes() {
             const { x, y } = this.toAffine();
-            const bytes = ut.numberToBytesLE(y, Fp.BYTES); // each y has 2 x values (x, -y)
+            const bytes = (0, utils_ts_1.numberToBytesLE)(y, Fp.BYTES); // each y has 2 x values (x, -y)
             bytes[bytes.length - 1] |= x & _1n ? 0x80 : 0; // when compressing, it's enough to store y
             return bytes; // and use the last byte to encode sign of x
         }
+        /** @deprecated use `toBytes` */
+        toRawBytes() {
+            return this.toBytes();
+        }
         toHex() {
-            return ut.bytesToHex(this.toRawBytes()); // Same as toRawBytes, but returns string.
+            return (0, utils_ts_1.bytesToHex)(this.toBytes());
+        }
+        toString() {
+            return `<Point ${this.is0() ? 'ZERO' : this.toHex()}>`;
         }
     }
+    // base / generator point
     Point.BASE = new Point(CURVE.Gx, CURVE.Gy, _1n, modP(CURVE.Gx * CURVE.Gy));
+    // zero / infinity / identity point
     Point.ZERO = new Point(_0n, _1n, _1n, _0n); // 0, 1, 1, 0
-    const { BASE: G, ZERO: I } = Point;
-    const wnaf = (0, curve_js_1.wNAF)(Point, nByteLength * 8);
+    // fields
+    Point.Fp = Fp;
+    Point.Fn = Fn;
+    const wnaf = new curve_ts_1.wNAF(Point, Fn.BYTES * 8); // Fn.BITS?
+    return Point;
+}
+/**
+ * Base class for prime-order points like Ristretto255 and Decaf448.
+ * These points eliminate cofactor issues by representing equivalence classes
+ * of Edwards curve points.
+ */
+class PrimeEdwardsPoint {
+    constructor(ep) {
+        this.ep = ep;
+    }
+    // Static methods that must be implemented by subclasses
+    static fromBytes(_bytes) {
+        throw new Error('fromBytes must be implemented by subclass');
+    }
+    static fromHex(_hex) {
+        throw new Error('fromHex must be implemented by subclass');
+    }
+    get x() {
+        return this.toAffine().x;
+    }
+    get y() {
+        return this.toAffine().y;
+    }
+    // Common implementations
+    clearCofactor() {
+        // no-op for prime-order groups
+        return this;
+    }
+    assertValidity() {
+        this.ep.assertValidity();
+    }
+    toAffine(invertedZ) {
+        return this.ep.toAffine(invertedZ);
+    }
+    /** @deprecated use `toBytes` */
+    toRawBytes() {
+        return this.toBytes();
+    }
+    toHex() {
+        return (0, utils_ts_1.bytesToHex)(this.toBytes());
+    }
+    toString() {
+        return this.toHex();
+    }
+    isTorsionFree() {
+        return true;
+    }
+    isSmallOrder() {
+        return false;
+    }
+    add(other) {
+        this.assertSame(other);
+        return this.init(this.ep.add(other.ep));
+    }
+    subtract(other) {
+        this.assertSame(other);
+        return this.init(this.ep.subtract(other.ep));
+    }
+    multiply(scalar) {
+        return this.init(this.ep.multiply(scalar));
+    }
+    multiplyUnsafe(scalar) {
+        return this.init(this.ep.multiplyUnsafe(scalar));
+    }
+    double() {
+        return this.init(this.ep.double());
+    }
+    negate() {
+        return this.init(this.ep.negate());
+    }
+    precompute(windowSize, isLazy) {
+        return this.init(this.ep.precompute(windowSize, isLazy));
+    }
+}
+exports.PrimeEdwardsPoint = PrimeEdwardsPoint;
+/**
+ * Initializes EdDSA signatures over given Edwards curve.
+ */
+function eddsa(Point, cHash, eddsaOpts) {
+    if (typeof cHash !== 'function')
+        throw new Error('"hash" function param is required');
+    (0, utils_ts_1._validateObject)(eddsaOpts, {}, {
+        adjustScalarBytes: 'function',
+        randomBytes: 'function',
+        domain: 'function',
+        prehash: 'function',
+        mapToCurve: 'function',
+    });
+    const { prehash } = eddsaOpts;
+    const { BASE: G, Fp, Fn } = Point;
+    const CURVE_ORDER = Fn.ORDER;
+    const randomBytes_ = eddsaOpts.randomBytes || utils_ts_1.randomBytes;
+    const adjustScalarBytes = eddsaOpts.adjustScalarBytes || ((bytes) => bytes); // NOOP
+    const domain = eddsaOpts.domain ||
+        ((data, ctx, phflag) => {
+            (0, utils_ts_1.abool)('phflag', phflag);
+            if (ctx.length || phflag)
+                throw new Error('Contexts/pre-hash are not supported');
+            return data;
+        }); // NOOP
     function modN(a) {
-        return (0, modular_js_1.mod)(a, CURVE_ORDER);
+        return Fn.create(a);
     }
     // Little-endian SHA512 with modulo n
     function modN_LE(hash) {
-        return modN(ut.bytesToNumberLE(hash));
+        // Not using Fn.fromBytes: hash can be 2*Fn.BYTES
+        return modN((0, utils_ts_1.bytesToNumberLE)(hash));
     }
-    /** Convenience method that creates public key and other stuff. RFC8032 5.1.5 */
-    function getExtendedPublicKey(key) {
+    // Get the hashed private scalar per RFC8032 5.1.5
+    function getPrivateScalar(key) {
         const len = Fp.BYTES;
-        key = (0, utils_js_1.ensureBytes)('private key', key, len);
+        key = (0, utils_ts_1.ensureBytes)('private key', key, len);
         // Hash private key with curve's hash function to produce uniformingly random input
         // Check byte lengths: ensure(64, h(ensure(32, key)))
-        const hashed = (0, utils_js_1.ensureBytes)('hashed private key', cHash(key), 2 * len);
+        const hashed = (0, utils_ts_1.ensureBytes)('hashed private key', cHash(key), 2 * len);
         const head = adjustScalarBytes(hashed.slice(0, len)); // clear first half bits, produce FE
         const prefix = hashed.slice(len, 2 * len); // second half is called key prefix (5.1.6)
         const scalar = modN_LE(head); // The actual private scalar
+        return { head, prefix, scalar };
+    }
+    /** Convenience method that creates public key from scalar. RFC8032 5.1.5 */
+    function getExtendedPublicKey(secretKey) {
+        const { head, prefix, scalar } = getPrivateScalar(secretKey);
         const point = G.multiply(scalar); // Point on Edwards curve aka public key
-        const pointBytes = point.toRawBytes(); // Uint8Array representation
+        const pointBytes = point.toBytes();
         return { head, prefix, scalar, point, pointBytes };
     }
-    // Calculates EdDSA pub key. RFC8032 5.1.5. Privkey is hashed. Use first half with 3 bits cleared
-    function getPublicKey(privKey) {
-        return getExtendedPublicKey(privKey).pointBytes;
+    /** Calculates EdDSA pub key. RFC8032 5.1.5. */
+    function getPublicKey(secretKey) {
+        return getExtendedPublicKey(secretKey).pointBytes;
     }
     // int('LE', SHA512(dom2(F, C) || msgs)) mod N
-    function hashDomainToScalar(context = new Uint8Array(), ...msgs) {
-        const msg = ut.concatBytes(...msgs);
-        return modN_LE(cHash(domain(msg, (0, utils_js_1.ensureBytes)('context', context), !!prehash)));
+    function hashDomainToScalar(context = Uint8Array.of(), ...msgs) {
+        const msg = (0, utils_ts_1.concatBytes)(...msgs);
+        return modN_LE(cHash(domain(msg, (0, utils_ts_1.ensureBytes)('context', context), !!prehash)));
     }
     /** Signs message with privateKey. RFC8032 5.1.6 */
-    function sign(msg, privKey, options = {}) {
-        msg = (0, utils_js_1.ensureBytes)('message', msg);
+    function sign(msg, secretKey, options = {}) {
+        msg = (0, utils_ts_1.ensureBytes)('message', msg);
         if (prehash)
             msg = prehash(msg); // for ed25519ph etc.
-        const { prefix, scalar, pointBytes } = getExtendedPublicKey(privKey);
+        const { prefix, scalar, pointBytes } = getExtendedPublicKey(secretKey);
         const r = hashDomainToScalar(options.context, prefix, msg); // r = dom2(F, C) || prefix || PH(M)
-        const R = G.multiply(r).toRawBytes(); // R = rG
+        const R = G.multiply(r).toBytes(); // R = rG
         const k = hashDomainToScalar(options.context, R, pointBytes, msg); // R || A || PH(M)
         const s = modN(r + k * scalar); // S = (r + k * s) mod L
-        ut.aInRange('signature.s', s, _0n, CURVE_ORDER); // 0 <= s < l
-        const res = ut.concatBytes(R, ut.numberToBytesLE(s, Fp.BYTES));
-        return (0, utils_js_1.ensureBytes)('result', res, Fp.BYTES * 2); // 64-byte signature
+        (0, utils_ts_1.aInRange)('signature.s', s, _0n, CURVE_ORDER); // 0 <= s < l
+        const L = Fp.BYTES;
+        const res = (0, utils_ts_1.concatBytes)(R, (0, utils_ts_1.numberToBytesLE)(s, L));
+        return (0, utils_ts_1.ensureBytes)('result', res, L * 2); // 64-byte signature
     }
-    const verifyOpts = VERIFY_DEFAULT;
+    // verification rule is either zip215 or rfc8032 / nist186-5. Consult fromHex:
+    const verifyOpts = { zip215: true };
     /**
      * Verifies EdDSA signature against message and public key. RFC8032 5.1.7.
      * An extended group equation is checked.
@@ -4630,14 +4768,14 @@ function twistedEdwards(curveDef) {
     function verify(sig, msg, publicKey, options = verifyOpts) {
         const { context, zip215 } = options;
         const len = Fp.BYTES; // Verifies EdDSA signature against message and public key. RFC8032 5.1.7.
-        sig = (0, utils_js_1.ensureBytes)('signature', sig, 2 * len); // An extended group equation is checked.
-        msg = (0, utils_js_1.ensureBytes)('message', msg);
-        publicKey = (0, utils_js_1.ensureBytes)('publicKey', publicKey, len);
+        sig = (0, utils_ts_1.ensureBytes)('signature', sig, 2 * len); // An extended group equation is checked.
+        msg = (0, utils_ts_1.ensureBytes)('message', msg);
+        publicKey = (0, utils_ts_1.ensureBytes)('publicKey', publicKey, len);
         if (zip215 !== undefined)
-            (0, utils_js_1.abool)('zip215', zip215);
+            (0, utils_ts_1.abool)('zip215', zip215);
         if (prehash)
             msg = prehash(msg); // for ed25519ph, etc
-        const s = ut.bytesToNumberLE(sig.slice(len, 2 * len));
+        const s = (0, utils_ts_1.bytesToNumberLE)(sig.slice(len, 2 * len));
         let A, R, SB;
         try {
             // zip215=true is good for consensus-critical apps. =false follows RFC8032 / NIST186-5.
@@ -4652,17 +4790,57 @@ function twistedEdwards(curveDef) {
         }
         if (!zip215 && A.isSmallOrder())
             return false;
-        const k = hashDomainToScalar(context, R.toRawBytes(), A.toRawBytes(), msg);
+        const k = hashDomainToScalar(context, R.toBytes(), A.toBytes(), msg);
         const RkA = R.add(A.multiplyUnsafe(k));
         // Extended group equation
         // [8][S]B = [8]R + [8][k]A'
-        return RkA.subtract(SB).clearCofactor().equals(Point.ZERO);
+        return RkA.subtract(SB).clearCofactor().is0();
     }
-    G._setWindowSize(8); // Enable precomputes. Slows down first publicKey computation by 20ms.
+    G.precompute(8); // Enable precomputes. Slows down first publicKey computation by 20ms.
+    const size = Fp.BYTES;
+    const lengths = {
+        secret: size,
+        public: size,
+        signature: 2 * size,
+        seed: size,
+    };
+    function randomSecretKey(seed = randomBytes_(lengths.seed)) {
+        return seed;
+    }
     const utils = {
         getExtendedPublicKey,
-        // ed25519 private keys are uniform 32b. No need to check for modulo bias, like in secp256k1.
-        randomPrivateKey: () => randomBytes(Fp.BYTES),
+        /** ed25519 priv keys are uniform 32b. No need to check for modulo bias, like in secp256k1. */
+        randomSecretKey,
+        isValidSecretKey,
+        isValidPublicKey,
+        randomPrivateKey: randomSecretKey,
+        /**
+         * Converts ed public key to x public key. Uses formula:
+         * - ed25519:
+         *   - `(u, v) = ((1+y)/(1-y), sqrt(-486664)*u/x)`
+         *   - `(x, y) = (sqrt(-486664)*u/v, (u-1)/(u+1))`
+         * - ed448:
+         *   - `(u, v) = ((y-1)/(y+1), sqrt(156324)*u/x)`
+         *   - `(x, y) = (sqrt(156324)*u/v, (1+u)/(1-u))`
+         *
+         * There is NO `fromMontgomery`:
+         * - There are 2 valid ed25519 points for every x25519, with flipped coordinate
+         * - Sometimes there are 0 valid ed25519 points, because x25519 *additionally*
+         *   accepts inputs on the quadratic twist, which can't be moved to ed25519
+         */
+        toMontgomery(publicKey) {
+            const { y } = Point.fromBytes(publicKey);
+            const is25519 = size === 32;
+            if (!is25519 && size !== 57)
+                throw new Error('only defined for 25519 and 448');
+            const u = is25519 ? Fp.div(_1n + y, _1n - y) : Fp.div(y - _1n, y + _1n);
+            return Fp.toBytes(u);
+        },
+        toMontgomeryPriv(privateKey) {
+            (0, utils_ts_1.abytes)(privateKey, size);
+            const hashed = cHash(privateKey.subarray(0, size));
+            return adjustScalarBytes(hashed).subarray(0, size);
+        },
         /**
          * We're doing scalar multiplication (used in getPublicKey etc) with precomputed BASE_POINT
          * values. This slows down first getPublicKey() by milliseconds (see Speed section),
@@ -4670,19 +4848,73 @@ function twistedEdwards(curveDef) {
          * @param windowSize 2, 4, 8, 16
          */
         precompute(windowSize = 8, point = Point.BASE) {
-            point._setWindowSize(windowSize);
-            point.multiply(BigInt(3));
-            return point;
+            return point.precompute(windowSize, false);
         },
     };
-    return {
-        CURVE,
+    function keygen(seed) {
+        const secretKey = utils.randomSecretKey(seed);
+        return { secretKey, publicKey: getPublicKey(secretKey) };
+    }
+    function isValidSecretKey(key) {
+        try {
+            return !!Fn.fromBytes(key, false);
+        }
+        catch (error) {
+            return false;
+        }
+    }
+    function isValidPublicKey(key, zip215) {
+        try {
+            return !!Point.fromBytes(key, zip215);
+        }
+        catch (error) {
+            return false;
+        }
+    }
+    return Object.freeze({
+        keygen,
         getPublicKey,
         sign,
         verify,
-        ExtendedPoint: Point,
         utils,
+        Point,
+        info: { type: 'edwards', lengths },
+    });
+}
+// TODO: remove
+function _eddsa_legacy_opts_to_new(c) {
+    const CURVE = {
+        a: c.a,
+        d: c.d,
+        p: c.Fp.ORDER,
+        n: c.n,
+        h: c.h,
+        Gx: c.Gx,
+        Gy: c.Gy,
     };
+    const Fp = c.Fp;
+    const Fn = (0, modular_ts_1.Field)(CURVE.n, c.nBitLength, true);
+    const curveOpts = { Fp, Fn, uvRatio: c.uvRatio };
+    const eddsaOpts = {
+        randomBytes: c.randomBytes,
+        adjustScalarBytes: c.adjustScalarBytes,
+        domain: c.domain,
+        prehash: c.prehash,
+        mapToCurve: c.mapToCurve,
+    };
+    return { CURVE, curveOpts, hash: c.hash, eddsaOpts };
+}
+// TODO: remove
+function _eddsa_new_output_to_legacy(c, eddsa) {
+    const legacy = Object.assign({}, eddsa, { ExtendedPoint: eddsa.Point, CURVE: c });
+    return legacy;
+}
+// TODO: remove. Use eddsa
+function twistedEdwards(c) {
+    const { CURVE, curveOpts, hash, eddsaOpts } = _eddsa_legacy_opts_to_new(c);
+    const Point = edwards(CURVE, curveOpts);
+    const EDDSA = eddsa(Point, hash, eddsaOpts);
+    return _eddsa_new_output_to_legacy(c, EDDSA);
 }
 //# sourceMappingURL=edwards.js.map
 
@@ -4694,15 +4926,16 @@ function twistedEdwards(curveDef) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports._DST_scalar = void 0;
 exports.expand_message_xmd = expand_message_xmd;
 exports.expand_message_xof = expand_message_xof;
 exports.hash_to_field = hash_to_field;
 exports.isogenyMap = isogenyMap;
 exports.createHasher = createHasher;
-const modular_js_1 = __nccwpck_require__(49542);
-const utils_js_1 = __nccwpck_require__(43901);
+const utils_ts_1 = __nccwpck_require__(28816);
+const modular_ts_1 = __nccwpck_require__(49542);
 // Octet Stream to Integer. "spec" implementation of os2ip is 2.5x slower vs bytesToNumberBE.
-const os2ip = utils_js_1.bytesToNumberBE;
+const os2ip = utils_ts_1.bytesToNumberBE;
 // Integer to Octet Stream (numberToBytesBE)
 function i2osp(value, length) {
     anum(value);
@@ -4727,32 +4960,37 @@ function anum(item) {
     if (!Number.isSafeInteger(item))
         throw new Error('number expected');
 }
+function normDST(DST) {
+    if (!(0, utils_ts_1.isBytes)(DST) && typeof DST !== 'string')
+        throw new Error('DST must be Uint8Array or string');
+    return typeof DST === 'string' ? (0, utils_ts_1.utf8ToBytes)(DST) : DST;
+}
 /**
  * Produces a uniformly random byte string using a cryptographic hash function H that outputs b bits.
  * [RFC 9380 5.3.1](https://www.rfc-editor.org/rfc/rfc9380#section-5.3.1).
  */
 function expand_message_xmd(msg, DST, lenInBytes, H) {
-    (0, utils_js_1.abytes)(msg);
-    (0, utils_js_1.abytes)(DST);
+    (0, utils_ts_1.abytes)(msg);
     anum(lenInBytes);
+    DST = normDST(DST);
     // https://www.rfc-editor.org/rfc/rfc9380#section-5.3.3
     if (DST.length > 255)
-        DST = H((0, utils_js_1.concatBytes)((0, utils_js_1.utf8ToBytes)('H2C-OVERSIZE-DST-'), DST));
+        DST = H((0, utils_ts_1.concatBytes)((0, utils_ts_1.utf8ToBytes)('H2C-OVERSIZE-DST-'), DST));
     const { outputLen: b_in_bytes, blockLen: r_in_bytes } = H;
     const ell = Math.ceil(lenInBytes / b_in_bytes);
     if (lenInBytes > 65535 || ell > 255)
         throw new Error('expand_message_xmd: invalid lenInBytes');
-    const DST_prime = (0, utils_js_1.concatBytes)(DST, i2osp(DST.length, 1));
+    const DST_prime = (0, utils_ts_1.concatBytes)(DST, i2osp(DST.length, 1));
     const Z_pad = i2osp(0, r_in_bytes);
     const l_i_b_str = i2osp(lenInBytes, 2); // len_in_bytes_str
     const b = new Array(ell);
-    const b_0 = H((0, utils_js_1.concatBytes)(Z_pad, msg, l_i_b_str, i2osp(0, 1), DST_prime));
-    b[0] = H((0, utils_js_1.concatBytes)(b_0, i2osp(1, 1), DST_prime));
+    const b_0 = H((0, utils_ts_1.concatBytes)(Z_pad, msg, l_i_b_str, i2osp(0, 1), DST_prime));
+    b[0] = H((0, utils_ts_1.concatBytes)(b_0, i2osp(1, 1), DST_prime));
     for (let i = 1; i <= ell; i++) {
         const args = [strxor(b_0, b[i - 1]), i2osp(i + 1, 1), DST_prime];
-        b[i] = H((0, utils_js_1.concatBytes)(...args));
+        b[i] = H((0, utils_ts_1.concatBytes)(...args));
     }
-    const pseudo_random_bytes = (0, utils_js_1.concatBytes)(...b);
+    const pseudo_random_bytes = (0, utils_ts_1.concatBytes)(...b);
     return pseudo_random_bytes.slice(0, lenInBytes);
 }
 /**
@@ -4763,14 +5001,14 @@ function expand_message_xmd(msg, DST, lenInBytes, H) {
  * [RFC 9380 5.3.2](https://www.rfc-editor.org/rfc/rfc9380#section-5.3.2).
  */
 function expand_message_xof(msg, DST, lenInBytes, k, H) {
-    (0, utils_js_1.abytes)(msg);
-    (0, utils_js_1.abytes)(DST);
+    (0, utils_ts_1.abytes)(msg);
     anum(lenInBytes);
+    DST = normDST(DST);
     // https://www.rfc-editor.org/rfc/rfc9380#section-5.3.3
     // DST = H('H2C-OVERSIZE-DST-' || a_very_long_DST, Math.ceil((lenInBytes * k) / 8));
     if (DST.length > 255) {
         const dkLen = Math.ceil((2 * k) / 8);
-        DST = H.create({ dkLen }).update((0, utils_js_1.utf8ToBytes)('H2C-OVERSIZE-DST-')).update(DST).digest();
+        DST = H.create({ dkLen }).update((0, utils_ts_1.utf8ToBytes)('H2C-OVERSIZE-DST-')).update(DST).digest();
     }
     if (lenInBytes > 65535 || DST.length > 255)
         throw new Error('expand_message_xof: invalid lenInBytes');
@@ -4791,17 +5029,17 @@ function expand_message_xof(msg, DST, lenInBytes, k, H) {
  * @returns [u_0, ..., u_(count - 1)], a list of field elements.
  */
 function hash_to_field(msg, count, options) {
-    (0, utils_js_1.validateObject)(options, {
-        DST: 'stringOrUint8Array',
+    (0, utils_ts_1._validateObject)(options, {
         p: 'bigint',
-        m: 'isSafeInteger',
-        k: 'isSafeInteger',
-        hash: 'hash',
+        m: 'number',
+        k: 'number',
+        hash: 'function',
     });
-    const { p, k, m, hash, expand, DST: _DST } = options;
-    (0, utils_js_1.abytes)(msg);
+    const { p, k, m, hash, expand, DST } = options;
+    if (!(0, utils_ts_1.isHash)(options.hash))
+        throw new Error('expected valid hash');
+    (0, utils_ts_1.abytes)(msg);
     anum(count);
-    const DST = typeof _DST === 'string' ? (0, utils_js_1.utf8ToBytes)(_DST) : _DST;
     const log2p = p.toString(2).length;
     const L = Math.ceil((log2p + k) / 8); // section 5.1 of ietf draft link above
     const len_in_bytes = count * m * L;
@@ -4825,7 +5063,7 @@ function hash_to_field(msg, count, options) {
         for (let j = 0; j < m; j++) {
             const elm_offset = L * (j + i * m);
             const tv = prb.subarray(elm_offset, elm_offset + L);
-            e[j] = (0, modular_js_1.mod)(os2ip(tv), p);
+            e[j] = (0, modular_ts_1.mod)(os2ip(tv), p);
         }
         u[i] = e;
     }
@@ -4833,47 +5071,66 @@ function hash_to_field(msg, count, options) {
 }
 function isogenyMap(field, map) {
     // Make same order as in spec
-    const COEFF = map.map((i) => Array.from(i).reverse());
+    const coeff = map.map((i) => Array.from(i).reverse());
     return (x, y) => {
-        const [xNum, xDen, yNum, yDen] = COEFF.map((val) => val.reduce((acc, i) => field.add(field.mul(acc, x), i)));
-        x = field.div(xNum, xDen); // xNum / xDen
-        y = field.mul(y, field.div(yNum, yDen)); // y * (yNum / yDev)
-        return { x: x, y: y };
+        const [xn, xd, yn, yd] = coeff.map((val) => val.reduce((acc, i) => field.add(field.mul(acc, x), i)));
+        // 6.6.3
+        // Exceptional cases of iso_map are inputs that cause the denominator of
+        // either rational function to evaluate to zero; such cases MUST return
+        // the identity point on E.
+        const [xd_inv, yd_inv] = (0, modular_ts_1.FpInvertBatch)(field, [xd, yd], true);
+        x = field.mul(xn, xd_inv); // xNum / xDen
+        y = field.mul(y, field.mul(yn, yd_inv)); // y * (yNum / yDev)
+        return { x, y };
     };
 }
-/** Creates hash-to-curve methods from EC Point and mapToCurve function. */
-function createHasher(Point, mapToCurve, def) {
+exports._DST_scalar = (0, utils_ts_1.utf8ToBytes)('HashToScalar-');
+/** Creates hash-to-curve methods from EC Point and mapToCurve function. See {@link H2CHasher}. */
+function createHasher(Point, mapToCurve, defaults) {
     if (typeof mapToCurve !== 'function')
         throw new Error('mapToCurve() must be defined');
+    function map(num) {
+        return Point.fromAffine(mapToCurve(num));
+    }
+    function clear(initial) {
+        const P = initial.clearCofactor();
+        if (P.equals(Point.ZERO))
+            return Point.ZERO; // zero will throw in assert
+        P.assertValidity();
+        return P;
+    }
     return {
-        // Encodes byte string to elliptic curve.
-        // hash_to_curve from https://www.rfc-editor.org/rfc/rfc9380#section-3
+        defaults,
         hashToCurve(msg, options) {
-            const u = hash_to_field(msg, 2, { ...def, DST: def.DST, ...options });
-            const u0 = Point.fromAffine(mapToCurve(u[0]));
-            const u1 = Point.fromAffine(mapToCurve(u[1]));
-            const P = u0.add(u1).clearCofactor();
-            P.assertValidity();
-            return P;
+            const opts = Object.assign({}, defaults, options);
+            const u = hash_to_field(msg, 2, opts);
+            const u0 = map(u[0]);
+            const u1 = map(u[1]);
+            return clear(u0.add(u1));
         },
-        // Encodes byte string to elliptic curve.
-        // encode_to_curve from https://www.rfc-editor.org/rfc/rfc9380#section-3
         encodeToCurve(msg, options) {
-            const u = hash_to_field(msg, 1, { ...def, DST: def.encodeDST, ...options });
-            const P = Point.fromAffine(mapToCurve(u[0])).clearCofactor();
-            P.assertValidity();
-            return P;
+            const optsDst = defaults.encodeDST ? { DST: defaults.encodeDST } : {};
+            const opts = Object.assign({}, defaults, optsDst, options);
+            const u = hash_to_field(msg, 1, opts);
+            const u0 = map(u[0]);
+            return clear(u0);
         },
-        // Same as encodeToCurve, but without hash
+        /** See {@link H2CHasher} */
         mapToCurve(scalars) {
             if (!Array.isArray(scalars))
-                throw new Error('mapToCurve: expected array of bigints');
+                throw new Error('expected array of bigints');
             for (const i of scalars)
                 if (typeof i !== 'bigint')
-                    throw new Error('mapToCurve: expected array of bigints');
-            const P = Point.fromAffine(mapToCurve(scalars)).clearCofactor();
-            P.assertValidity();
-            return P;
+                    throw new Error('expected array of bigints');
+            return clear(map(scalars));
+        },
+        // hash_to_scalar can produce 0: https://www.rfc-editor.org/errata/eid8393
+        // RFC 9380, draft-irtf-cfrg-bbs-signatures-08
+        hashToScalar(msg, options) {
+            // @ts-ignore
+            const N = Point.Fn.ORDER;
+            const opts = Object.assign({}, defaults, { p: N, m: 1, DST: exports._DST_scalar }, options);
+            return hash_to_field(msg, 1, opts)[0][0];
         },
     };
 }
@@ -4909,19 +5166,19 @@ exports.getFieldBytesLength = getFieldBytesLength;
 exports.getMinHashLength = getMinHashLength;
 exports.mapHashToField = mapHashToField;
 /**
- * Utils for modular division and finite fields.
- * A finite field over 11 is integer number operations `mod 11`.
+ * Utils for modular division and fields.
+ * Field over 11 is a finite (Galois) field is integer number operations `mod 11`.
  * There is no division: it is replaced by modular multiplicative inverse.
  * @module
  */
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const utils_js_1 = __nccwpck_require__(43901);
+const utils_ts_1 = __nccwpck_require__(28816);
 // prettier-ignore
 const _0n = BigInt(0), _1n = BigInt(1), _2n = /* @__PURE__ */ BigInt(2), _3n = /* @__PURE__ */ BigInt(3);
 // prettier-ignore
-const _4n = /* @__PURE__ */ BigInt(4), _5n = /* @__PURE__ */ BigInt(5), _8n = /* @__PURE__ */ BigInt(8);
+const _4n = /* @__PURE__ */ BigInt(4), _5n = /* @__PURE__ */ BigInt(5), _7n = /* @__PURE__ */ BigInt(7);
 // prettier-ignore
-const _9n = /* @__PURE__ */ BigInt(9), _16n = /* @__PURE__ */ BigInt(16);
+const _8n = /* @__PURE__ */ BigInt(8), _9n = /* @__PURE__ */ BigInt(9), _16n = /* @__PURE__ */ BigInt(16);
 // Calculates a modulo b
 function mod(a, b) {
     const result = a % b;
@@ -4930,25 +5187,11 @@ function mod(a, b) {
 /**
  * Efficiently raise num to power and do modular division.
  * Unsafe in some contexts: uses ladder, so can expose bigint bits.
- * @todo use field version && remove
  * @example
  * pow(2n, 6n, 11n) // 64n % 11n == 9n
  */
 function pow(num, power, modulo) {
-    if (power < _0n)
-        throw new Error('invalid exponent, negatives unsupported');
-    if (modulo <= _0n)
-        throw new Error('invalid modulus');
-    if (modulo === _1n)
-        return _0n;
-    let res = _1n;
-    while (power > _0n) {
-        if (power & _1n)
-            res = (res * num) % modulo;
-        num = (num * num) % modulo;
-        power >>= _1n;
-    }
-    return res;
+    return FpPow(Field(modulo), num, power);
 }
 /** Does `x^(2^power)` mod p. `pow2(30, 4)` == `30^(2^4)` */
 function pow2(x, power, modulo) {
@@ -4987,75 +5230,128 @@ function invert(number, modulo) {
         throw new Error('invert: does not exist');
     return mod(x, modulo);
 }
+function assertIsSquare(Fp, root, n) {
+    if (!Fp.eql(Fp.sqr(root), n))
+        throw new Error('Cannot find square root');
+}
+// Not all roots are possible! Example which will throw:
+// const NUM =
+// n = 72057594037927816n;
+// Fp = Field(BigInt('0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab'));
+function sqrt3mod4(Fp, n) {
+    const p1div4 = (Fp.ORDER + _1n) / _4n;
+    const root = Fp.pow(n, p1div4);
+    assertIsSquare(Fp, root, n);
+    return root;
+}
+function sqrt5mod8(Fp, n) {
+    const p5div8 = (Fp.ORDER - _5n) / _8n;
+    const n2 = Fp.mul(n, _2n);
+    const v = Fp.pow(n2, p5div8);
+    const nv = Fp.mul(n, v);
+    const i = Fp.mul(Fp.mul(nv, _2n), v);
+    const root = Fp.mul(nv, Fp.sub(i, Fp.ONE));
+    assertIsSquare(Fp, root, n);
+    return root;
+}
+// Based on RFC9380, Kong algorithm
+// prettier-ignore
+function sqrt9mod16(P) {
+    const Fp_ = Field(P);
+    const tn = tonelliShanks(P);
+    const c1 = tn(Fp_, Fp_.neg(Fp_.ONE)); //  1. c1 = sqrt(-1) in F, i.e., (c1^2) == -1 in F
+    const c2 = tn(Fp_, c1); //  2. c2 = sqrt(c1) in F, i.e., (c2^2) == c1 in F
+    const c3 = tn(Fp_, Fp_.neg(c1)); //  3. c3 = sqrt(-c1) in F, i.e., (c3^2) == -c1 in F
+    const c4 = (P + _7n) / _16n; //  4. c4 = (q + 7) / 16        # Integer arithmetic
+    return (Fp, n) => {
+        let tv1 = Fp.pow(n, c4); //  1. tv1 = x^c4
+        let tv2 = Fp.mul(tv1, c1); //  2. tv2 = c1 * tv1
+        const tv3 = Fp.mul(tv1, c2); //  3. tv3 = c2 * tv1
+        const tv4 = Fp.mul(tv1, c3); //  4. tv4 = c3 * tv1
+        const e1 = Fp.eql(Fp.sqr(tv2), n); //  5.  e1 = (tv2^2) == x
+        const e2 = Fp.eql(Fp.sqr(tv3), n); //  6.  e2 = (tv3^2) == x
+        tv1 = Fp.cmov(tv1, tv2, e1); //  7. tv1 = CMOV(tv1, tv2, e1)  # Select tv2 if (tv2^2) == x
+        tv2 = Fp.cmov(tv4, tv3, e2); //  8. tv2 = CMOV(tv4, tv3, e2)  # Select tv3 if (tv3^2) == x
+        const e3 = Fp.eql(Fp.sqr(tv2), n); //  9.  e3 = (tv2^2) == x
+        const root = Fp.cmov(tv1, tv2, e3); // 10.  z = CMOV(tv1, tv2, e3)   # Select sqrt from tv1 & tv2
+        assertIsSquare(Fp, root, n);
+        return root;
+    };
+}
 /**
  * Tonelli-Shanks square root search algorithm.
  * 1. https://eprint.iacr.org/2012/685.pdf (page 12)
  * 2. Square Roots from 1; 24, 51, 10 to Dan Shanks
- * Will start an infinite loop if field order P is not prime.
  * @param P field order
  * @returns function that takes field Fp (created from P) and number n
  */
 function tonelliShanks(P) {
-    // Legendre constant: used to calculate Legendre symbol (a | p),
-    // which denotes the value of a^((p-1)/2) (mod p).
-    // (a | p) ≡ 1    if a is a square (mod p)
-    // (a | p) ≡ -1   if a is not a square (mod p)
-    // (a | p) ≡ 0    if a ≡ 0 (mod p)
-    const legendreC = (P - _1n) / _2n;
-    let Q, S, Z;
-    // Step 1: By factoring out powers of 2 from p - 1,
-    // find q and s such that p - 1 = q*(2^s) with q odd
-    for (Q = P - _1n, S = 0; Q % _2n === _0n; Q /= _2n, S++)
-        ;
-    // Step 2: Select a non-square z such that (z | p) ≡ -1 and set c ≡ zq
-    for (Z = _2n; Z < P && pow(Z, legendreC, P) !== P - _1n; Z++) {
-        // Crash instead of infinity loop, we cannot reasonable count until P.
-        if (Z > 1000)
-            throw new Error('Cannot find square root: likely non-prime P');
+    // Initialization (precomputation).
+    // Caching initialization could boost perf by 7%.
+    if (P < _3n)
+        throw new Error('sqrt is not defined for small field');
+    // Factor P - 1 = Q * 2^S, where Q is odd
+    let Q = P - _1n;
+    let S = 0;
+    while (Q % _2n === _0n) {
+        Q /= _2n;
+        S++;
     }
-    // Fast-path
-    if (S === 1) {
-        const p1div4 = (P + _1n) / _4n;
-        return function tonelliFast(Fp, n) {
-            const root = Fp.pow(n, p1div4);
-            if (!Fp.eql(Fp.sqr(root), n))
-                throw new Error('Cannot find square root');
-            return root;
-        };
+    // Find the first quadratic non-residue Z >= 2
+    let Z = _2n;
+    const _Fp = Field(P);
+    while (FpLegendre(_Fp, Z) === 1) {
+        // Basic primality test for P. After x iterations, chance of
+        // not finding quadratic non-residue is 2^x, so 2^1000.
+        if (Z++ > 1000)
+            throw new Error('Cannot find square root: probably non-prime P');
     }
+    // Fast-path; usually done before Z, but we do "primality test".
+    if (S === 1)
+        return sqrt3mod4;
     // Slow-path
+    // TODO: test on Fp2 and others
+    let cc = _Fp.pow(Z, Q); // c = z^Q
     const Q1div2 = (Q + _1n) / _2n;
     return function tonelliSlow(Fp, n) {
-        // Step 0: Check that n is indeed a square: (n | p) should not be ≡ -1
-        if (Fp.pow(n, legendreC) === Fp.neg(Fp.ONE))
+        if (Fp.is0(n))
+            return n;
+        // Check if n is a quadratic residue using Legendre symbol
+        if (FpLegendre(Fp, n) !== 1)
             throw new Error('Cannot find square root');
-        let r = S;
-        // TODO: will fail at Fp2/etc
-        let g = Fp.pow(Fp.mul(Fp.ONE, Z), Q); // will update both x and b
-        let x = Fp.pow(n, Q1div2); // first guess at the square root
-        let b = Fp.pow(n, Q); // first guess at the fudge factor
-        while (!Fp.eql(b, Fp.ONE)) {
-            if (Fp.eql(b, Fp.ZERO))
-                return Fp.ZERO; // https://en.wikipedia.org/wiki/Tonelli%E2%80%93Shanks_algorithm (4. If t = 0, return r = 0)
-            // Find m such b^(2^m)==1
-            let m = 1;
-            for (let t2 = Fp.sqr(b); m < r; m++) {
-                if (Fp.eql(t2, Fp.ONE))
-                    break;
-                t2 = Fp.sqr(t2); // t2 *= t2
+        // Initialize variables for the main loop
+        let M = S;
+        let c = Fp.mul(Fp.ONE, cc); // c = z^Q, move cc from field _Fp into field Fp
+        let t = Fp.pow(n, Q); // t = n^Q, first guess at the fudge factor
+        let R = Fp.pow(n, Q1div2); // R = n^((Q+1)/2), first guess at the square root
+        // Main loop
+        // while t != 1
+        while (!Fp.eql(t, Fp.ONE)) {
+            if (Fp.is0(t))
+                return Fp.ZERO; // if t=0 return R=0
+            let i = 1;
+            // Find the smallest i >= 1 such that t^(2^i) ≡ 1 (mod P)
+            let t_tmp = Fp.sqr(t); // t^(2^1)
+            while (!Fp.eql(t_tmp, Fp.ONE)) {
+                i++;
+                t_tmp = Fp.sqr(t_tmp); // t^(2^2)...
+                if (i === M)
+                    throw new Error('Cannot find square root');
             }
-            // NOTE: r-m-1 can be bigger than 32, need to convert to bigint before shift, otherwise there will be overflow
-            const ge = Fp.pow(g, _1n << BigInt(r - m - 1)); // ge = 2^(r-m-1)
-            g = Fp.sqr(ge); // g = ge * ge
-            x = Fp.mul(x, ge); // x *= ge
-            b = Fp.mul(b, g); // b *= g
-            r = m;
+            // Calculate the exponent for b: 2^(M - i - 1)
+            const exponent = _1n << BigInt(M - i - 1); // bigint is important
+            const b = Fp.pow(c, exponent); // b = 2^(M - i - 1)
+            // Update variables
+            M = i;
+            c = Fp.sqr(b); // c = b^2
+            t = Fp.mul(t, c); // t = (t * b^2)
+            R = Fp.mul(R, b); // R = R*b
         }
-        return x;
+        return R;
     };
 }
 /**
- * Square root for a finite field. It will try to check if optimizations are applicable and fall back to 4:
+ * Square root for a finite field. Will try optimized versions first:
  *
  * 1. P ≡ 3 (mod 4)
  * 2. P ≡ 5 (mod 8)
@@ -5066,59 +5362,16 @@ function tonelliShanks(P) {
  * For example there is FpSqrtOdd/FpSqrtEven to choice root based on oddness (used for hash-to-curve).
  */
 function FpSqrt(P) {
-    // P ≡ 3 (mod 4)
-    // √n = n^((P+1)/4)
-    if (P % _4n === _3n) {
-        // Not all roots possible!
-        // const ORDER =
-        //   0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaabn;
-        // const NUM = 72057594037927816n;
-        const p1div4 = (P + _1n) / _4n;
-        return function sqrt3mod4(Fp, n) {
-            const root = Fp.pow(n, p1div4);
-            // Throw if root**2 != n
-            if (!Fp.eql(Fp.sqr(root), n))
-                throw new Error('Cannot find square root');
-            return root;
-        };
-    }
-    // Atkin algorithm for q ≡ 5 (mod 8), https://eprint.iacr.org/2012/685.pdf (page 10)
-    if (P % _8n === _5n) {
-        const c1 = (P - _5n) / _8n;
-        return function sqrt5mod8(Fp, n) {
-            const n2 = Fp.mul(n, _2n);
-            const v = Fp.pow(n2, c1);
-            const nv = Fp.mul(n, v);
-            const i = Fp.mul(Fp.mul(nv, _2n), v);
-            const root = Fp.mul(nv, Fp.sub(i, Fp.ONE));
-            if (!Fp.eql(Fp.sqr(root), n))
-                throw new Error('Cannot find square root');
-            return root;
-        };
-    }
-    // P ≡ 9 (mod 16)
-    if (P % _16n === _9n) {
-        // NOTE: tonelli is too slow for bls-Fp2 calculations even on start
-        // Means we cannot use sqrt for constants at all!
-        //
-        // const c1 = Fp.sqrt(Fp.negate(Fp.ONE)); //  1. c1 = sqrt(-1) in F, i.e., (c1^2) == -1 in F
-        // const c2 = Fp.sqrt(c1);                //  2. c2 = sqrt(c1) in F, i.e., (c2^2) == c1 in F
-        // const c3 = Fp.sqrt(Fp.negate(c1));     //  3. c3 = sqrt(-c1) in F, i.e., (c3^2) == -c1 in F
-        // const c4 = (P + _7n) / _16n;           //  4. c4 = (q + 7) / 16        # Integer arithmetic
-        // sqrt = (x) => {
-        //   let tv1 = Fp.pow(x, c4);             //  1. tv1 = x^c4
-        //   let tv2 = Fp.mul(c1, tv1);           //  2. tv2 = c1 * tv1
-        //   const tv3 = Fp.mul(c2, tv1);         //  3. tv3 = c2 * tv1
-        //   let tv4 = Fp.mul(c3, tv1);           //  4. tv4 = c3 * tv1
-        //   const e1 = Fp.equals(Fp.square(tv2), x); //  5.  e1 = (tv2^2) == x
-        //   const e2 = Fp.equals(Fp.square(tv3), x); //  6.  e2 = (tv3^2) == x
-        //   tv1 = Fp.cmov(tv1, tv2, e1); //  7. tv1 = CMOV(tv1, tv2, e1)  # Select tv2 if (tv2^2) == x
-        //   tv2 = Fp.cmov(tv4, tv3, e2); //  8. tv2 = CMOV(tv4, tv3, e2)  # Select tv3 if (tv3^2) == x
-        //   const e3 = Fp.equals(Fp.square(tv2), x); //  9.  e3 = (tv2^2) == x
-        //   return Fp.cmov(tv1, tv2, e3); //  10.  z = CMOV(tv1, tv2, e3)  # Select the sqrt from tv1 and tv2
-        // }
-    }
-    // Other cases: Tonelli-Shanks algorithm
+    // P ≡ 3 (mod 4) => √n = n^((P+1)/4)
+    if (P % _4n === _3n)
+        return sqrt3mod4;
+    // P ≡ 5 (mod 8) => Atkin algorithm, page 10 of https://eprint.iacr.org/2012/685.pdf
+    if (P % _8n === _5n)
+        return sqrt5mod8;
+    // P ≡ 9 (mod 16) => Kong algorithm, page 11 of https://eprint.iacr.org/2012/685.pdf (algorithm 4)
+    if (P % _16n === _9n)
+        return sqrt9mod16(P);
+    // Tonelli-Shanks algorithm
     return tonelliShanks(P);
 }
 // Little-endian check for first LE bit (last BE bit);
@@ -5134,110 +5387,153 @@ function validateField(field) {
     const initial = {
         ORDER: 'bigint',
         MASK: 'bigint',
-        BYTES: 'isSafeInteger',
-        BITS: 'isSafeInteger',
+        BYTES: 'number',
+        BITS: 'number',
     };
     const opts = FIELD_FIELDS.reduce((map, val) => {
         map[val] = 'function';
         return map;
     }, initial);
-    return (0, utils_js_1.validateObject)(field, opts);
+    (0, utils_ts_1._validateObject)(field, opts);
+    // const max = 16384;
+    // if (field.BYTES < 1 || field.BYTES > max) throw new Error('invalid field');
+    // if (field.BITS < 1 || field.BITS > 8 * max) throw new Error('invalid field');
+    return field;
 }
 // Generic field functions
 /**
  * Same as `pow` but for Fp: non-constant-time.
  * Unsafe in some contexts: uses ladder, so can expose bigint bits.
  */
-function FpPow(f, num, power) {
-    // Should have same speed as pow for bigints
-    // TODO: benchmark!
+function FpPow(Fp, num, power) {
     if (power < _0n)
         throw new Error('invalid exponent, negatives unsupported');
     if (power === _0n)
-        return f.ONE;
+        return Fp.ONE;
     if (power === _1n)
         return num;
-    let p = f.ONE;
+    let p = Fp.ONE;
     let d = num;
     while (power > _0n) {
         if (power & _1n)
-            p = f.mul(p, d);
-        d = f.sqr(d);
+            p = Fp.mul(p, d);
+        d = Fp.sqr(d);
         power >>= _1n;
     }
     return p;
 }
 /**
  * Efficiently invert an array of Field elements.
- * `inv(0)` will return `undefined` here: make sure to throw an error.
+ * Exception-free. Will return `undefined` for 0 elements.
+ * @param passZero map 0 to 0 (instead of undefined)
  */
-function FpInvertBatch(f, nums) {
-    const tmp = new Array(nums.length);
+function FpInvertBatch(Fp, nums, passZero = false) {
+    const inverted = new Array(nums.length).fill(passZero ? Fp.ZERO : undefined);
     // Walk from first to last, multiply them by each other MOD p
-    const lastMultiplied = nums.reduce((acc, num, i) => {
-        if (f.is0(num))
+    const multipliedAcc = nums.reduce((acc, num, i) => {
+        if (Fp.is0(num))
             return acc;
-        tmp[i] = acc;
-        return f.mul(acc, num);
-    }, f.ONE);
+        inverted[i] = acc;
+        return Fp.mul(acc, num);
+    }, Fp.ONE);
     // Invert last element
-    const inverted = f.inv(lastMultiplied);
+    const invertedAcc = Fp.inv(multipliedAcc);
     // Walk from last to first, multiply them by inverted each other MOD p
     nums.reduceRight((acc, num, i) => {
-        if (f.is0(num))
+        if (Fp.is0(num))
             return acc;
-        tmp[i] = f.mul(acc, tmp[i]);
-        return f.mul(acc, num);
-    }, inverted);
-    return tmp;
+        inverted[i] = Fp.mul(acc, inverted[i]);
+        return Fp.mul(acc, num);
+    }, invertedAcc);
+    return inverted;
 }
-function FpDiv(f, lhs, rhs) {
-    return f.mul(lhs, typeof rhs === 'bigint' ? invert(rhs, f.ORDER) : f.inv(rhs));
+// TODO: remove
+function FpDiv(Fp, lhs, rhs) {
+    return Fp.mul(lhs, typeof rhs === 'bigint' ? invert(rhs, Fp.ORDER) : Fp.inv(rhs));
 }
 /**
  * Legendre symbol.
+ * Legendre constant is used to calculate Legendre symbol (a | p)
+ * which denotes the value of a^((p-1)/2) (mod p).
+ *
  * * (a | p) ≡ 1    if a is a square (mod p), quadratic residue
  * * (a | p) ≡ -1   if a is not a square (mod p), quadratic non residue
  * * (a | p) ≡ 0    if a ≡ 0 (mod p)
  */
-function FpLegendre(order) {
-    const legendreConst = (order - _1n) / _2n; // Integer arithmetic
-    return (f, x) => f.pow(x, legendreConst);
+function FpLegendre(Fp, n) {
+    // We can use 3rd argument as optional cache of this value
+    // but seems unneeded for now. The operation is very fast.
+    const p1mod2 = (Fp.ORDER - _1n) / _2n;
+    const powered = Fp.pow(n, p1mod2);
+    const yes = Fp.eql(powered, Fp.ONE);
+    const zero = Fp.eql(powered, Fp.ZERO);
+    const no = Fp.eql(powered, Fp.neg(Fp.ONE));
+    if (!yes && !zero && !no)
+        throw new Error('invalid Legendre symbol result');
+    return yes ? 1 : zero ? 0 : -1;
 }
 // This function returns True whenever the value x is a square in the field F.
-function FpIsSquare(f) {
-    const legendre = FpLegendre(f.ORDER);
-    return (x) => {
-        const p = legendre(f, x);
-        return f.eql(p, f.ZERO) || f.eql(p, f.ONE);
-    };
+function FpIsSquare(Fp, n) {
+    const l = FpLegendre(Fp, n);
+    return l === 1;
 }
 // CURVE.n lengths
 function nLength(n, nBitLength) {
     // Bit size, byte size of CURVE.n
+    if (nBitLength !== undefined)
+        (0, utils_ts_1.anumber)(nBitLength);
     const _nBitLength = nBitLength !== undefined ? nBitLength : n.toString(2).length;
     const nByteLength = Math.ceil(_nBitLength / 8);
     return { nBitLength: _nBitLength, nByteLength };
 }
 /**
- * Initializes a finite field over prime.
- * Major performance optimizations:
- * * a) denormalized operations like mulN instead of mul
- * * b) same object shape: never add or remove keys
- * * c) Object.freeze
+ * Creates a finite field. Major performance optimizations:
+ * * 1. Denormalized operations like mulN instead of mul.
+ * * 2. Identical object shape: never add or remove keys.
+ * * 3. `Object.freeze`.
  * Fragile: always run a benchmark on a change.
  * Security note: operations don't check 'isValid' for all elements for performance reasons,
  * it is caller responsibility to check this.
  * This is low-level code, please make sure you know what you're doing.
- * @param ORDER prime positive bigint
+ *
+ * Note about field properties:
+ * * CHARACTERISTIC p = prime number, number of elements in main subgroup.
+ * * ORDER q = similar to cofactor in curves, may be composite `q = p^m`.
+ *
+ * @param ORDER field order, probably prime, or could be composite
  * @param bitLen how many bits the field consumes
- * @param isLE (def: false) if encoding / decoding should be in little-endian
+ * @param isLE (default: false) if encoding / decoding should be in little-endian
  * @param redef optional faster redefinitions of sqrt and other methods
  */
-function Field(ORDER, bitLen, isLE = false, redef = {}) {
+function Field(ORDER, bitLenOrOpts, // TODO: use opts only in v2?
+isLE = false, opts = {}) {
     if (ORDER <= _0n)
         throw new Error('invalid field: expected ORDER > 0, got ' + ORDER);
-    const { nBitLength: BITS, nByteLength: BYTES } = nLength(ORDER, bitLen);
+    let _nbitLength = undefined;
+    let _sqrt = undefined;
+    let modOnDecode = false;
+    let allowedLengths = undefined;
+    if (typeof bitLenOrOpts === 'object' && bitLenOrOpts != null) {
+        if (opts.sqrt || isLE)
+            throw new Error('cannot specify opts in two arguments');
+        const _opts = bitLenOrOpts;
+        if (_opts.BITS)
+            _nbitLength = _opts.BITS;
+        if (_opts.sqrt)
+            _sqrt = _opts.sqrt;
+        if (typeof _opts.isLE === 'boolean')
+            isLE = _opts.isLE;
+        if (typeof _opts.modOnDecode === 'boolean')
+            modOnDecode = _opts.modOnDecode;
+        allowedLengths = _opts.allowedLengths;
+    }
+    else {
+        if (typeof bitLenOrOpts === 'number')
+            _nbitLength = bitLenOrOpts;
+        if (opts.sqrt)
+            _sqrt = opts.sqrt;
+    }
+    const { nBitLength: BITS, nByteLength: BYTES } = nLength(ORDER, _nbitLength);
     if (BYTES > 2048)
         throw new Error('invalid field: expected ORDER of <= 2048 bytes');
     let sqrtP; // cached sqrtP
@@ -5246,9 +5542,10 @@ function Field(ORDER, bitLen, isLE = false, redef = {}) {
         isLE,
         BITS,
         BYTES,
-        MASK: (0, utils_js_1.bitMask)(BITS),
+        MASK: (0, utils_ts_1.bitMask)(BITS),
         ZERO: _0n,
         ONE: _1n,
+        allowedLengths: allowedLengths,
         create: (num) => mod(num, ORDER),
         isValid: (num) => {
             if (typeof num !== 'bigint')
@@ -5256,6 +5553,8 @@ function Field(ORDER, bitLen, isLE = false, redef = {}) {
             return _0n <= num && num < ORDER; // 0 is valid element, but it's not invertible
         },
         is0: (num) => num === _0n,
+        // is valid and invertible
+        isValidNot0: (num) => !f.is0(num) && f.isValid(num),
         isOdd: (num) => (num & _1n) === _1n,
         neg: (num) => mod(-num, ORDER),
         eql: (lhs, rhs) => lhs === rhs,
@@ -5271,25 +5570,56 @@ function Field(ORDER, bitLen, isLE = false, redef = {}) {
         subN: (lhs, rhs) => lhs - rhs,
         mulN: (lhs, rhs) => lhs * rhs,
         inv: (num) => invert(num, ORDER),
-        sqrt: redef.sqrt ||
+        sqrt: _sqrt ||
             ((n) => {
                 if (!sqrtP)
                     sqrtP = FpSqrt(ORDER);
                 return sqrtP(f, n);
             }),
-        invertBatch: (lst) => FpInvertBatch(f, lst),
-        // TODO: do we really need constant cmov?
-        // We don't have const-time bigints anyway, so probably will be not very useful
-        cmov: (a, b, c) => (c ? b : a),
-        toBytes: (num) => (isLE ? (0, utils_js_1.numberToBytesLE)(num, BYTES) : (0, utils_js_1.numberToBytesBE)(num, BYTES)),
-        fromBytes: (bytes) => {
+        toBytes: (num) => (isLE ? (0, utils_ts_1.numberToBytesLE)(num, BYTES) : (0, utils_ts_1.numberToBytesBE)(num, BYTES)),
+        fromBytes: (bytes, skipValidation = true) => {
+            if (allowedLengths) {
+                if (!allowedLengths.includes(bytes.length) || bytes.length > BYTES) {
+                    throw new Error('Field.fromBytes: expected ' + allowedLengths + ' bytes, got ' + bytes.length);
+                }
+                const padded = new Uint8Array(BYTES);
+                // isLE add 0 to right, !isLE to the left.
+                padded.set(bytes, isLE ? 0 : padded.length - bytes.length);
+                bytes = padded;
+            }
             if (bytes.length !== BYTES)
                 throw new Error('Field.fromBytes: expected ' + BYTES + ' bytes, got ' + bytes.length);
-            return isLE ? (0, utils_js_1.bytesToNumberLE)(bytes) : (0, utils_js_1.bytesToNumberBE)(bytes);
+            let scalar = isLE ? (0, utils_ts_1.bytesToNumberLE)(bytes) : (0, utils_ts_1.bytesToNumberBE)(bytes);
+            if (modOnDecode)
+                scalar = mod(scalar, ORDER);
+            if (!skipValidation)
+                if (!f.isValid(scalar))
+                    throw new Error('invalid field element: outside of range 0..ORDER');
+            // NOTE: we don't validate scalar here, please use isValid. This done such way because some
+            // protocol may allow non-reduced scalar that reduced later or changed some other way.
+            return scalar;
         },
+        // TODO: we don't need it here, move out to separate fn
+        invertBatch: (lst) => FpInvertBatch(f, lst),
+        // We can't move this out because Fp6, Fp12 implement it
+        // and it's unclear what to return in there.
+        cmov: (a, b, c) => (c ? b : a),
     });
     return Object.freeze(f);
 }
+// Generic random scalar, we can do same for other fields if via Fp2.mul(Fp2.ONE, Fp2.random)?
+// This allows unsafe methods like ignore bias or zero. These unsafe, but often used in different protocols (if deterministic RNG).
+// which mean we cannot force this via opts.
+// Not sure what to do with randomBytes, we can accept it inside opts if wanted.
+// Probably need to export getMinHashLength somewhere?
+// random(bytes?: Uint8Array, unsafeAllowZero = false, unsafeAllowBias = false) {
+//   const LEN = !unsafeAllowBias ? getMinHashLength(ORDER) : BYTES;
+//   if (bytes === undefined) bytes = randomBytes(LEN); // _opts.randomBytes?
+//   const num = isLE ? bytesToNumberLE(bytes) : bytesToNumberBE(bytes);
+//   // `mod(x, 11)` can sometimes produce 0. `mod(x, 10) + 1` is the same, but no 0
+//   const reduced = unsafeAllowZero ? mod(num, ORDER) : mod(num, ORDER - _1n) + _1n;
+//   return reduced;
+// },
 function FpSqrtOdd(Fp, elm) {
     if (!Fp.isOdd)
         throw new Error("Field doesn't have isOdd");
@@ -5309,12 +5639,12 @@ function FpSqrtEven(Fp, elm) {
  * @deprecated use `mapKeyToField` instead
  */
 function hashToPrivateScalar(hash, groupOrder, isLE = false) {
-    hash = (0, utils_js_1.ensureBytes)('privateHash', hash);
+    hash = (0, utils_ts_1.ensureBytes)('privateHash', hash);
     const hashLen = hash.length;
     const minLen = nLength(groupOrder).nByteLength + 8;
     if (minLen < 24 || hashLen < minLen || hashLen > 1024)
         throw new Error('hashToPrivateScalar: expected ' + minLen + '-1024 bytes of input, got ' + hashLen);
-    const num = isLE ? (0, utils_js_1.bytesToNumberLE)(hash) : (0, utils_js_1.bytesToNumberBE)(hash);
+    const num = isLE ? (0, utils_ts_1.bytesToNumberLE)(hash) : (0, utils_ts_1.bytesToNumberBE)(hash);
     return mod(num, groupOrder - _1n) + _1n;
 }
 /**
@@ -5360,10 +5690,10 @@ function mapHashToField(key, fieldOrder, isLE = false) {
     // No small numbers: need to understand bias story. No huge numbers: easier to detect JS timings.
     if (len < 16 || len < minLen || len > 1024)
         throw new Error('expected ' + minLen + '-1024 bytes of input, got ' + len);
-    const num = isLE ? (0, utils_js_1.bytesToNumberLE)(key) : (0, utils_js_1.bytesToNumberBE)(key);
+    const num = isLE ? (0, utils_ts_1.bytesToNumberLE)(key) : (0, utils_ts_1.bytesToNumberBE)(key);
     // `mod(x, 11)` can sometimes produce 0. `mod(x, 10) + 1` is the same, but no 0
     const reduced = mod(num, fieldOrder - _1n) + _1n;
-    return isLE ? (0, utils_js_1.numberToBytesLE)(reduced, fieldLen) : (0, utils_js_1.numberToBytesBE)(reduced, fieldLen);
+    return isLE ? (0, utils_ts_1.numberToBytesLE)(reduced, fieldLen) : (0, utils_ts_1.numberToBytesBE)(reduced, fieldLen);
 }
 //# sourceMappingURL=modular.js.map
 
@@ -5383,64 +5713,93 @@ exports.montgomery = montgomery;
  * @module
  */
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const modular_js_1 = __nccwpck_require__(49542);
-const utils_js_1 = __nccwpck_require__(43901);
+const utils_ts_1 = __nccwpck_require__(28816);
+const modular_ts_1 = __nccwpck_require__(49542);
 const _0n = BigInt(0);
 const _1n = BigInt(1);
+const _2n = BigInt(2);
 function validateOpts(curve) {
-    (0, utils_js_1.validateObject)(curve, {
-        a: 'bigint',
-    }, {
-        montgomeryBits: 'isSafeInteger',
-        nByteLength: 'isSafeInteger',
+    (0, utils_ts_1._validateObject)(curve, {
         adjustScalarBytes: 'function',
-        domain: 'function',
         powPminus2: 'function',
-        Gu: 'bigint',
     });
-    // Set defaults
     return Object.freeze({ ...curve });
 }
-// Uses only one coordinate instead of two
 function montgomery(curveDef) {
     const CURVE = validateOpts(curveDef);
-    const { P } = CURVE;
-    const modP = (n) => (0, modular_js_1.mod)(n, P);
-    const montgomeryBits = CURVE.montgomeryBits;
-    const montgomeryBytes = Math.ceil(montgomeryBits / 8);
-    const fieldLen = CURVE.nByteLength;
-    const adjustScalarBytes = CURVE.adjustScalarBytes || ((bytes) => bytes);
-    const powPminus2 = CURVE.powPminus2 || ((x) => (0, modular_js_1.pow)(x, P - BigInt(2), P));
-    // cswap from RFC7748. But it is not from RFC7748!
-    /*
-      cswap(swap, x_2, x_3):
-           dummy = mask(swap) AND (x_2 XOR x_3)
-           x_2 = x_2 XOR dummy
-           x_3 = x_3 XOR dummy
-           Return (x_2, x_3)
-    Where mask(swap) is the all-1 or all-0 word of the same length as x_2
-     and x_3, computed, e.g., as mask(swap) = 0 - swap.
-    */
-    function cswap(swap, x_2, x_3) {
-        const dummy = modP(swap * (x_2 - x_3));
-        x_2 = modP(x_2 - dummy);
-        x_3 = modP(x_3 + dummy);
-        return [x_2, x_3];
+    const { P, type, adjustScalarBytes, powPminus2, randomBytes: rand } = CURVE;
+    const is25519 = type === 'x25519';
+    if (!is25519 && type !== 'x448')
+        throw new Error('invalid type');
+    const randomBytes_ = rand || utils_ts_1.randomBytes;
+    const montgomeryBits = is25519 ? 255 : 448;
+    const fieldLen = is25519 ? 32 : 56;
+    const Gu = is25519 ? BigInt(9) : BigInt(5);
+    // RFC 7748 #5:
+    // The constant a24 is (486662 - 2) / 4 = 121665 for curve25519/X25519 and
+    // (156326 - 2) / 4 = 39081 for curve448/X448
+    // const a = is25519 ? 156326n : 486662n;
+    const a24 = is25519 ? BigInt(121665) : BigInt(39081);
+    // RFC: x25519 "the resulting integer is of the form 2^254 plus
+    // eight times a value between 0 and 2^251 - 1 (inclusive)"
+    // x448: "2^447 plus four times a value between 0 and 2^445 - 1 (inclusive)"
+    const minScalar = is25519 ? _2n ** BigInt(254) : _2n ** BigInt(447);
+    const maxAdded = is25519
+        ? BigInt(8) * _2n ** BigInt(251) - _1n
+        : BigInt(4) * _2n ** BigInt(445) - _1n;
+    const maxScalar = minScalar + maxAdded + _1n; // (inclusive)
+    const modP = (n) => (0, modular_ts_1.mod)(n, P);
+    const GuBytes = encodeU(Gu);
+    function encodeU(u) {
+        return (0, utils_ts_1.numberToBytesLE)(modP(u), fieldLen);
     }
-    // x25519 from 4
-    // The constant a24 is (486662 - 2) / 4 = 121665 for curve25519/X25519
-    const a24 = (CURVE.a - BigInt(2)) / BigInt(4);
+    function decodeU(u) {
+        const _u = (0, utils_ts_1.ensureBytes)('u coordinate', u, fieldLen);
+        // RFC: When receiving such an array, implementations of X25519
+        // (but not X448) MUST mask the most significant bit in the final byte.
+        if (is25519)
+            _u[31] &= 127; // 0b0111_1111
+        // RFC: Implementations MUST accept non-canonical values and process them as
+        // if they had been reduced modulo the field prime.  The non-canonical
+        // values are 2^255 - 19 through 2^255 - 1 for X25519 and 2^448 - 2^224
+        // - 1 through 2^448 - 1 for X448.
+        return modP((0, utils_ts_1.bytesToNumberLE)(_u));
+    }
+    function decodeScalar(scalar) {
+        return (0, utils_ts_1.bytesToNumberLE)(adjustScalarBytes((0, utils_ts_1.ensureBytes)('scalar', scalar, fieldLen)));
+    }
+    function scalarMult(scalar, u) {
+        const pu = montgomeryLadder(decodeU(u), decodeScalar(scalar));
+        // Some public keys are useless, of low-order. Curve author doesn't think
+        // it needs to be validated, but we do it nonetheless.
+        // https://cr.yp.to/ecdh.html#validate
+        if (pu === _0n)
+            throw new Error('invalid private or public key received');
+        return encodeU(pu);
+    }
+    // Computes public key from private. By doing scalar multiplication of base point.
+    function scalarMultBase(scalar) {
+        return scalarMult(scalar, GuBytes);
+    }
+    // cswap from RFC7748 "example code"
+    function cswap(swap, x_2, x_3) {
+        // dummy = mask(swap) AND (x_2 XOR x_3)
+        // Where mask(swap) is the all-1 or all-0 word of the same length as x_2
+        // and x_3, computed, e.g., as mask(swap) = 0 - swap.
+        const dummy = modP(swap * (x_2 - x_3));
+        x_2 = modP(x_2 - dummy); // x_2 = x_2 XOR dummy
+        x_3 = modP(x_3 + dummy); // x_3 = x_3 XOR dummy
+        return { x_2, x_3 };
+    }
     /**
-     *
+     * Montgomery x-only multiplication ladder.
      * @param pointU u coordinate (x) on Montgomery Curve 25519
      * @param scalar by which the point would be multiplied
      * @returns new Point on Montgomery curve
      */
     function montgomeryLadder(u, scalar) {
-        (0, utils_js_1.aInRange)('u', u, _0n, P);
-        (0, utils_js_1.aInRange)('scalar', scalar, _0n, P);
-        // Section 5: Implementations MUST accept non-canonical values and process them as
-        // if they had been reduced modulo the field prime.
+        (0, utils_ts_1.aInRange)('u', u, _0n, P);
+        (0, utils_ts_1.aInRange)('scalar', scalar, minScalar, maxScalar);
         const k = scalar;
         const x_1 = u;
         let x_2 = _1n;
@@ -5448,16 +5807,11 @@ function montgomery(curveDef) {
         let x_3 = u;
         let z_3 = _1n;
         let swap = _0n;
-        let sw;
         for (let t = BigInt(montgomeryBits - 1); t >= _0n; t--) {
             const k_t = (k >> t) & _1n;
             swap ^= k_t;
-            sw = cswap(swap, x_2, x_3);
-            x_2 = sw[0];
-            x_3 = sw[1];
-            sw = cswap(swap, z_2, z_3);
-            z_2 = sw[0];
-            z_3 = sw[1];
+            ({ x_2, x_3 } = cswap(swap, x_2, x_3));
+            ({ x_2: z_2, x_3: z_3 } = cswap(swap, z_2, z_3));
             swap = k_t;
             const A = x_2 + z_2;
             const AA = modP(A * A);
@@ -5475,435 +5829,37 @@ function montgomery(curveDef) {
             x_2 = modP(AA * BB);
             z_2 = modP(E * (AA + modP(a24 * E)));
         }
-        // (x_2, x_3) = cswap(swap, x_2, x_3)
-        sw = cswap(swap, x_2, x_3);
-        x_2 = sw[0];
-        x_3 = sw[1];
-        // (z_2, z_3) = cswap(swap, z_2, z_3)
-        sw = cswap(swap, z_2, z_3);
-        z_2 = sw[0];
-        z_3 = sw[1];
-        // z_2^(p - 2)
-        const z2 = powPminus2(z_2);
-        // Return x_2 * (z_2^(p - 2))
-        return modP(x_2 * z2);
+        ({ x_2, x_3 } = cswap(swap, x_2, x_3));
+        ({ x_2: z_2, x_3: z_3 } = cswap(swap, z_2, z_3));
+        const z2 = powPminus2(z_2); // `Fp.pow(x, P - _2n)` is much slower equivalent
+        return modP(x_2 * z2); // Return x_2 * (z_2^(p - 2))
     }
-    function encodeUCoordinate(u) {
-        return (0, utils_js_1.numberToBytesLE)(modP(u), montgomeryBytes);
+    const randomSecretKey = (seed = randomBytes_(fieldLen)) => seed;
+    const utils = {
+        randomSecretKey,
+        randomPrivateKey: randomSecretKey,
+    };
+    function keygen(seed) {
+        const secretKey = utils.randomSecretKey(seed);
+        return { secretKey, publicKey: scalarMultBase(secretKey) };
     }
-    function decodeUCoordinate(uEnc) {
-        // Section 5: When receiving such an array, implementations of X25519
-        // MUST mask the most significant bit in the final byte.
-        const u = (0, utils_js_1.ensureBytes)('u coordinate', uEnc, montgomeryBytes);
-        if (fieldLen === 32)
-            u[31] &= 127; // 0b0111_1111
-        return (0, utils_js_1.bytesToNumberLE)(u);
-    }
-    function decodeScalar(n) {
-        const bytes = (0, utils_js_1.ensureBytes)('scalar', n);
-        const len = bytes.length;
-        if (len !== montgomeryBytes && len !== fieldLen) {
-            let valid = '' + montgomeryBytes + ' or ' + fieldLen;
-            throw new Error('invalid scalar, expected ' + valid + ' bytes, got ' + len);
-        }
-        return (0, utils_js_1.bytesToNumberLE)(adjustScalarBytes(bytes));
-    }
-    function scalarMult(scalar, u) {
-        const pointU = decodeUCoordinate(u);
-        const _scalar = decodeScalar(scalar);
-        const pu = montgomeryLadder(pointU, _scalar);
-        // The result was not contributory
-        // https://cr.yp.to/ecdh.html#validate
-        if (pu === _0n)
-            throw new Error('invalid private or public key received');
-        return encodeUCoordinate(pu);
-    }
-    // Computes public key from private. By doing scalar multiplication of base point.
-    const GuBytes = encodeUCoordinate(CURVE.Gu);
-    function scalarMultBase(scalar) {
-        return scalarMult(scalar, GuBytes);
-    }
+    const lengths = {
+        secret: fieldLen,
+        public: fieldLen,
+        seed: fieldLen,
+    };
     return {
+        keygen,
+        getSharedSecret: (secretKey, publicKey) => scalarMult(secretKey, publicKey),
+        getPublicKey: (secretKey) => scalarMultBase(secretKey),
         scalarMult,
         scalarMultBase,
-        getSharedSecret: (privateKey, publicKey) => scalarMult(privateKey, publicKey),
-        getPublicKey: (privateKey) => scalarMultBase(privateKey),
-        utils: { randomPrivateKey: () => CURVE.randomBytes(CURVE.nByteLength) },
-        GuBytes: GuBytes,
+        utils,
+        GuBytes: GuBytes.slice(),
+        info: { type: 'montgomery', lengths },
     };
 }
 //# sourceMappingURL=montgomery.js.map
-
-/***/ }),
-
-/***/ 43901:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-/**
- * Hex, bytes and number utilities.
- * @module
- */
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.notImplemented = exports.bitMask = void 0;
-exports.isBytes = isBytes;
-exports.abytes = abytes;
-exports.abool = abool;
-exports.bytesToHex = bytesToHex;
-exports.numberToHexUnpadded = numberToHexUnpadded;
-exports.hexToNumber = hexToNumber;
-exports.hexToBytes = hexToBytes;
-exports.bytesToNumberBE = bytesToNumberBE;
-exports.bytesToNumberLE = bytesToNumberLE;
-exports.numberToBytesBE = numberToBytesBE;
-exports.numberToBytesLE = numberToBytesLE;
-exports.numberToVarBytesBE = numberToVarBytesBE;
-exports.ensureBytes = ensureBytes;
-exports.concatBytes = concatBytes;
-exports.equalBytes = equalBytes;
-exports.utf8ToBytes = utf8ToBytes;
-exports.inRange = inRange;
-exports.aInRange = aInRange;
-exports.bitLen = bitLen;
-exports.bitGet = bitGet;
-exports.bitSet = bitSet;
-exports.createHmacDrbg = createHmacDrbg;
-exports.validateObject = validateObject;
-exports.memoized = memoized;
-// 100 lines of code in the file are duplicated from noble-hashes (utils).
-// This is OK: `abstract` directory does not use noble-hashes.
-// User may opt-in into using different hashing library. This way, noble-hashes
-// won't be included into their bundle.
-const _0n = /* @__PURE__ */ BigInt(0);
-const _1n = /* @__PURE__ */ BigInt(1);
-const _2n = /* @__PURE__ */ BigInt(2);
-function isBytes(a) {
-    return a instanceof Uint8Array || (ArrayBuffer.isView(a) && a.constructor.name === 'Uint8Array');
-}
-function abytes(item) {
-    if (!isBytes(item))
-        throw new Error('Uint8Array expected');
-}
-function abool(title, value) {
-    if (typeof value !== 'boolean')
-        throw new Error(title + ' boolean expected, got ' + value);
-}
-// Array where index 0xf0 (240) is mapped to string 'f0'
-const hexes = /* @__PURE__ */ Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, '0'));
-/**
- * @example bytesToHex(Uint8Array.from([0xca, 0xfe, 0x01, 0x23])) // 'cafe0123'
- */
-function bytesToHex(bytes) {
-    abytes(bytes);
-    // pre-caching improves the speed 6x
-    let hex = '';
-    for (let i = 0; i < bytes.length; i++) {
-        hex += hexes[bytes[i]];
-    }
-    return hex;
-}
-function numberToHexUnpadded(num) {
-    const hex = num.toString(16);
-    return hex.length & 1 ? '0' + hex : hex;
-}
-function hexToNumber(hex) {
-    if (typeof hex !== 'string')
-        throw new Error('hex string expected, got ' + typeof hex);
-    return hex === '' ? _0n : BigInt('0x' + hex); // Big Endian
-}
-// We use optimized technique to convert hex string to byte array
-const asciis = { _0: 48, _9: 57, A: 65, F: 70, a: 97, f: 102 };
-function asciiToBase16(ch) {
-    if (ch >= asciis._0 && ch <= asciis._9)
-        return ch - asciis._0; // '2' => 50-48
-    if (ch >= asciis.A && ch <= asciis.F)
-        return ch - (asciis.A - 10); // 'B' => 66-(65-10)
-    if (ch >= asciis.a && ch <= asciis.f)
-        return ch - (asciis.a - 10); // 'b' => 98-(97-10)
-    return;
-}
-/**
- * @example hexToBytes('cafe0123') // Uint8Array.from([0xca, 0xfe, 0x01, 0x23])
- */
-function hexToBytes(hex) {
-    if (typeof hex !== 'string')
-        throw new Error('hex string expected, got ' + typeof hex);
-    const hl = hex.length;
-    const al = hl / 2;
-    if (hl % 2)
-        throw new Error('hex string expected, got unpadded hex of length ' + hl);
-    const array = new Uint8Array(al);
-    for (let ai = 0, hi = 0; ai < al; ai++, hi += 2) {
-        const n1 = asciiToBase16(hex.charCodeAt(hi));
-        const n2 = asciiToBase16(hex.charCodeAt(hi + 1));
-        if (n1 === undefined || n2 === undefined) {
-            const char = hex[hi] + hex[hi + 1];
-            throw new Error('hex string expected, got non-hex character "' + char + '" at index ' + hi);
-        }
-        array[ai] = n1 * 16 + n2; // multiply first octet, e.g. 'a3' => 10*16+3 => 160 + 3 => 163
-    }
-    return array;
-}
-// BE: Big Endian, LE: Little Endian
-function bytesToNumberBE(bytes) {
-    return hexToNumber(bytesToHex(bytes));
-}
-function bytesToNumberLE(bytes) {
-    abytes(bytes);
-    return hexToNumber(bytesToHex(Uint8Array.from(bytes).reverse()));
-}
-function numberToBytesBE(n, len) {
-    return hexToBytes(n.toString(16).padStart(len * 2, '0'));
-}
-function numberToBytesLE(n, len) {
-    return numberToBytesBE(n, len).reverse();
-}
-// Unpadded, rarely used
-function numberToVarBytesBE(n) {
-    return hexToBytes(numberToHexUnpadded(n));
-}
-/**
- * Takes hex string or Uint8Array, converts to Uint8Array.
- * Validates output length.
- * Will throw error for other types.
- * @param title descriptive title for an error e.g. 'private key'
- * @param hex hex string or Uint8Array
- * @param expectedLength optional, will compare to result array's length
- * @returns
- */
-function ensureBytes(title, hex, expectedLength) {
-    let res;
-    if (typeof hex === 'string') {
-        try {
-            res = hexToBytes(hex);
-        }
-        catch (e) {
-            throw new Error(title + ' must be hex string or Uint8Array, cause: ' + e);
-        }
-    }
-    else if (isBytes(hex)) {
-        // Uint8Array.from() instead of hash.slice() because node.js Buffer
-        // is instance of Uint8Array, and its slice() creates **mutable** copy
-        res = Uint8Array.from(hex);
-    }
-    else {
-        throw new Error(title + ' must be hex string or Uint8Array');
-    }
-    const len = res.length;
-    if (typeof expectedLength === 'number' && len !== expectedLength)
-        throw new Error(title + ' of length ' + expectedLength + ' expected, got ' + len);
-    return res;
-}
-/**
- * Copies several Uint8Arrays into one.
- */
-function concatBytes(...arrays) {
-    let sum = 0;
-    for (let i = 0; i < arrays.length; i++) {
-        const a = arrays[i];
-        abytes(a);
-        sum += a.length;
-    }
-    const res = new Uint8Array(sum);
-    for (let i = 0, pad = 0; i < arrays.length; i++) {
-        const a = arrays[i];
-        res.set(a, pad);
-        pad += a.length;
-    }
-    return res;
-}
-// Compares 2 u8a-s in kinda constant time
-function equalBytes(a, b) {
-    if (a.length !== b.length)
-        return false;
-    let diff = 0;
-    for (let i = 0; i < a.length; i++)
-        diff |= a[i] ^ b[i];
-    return diff === 0;
-}
-/**
- * @example utf8ToBytes('abc') // new Uint8Array([97, 98, 99])
- */
-function utf8ToBytes(str) {
-    if (typeof str !== 'string')
-        throw new Error('string expected');
-    return new Uint8Array(new TextEncoder().encode(str)); // https://bugzil.la/1681809
-}
-// Is positive bigint
-const isPosBig = (n) => typeof n === 'bigint' && _0n <= n;
-function inRange(n, min, max) {
-    return isPosBig(n) && isPosBig(min) && isPosBig(max) && min <= n && n < max;
-}
-/**
- * Asserts min <= n < max. NOTE: It's < max and not <= max.
- * @example
- * aInRange('x', x, 1n, 256n); // would assume x is in (1n..255n)
- */
-function aInRange(title, n, min, max) {
-    // Why min <= n < max and not a (min < n < max) OR b (min <= n <= max)?
-    // consider P=256n, min=0n, max=P
-    // - a for min=0 would require -1:          `inRange('x', x, -1n, P)`
-    // - b would commonly require subtraction:  `inRange('x', x, 0n, P - 1n)`
-    // - our way is the cleanest:               `inRange('x', x, 0n, P)
-    if (!inRange(n, min, max))
-        throw new Error('expected valid ' + title + ': ' + min + ' <= n < ' + max + ', got ' + n);
-}
-// Bit operations
-/**
- * Calculates amount of bits in a bigint.
- * Same as `n.toString(2).length`
- */
-function bitLen(n) {
-    let len;
-    for (len = 0; n > _0n; n >>= _1n, len += 1)
-        ;
-    return len;
-}
-/**
- * Gets single bit at position.
- * NOTE: first bit position is 0 (same as arrays)
- * Same as `!!+Array.from(n.toString(2)).reverse()[pos]`
- */
-function bitGet(n, pos) {
-    return (n >> BigInt(pos)) & _1n;
-}
-/**
- * Sets single bit at position.
- */
-function bitSet(n, pos, value) {
-    return n | ((value ? _1n : _0n) << BigInt(pos));
-}
-/**
- * Calculate mask for N bits. Not using ** operator with bigints because of old engines.
- * Same as BigInt(`0b${Array(i).fill('1').join('')}`)
- */
-const bitMask = (n) => (_2n << BigInt(n - 1)) - _1n;
-exports.bitMask = bitMask;
-// DRBG
-const u8n = (data) => new Uint8Array(data); // creates Uint8Array
-const u8fr = (arr) => Uint8Array.from(arr); // another shortcut
-/**
- * Minimal HMAC-DRBG from NIST 800-90 for RFC6979 sigs.
- * @returns function that will call DRBG until 2nd arg returns something meaningful
- * @example
- *   const drbg = createHmacDRBG<Key>(32, 32, hmac);
- *   drbg(seed, bytesToKey); // bytesToKey must return Key or undefined
- */
-function createHmacDrbg(hashLen, qByteLen, hmacFn) {
-    if (typeof hashLen !== 'number' || hashLen < 2)
-        throw new Error('hashLen must be a number');
-    if (typeof qByteLen !== 'number' || qByteLen < 2)
-        throw new Error('qByteLen must be a number');
-    if (typeof hmacFn !== 'function')
-        throw new Error('hmacFn must be a function');
-    // Step B, Step C: set hashLen to 8*ceil(hlen/8)
-    let v = u8n(hashLen); // Minimal non-full-spec HMAC-DRBG from NIST 800-90 for RFC6979 sigs.
-    let k = u8n(hashLen); // Steps B and C of RFC6979 3.2: set hashLen, in our case always same
-    let i = 0; // Iterations counter, will throw when over 1000
-    const reset = () => {
-        v.fill(1);
-        k.fill(0);
-        i = 0;
-    };
-    const h = (...b) => hmacFn(k, v, ...b); // hmac(k)(v, ...values)
-    const reseed = (seed = u8n()) => {
-        // HMAC-DRBG reseed() function. Steps D-G
-        k = h(u8fr([0x00]), seed); // k = hmac(k || v || 0x00 || seed)
-        v = h(); // v = hmac(k || v)
-        if (seed.length === 0)
-            return;
-        k = h(u8fr([0x01]), seed); // k = hmac(k || v || 0x01 || seed)
-        v = h(); // v = hmac(k || v)
-    };
-    const gen = () => {
-        // HMAC-DRBG generate() function
-        if (i++ >= 1000)
-            throw new Error('drbg: tried 1000 values');
-        let len = 0;
-        const out = [];
-        while (len < qByteLen) {
-            v = h();
-            const sl = v.slice();
-            out.push(sl);
-            len += v.length;
-        }
-        return concatBytes(...out);
-    };
-    const genUntil = (seed, pred) => {
-        reset();
-        reseed(seed); // Steps D-G
-        let res = undefined; // Step H: grind until k is in [1..n-1]
-        while (!(res = pred(gen())))
-            reseed();
-        reset();
-        return res;
-    };
-    return genUntil;
-}
-// Validating curves and fields
-const validatorFns = {
-    bigint: (val) => typeof val === 'bigint',
-    function: (val) => typeof val === 'function',
-    boolean: (val) => typeof val === 'boolean',
-    string: (val) => typeof val === 'string',
-    stringOrUint8Array: (val) => typeof val === 'string' || isBytes(val),
-    isSafeInteger: (val) => Number.isSafeInteger(val),
-    array: (val) => Array.isArray(val),
-    field: (val, object) => object.Fp.isValid(val),
-    hash: (val) => typeof val === 'function' && Number.isSafeInteger(val.outputLen),
-};
-// type Record<K extends string | number | symbol, T> = { [P in K]: T; }
-function validateObject(object, validators, optValidators = {}) {
-    const checkField = (fieldName, type, isOptional) => {
-        const checkVal = validatorFns[type];
-        if (typeof checkVal !== 'function')
-            throw new Error('invalid validator function');
-        const val = object[fieldName];
-        if (isOptional && val === undefined)
-            return;
-        if (!checkVal(val, object)) {
-            throw new Error('param ' + String(fieldName) + ' is invalid. Expected ' + type + ', got ' + val);
-        }
-    };
-    for (const [fieldName, type] of Object.entries(validators))
-        checkField(fieldName, type, false);
-    for (const [fieldName, type] of Object.entries(optValidators))
-        checkField(fieldName, type, true);
-    return object;
-}
-// validate type tests
-// const o: { a: number; b: number; c: number } = { a: 1, b: 5, c: 6 };
-// const z0 = validateObject(o, { a: 'isSafeInteger' }, { c: 'bigint' }); // Ok!
-// // Should fail type-check
-// const z1 = validateObject(o, { a: 'tmp' }, { c: 'zz' });
-// const z2 = validateObject(o, { a: 'isSafeInteger' }, { c: 'zz' });
-// const z3 = validateObject(o, { test: 'boolean', z: 'bug' });
-// const z4 = validateObject(o, { a: 'boolean', z: 'bug' });
-/**
- * throws not implemented error
- */
-const notImplemented = () => {
-    throw new Error('not implemented');
-};
-exports.notImplemented = notImplemented;
-/**
- * Memoizes (caches) computation result.
- * Uses WeakMap: the value is going auto-cleaned by GC after last reference is removed.
- */
-function memoized(fn) {
-    const map = new WeakMap();
-    return (arg, ...args) => {
-        const val = map.get(arg);
-        if (val !== undefined)
-            return val;
-        const computed = fn(arg, ...args);
-        map.set(arg, computed);
-        return computed;
-    };
-}
-//# sourceMappingURL=utils.js.map
 
 /***/ }),
 
@@ -5914,10 +5870,15 @@ function memoized(fn) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DER = exports.DERErr = void 0;
+exports._splitEndoScalar = _splitEndoScalar;
+exports._legacyHelperEquat = _legacyHelperEquat;
+exports._normFnElement = _normFnElement;
+exports.weierstrassN = weierstrassN;
 exports.weierstrassPoints = weierstrassPoints;
-exports.weierstrass = weierstrass;
 exports.SWUFpSqrtRatio = SWUFpSqrtRatio;
 exports.mapToCurveSimpleSWU = mapToCurveSimpleSWU;
+exports.ecdsa = ecdsa;
+exports.weierstrass = weierstrass;
 /**
  * Short Weierstrass curve methods. The formula is: y² = x³ + ax + b.
  *
@@ -5945,44 +5906,47 @@ exports.mapToCurveSimpleSWU = mapToCurveSimpleSWU;
  * @module
  */
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const curve_js_1 = __nccwpck_require__(78015);
-const modular_js_1 = __nccwpck_require__(49542);
-const ut = __nccwpck_require__(43901);
-const utils_js_1 = __nccwpck_require__(43901);
+const hmac_js_1 = __nccwpck_require__(11494);
+const utils_1 = __nccwpck_require__(4248);
+const utils_ts_1 = __nccwpck_require__(28816);
+const curve_ts_1 = __nccwpck_require__(78015);
+const modular_ts_1 = __nccwpck_require__(49542);
+// We construct basis in such way that den is always positive and equals n, but num sign depends on basis (not on secret value)
+const divNearest = (num, den) => (num + (num >= 0 ? den : -den) / _2n) / den;
+/**
+ * Splits scalar for GLV endomorphism.
+ */
+function _splitEndoScalar(k, basis, n) {
+    // Split scalar into two such that part is ~half bits: `abs(part) < sqrt(N)`
+    // Since part can be negative, we need to do this on point.
+    // TODO: verifyScalar function which consumes lambda
+    const [[a1, b1], [a2, b2]] = basis;
+    const c1 = divNearest(b2 * k, n);
+    const c2 = divNearest(-b1 * k, n);
+    // |k1|/|k2| is < sqrt(N), but can be negative.
+    // If we do `k1 mod N`, we'll get big scalar (`> sqrt(N)`): so, we do cheaper negation instead.
+    let k1 = k - c1 * a1 - c2 * a2;
+    let k2 = -c1 * b1 - c2 * b2;
+    const k1neg = k1 < _0n;
+    const k2neg = k2 < _0n;
+    if (k1neg)
+        k1 = -k1;
+    if (k2neg)
+        k2 = -k2;
+    // Double check that resulting scalar less than half bits of N: otherwise wNAF will fail.
+    // This should only happen on wrong basises. Also, math inside is too complex and I don't trust it.
+    const MAX_NUM = (0, utils_ts_1.bitMask)(Math.ceil((0, utils_ts_1.bitLen)(n) / 2)) + _1n; // Half bits of N
+    if (k1 < _0n || k1 >= MAX_NUM || k2 < _0n || k2 >= MAX_NUM) {
+        throw new Error('splitScalar (endomorphism): failed, k=' + k);
+    }
+    return { k1neg, k1, k2neg, k2 };
+}
 function validateSigVerOpts(opts) {
     if (opts.lowS !== undefined)
-        (0, utils_js_1.abool)('lowS', opts.lowS);
+        (0, utils_ts_1.abool)('lowS', opts.lowS);
     if (opts.prehash !== undefined)
-        (0, utils_js_1.abool)('prehash', opts.prehash);
+        (0, utils_ts_1.abool)('prehash', opts.prehash);
 }
-function validatePointOpts(curve) {
-    const opts = (0, curve_js_1.validateBasic)(curve);
-    ut.validateObject(opts, {
-        a: 'field',
-        b: 'field',
-    }, {
-        allowedPrivateKeyLengths: 'array',
-        wrapPrivateKey: 'boolean',
-        isTorsionFree: 'function',
-        clearCofactor: 'function',
-        allowInfinityPoint: 'boolean',
-        fromBytes: 'function',
-        toBytes: 'function',
-    });
-    const { endo, Fp, a } = opts;
-    if (endo) {
-        if (!Fp.eql(a, Fp.ZERO)) {
-            throw new Error('invalid endomorphism, can only be defined for Koblitz curves that have a=0');
-        }
-        if (typeof endo !== 'object' ||
-            typeof endo.beta !== 'bigint' ||
-            typeof endo.splitScalar !== 'function') {
-            throw new Error('invalid endomorphism, expected beta: bigint and splitScalar: function');
-        }
-    }
-    return Object.freeze({ ...opts });
-}
-const { bytesToNumberBE: b2n, hexToBytes: h2b } = ut;
 class DERErr extends Error {
     constructor(m = '') {
         super(m);
@@ -6008,12 +5972,12 @@ exports.DER = {
             if (data.length & 1)
                 throw new E('tlv.encode: unpadded data');
             const dataLen = data.length / 2;
-            const len = ut.numberToHexUnpadded(dataLen);
+            const len = (0, utils_ts_1.numberToHexUnpadded)(dataLen);
             if ((len.length / 2) & 128)
                 throw new E('tlv.encode: long form length too big');
             // length of length with long form flag
-            const lenLen = dataLen > 127 ? ut.numberToHexUnpadded((len.length / 2) | 128) : '';
-            const t = ut.numberToHexUnpadded(tag);
+            const lenLen = dataLen > 127 ? (0, utils_ts_1.numberToHexUnpadded)((len.length / 2) | 128) : '';
+            const t = (0, utils_ts_1.numberToHexUnpadded)(tag);
             return t + lenLen + len + data;
         },
         // v - value, l - left bytes (unparsed)
@@ -6062,7 +6026,7 @@ exports.DER = {
             const { Err: E } = exports.DER;
             if (num < _0n)
                 throw new E('integer: negative integers are not allowed');
-            let hex = ut.numberToHexUnpadded(num);
+            let hex = (0, utils_ts_1.numberToHexUnpadded)(num);
             // Pad with zero byte if negative flag is present
             if (Number.parseInt(hex[0], 16) & 0b1000)
                 hex = '00' + hex;
@@ -6076,14 +6040,13 @@ exports.DER = {
                 throw new E('invalid signature integer: negative');
             if (data[0] === 0x00 && !(data[1] & 128))
                 throw new E('invalid signature integer: unnecessary leading zero');
-            return b2n(data);
+            return (0, utils_ts_1.bytesToNumberBE)(data);
         },
     },
     toSig(hex) {
         // parse DER signature
         const { Err: E, _int: int, _tlv: tlv } = exports.DER;
-        const data = typeof hex === 'string' ? h2b(hex) : hex;
-        ut.abytes(data);
+        const data = (0, utils_ts_1.ensureBytes)('signature', hex);
         const { v: seqBytes, l: seqLeftBytes } = tlv.decode(0x30, data);
         if (seqLeftBytes.length)
             throw new E('invalid signature: left bytes after parsing');
@@ -6104,151 +6067,223 @@ exports.DER = {
 // Be friendly to bad ECMAScript parsers by not using bigint literals
 // prettier-ignore
 const _0n = BigInt(0), _1n = BigInt(1), _2n = BigInt(2), _3n = BigInt(3), _4n = BigInt(4);
-function weierstrassPoints(opts) {
-    const CURVE = validatePointOpts(opts);
-    const { Fp } = CURVE; // All curves has same field / group length as for now, but they can differ
-    const Fn = (0, modular_js_1.Field)(CURVE.n, CURVE.nBitLength);
-    const toBytes = CURVE.toBytes ||
-        ((_c, point, _isCompressed) => {
-            const a = point.toAffine();
-            return ut.concatBytes(Uint8Array.from([0x04]), Fp.toBytes(a.x), Fp.toBytes(a.y));
-        });
-    const fromBytes = CURVE.fromBytes ||
-        ((bytes) => {
-            // const head = bytes[0];
-            const tail = bytes.subarray(1);
-            // if (head !== 0x04) throw new Error('Only non-compressed encoding is supported');
-            const x = Fp.fromBytes(tail.subarray(0, Fp.BYTES));
-            const y = Fp.fromBytes(tail.subarray(Fp.BYTES, 2 * Fp.BYTES));
-            return { x, y };
-        });
+// TODO: remove
+function _legacyHelperEquat(Fp, a, b) {
     /**
-     * y² = x³ + ax + b: Short weierstrass curve formula
+     * y² = x³ + ax + b: Short weierstrass curve formula. Takes x, returns y².
      * @returns y²
      */
     function weierstrassEquation(x) {
-        const { a, b } = CURVE;
         const x2 = Fp.sqr(x); // x * x
-        const x3 = Fp.mul(x2, x); // x2 * x
-        return Fp.add(Fp.add(x3, Fp.mul(x, a)), b); // x3 + a * x + b
+        const x3 = Fp.mul(x2, x); // x² * x
+        return Fp.add(Fp.add(x3, Fp.mul(x, a)), b); // x³ + a * x + b
     }
-    // Validate whether the passed curve params are valid.
-    // We check if curve equation works for generator point.
-    // `assertValidity()` won't work: `isTorsionFree()` is not available at this point in bls12-381.
-    // ProjectivePoint class has not been initialized yet.
-    if (!Fp.eql(Fp.sqr(CURVE.Gy), weierstrassEquation(CURVE.Gx)))
-        throw new Error('bad generator point: equation left != right');
-    // Valid group elements reside in range 1..n-1
-    function isWithinCurveOrder(num) {
-        return ut.inRange(num, _1n, CURVE.n);
+    return weierstrassEquation;
+}
+function _normFnElement(Fn, key) {
+    const { BYTES: expected } = Fn;
+    let num;
+    if (typeof key === 'bigint') {
+        num = key;
     }
-    // Validates if priv key is valid and converts it to bigint.
-    // Supports options allowedPrivateKeyLengths and wrapPrivateKey.
-    function normPrivateKeyToScalar(key) {
-        const { allowedPrivateKeyLengths: lengths, nByteLength, wrapPrivateKey, n: N } = CURVE;
-        if (lengths && typeof key !== 'bigint') {
-            if (ut.isBytes(key))
-                key = ut.bytesToHex(key);
-            // Normalize to hex string, pad. E.g. P521 would norm 130-132 char hex to 132-char bytes
-            if (typeof key !== 'string' || !lengths.includes(key.length))
-                throw new Error('invalid private key');
-            key = key.padStart(nByteLength * 2, '0');
-        }
-        let num;
+    else {
+        let bytes = (0, utils_ts_1.ensureBytes)('private key', key);
         try {
-            num =
-                typeof key === 'bigint'
-                    ? key
-                    : ut.bytesToNumberBE((0, utils_js_1.ensureBytes)('private key', key, nByteLength));
+            num = Fn.fromBytes(bytes);
         }
         catch (error) {
-            throw new Error('invalid private key, expected hex or ' + nByteLength + ' bytes, got ' + typeof key);
+            throw new Error(`invalid private key: expected ui8a of size ${expected}, got ${typeof key}`);
         }
-        if (wrapPrivateKey)
-            num = (0, modular_js_1.mod)(num, N); // disabled by default, enabled for BLS
-        ut.aInRange('private key', num, _1n, N); // num in range [1..N-1]
-        return num;
     }
-    function assertPrjPoint(other) {
+    if (!Fn.isValidNot0(num))
+        throw new Error('invalid private key: out of range [1..N-1]');
+    return num;
+}
+function weierstrassN(CURVE, curveOpts = {}) {
+    const { Fp, Fn } = (0, curve_ts_1._createCurveFields)('weierstrass', CURVE, curveOpts);
+    const { h: cofactor, n: CURVE_ORDER } = CURVE;
+    (0, utils_ts_1._validateObject)(curveOpts, {}, {
+        allowInfinityPoint: 'boolean',
+        clearCofactor: 'function',
+        isTorsionFree: 'function',
+        fromBytes: 'function',
+        toBytes: 'function',
+        endo: 'object',
+        wrapPrivateKey: 'boolean',
+    });
+    const { endo } = curveOpts;
+    if (endo) {
+        // validateObject(endo, { beta: 'bigint', splitScalar: 'function' });
+        if (!Fp.is0(CURVE.a) || typeof endo.beta !== 'bigint' || !Array.isArray(endo.basises)) {
+            throw new Error('invalid endo: expected "beta": bigint and "basises": array');
+        }
+    }
+    function assertCompressionIsSupported() {
+        if (!Fp.isOdd)
+            throw new Error('compression is not supported: Field does not have .isOdd()');
+    }
+    // Implements IEEE P1363 point encoding
+    function pointToBytes(_c, point, isCompressed) {
+        const { x, y } = point.toAffine();
+        const bx = Fp.toBytes(x);
+        (0, utils_ts_1.abool)('isCompressed', isCompressed);
+        if (isCompressed) {
+            assertCompressionIsSupported();
+            const hasEvenY = !Fp.isOdd(y);
+            return (0, utils_ts_1.concatBytes)(pprefix(hasEvenY), bx);
+        }
+        else {
+            return (0, utils_ts_1.concatBytes)(Uint8Array.of(0x04), bx, Fp.toBytes(y));
+        }
+    }
+    function pointFromBytes(bytes) {
+        (0, utils_ts_1.abytes)(bytes);
+        const L = Fp.BYTES;
+        const LC = L + 1; // length compressed, e.g. 33 for 32-byte field
+        const LU = 2 * L + 1; // length uncompressed, e.g. 65 for 32-byte field
+        const length = bytes.length;
+        const head = bytes[0];
+        const tail = bytes.subarray(1);
+        // No actual validation is done here: use .assertValidity()
+        if (length === LC && (head === 0x02 || head === 0x03)) {
+            const x = Fp.fromBytes(tail);
+            if (!Fp.isValid(x))
+                throw new Error('bad point: is not on curve, wrong x');
+            const y2 = weierstrassEquation(x); // y² = x³ + ax + b
+            let y;
+            try {
+                y = Fp.sqrt(y2); // y = y² ^ (p+1)/4
+            }
+            catch (sqrtError) {
+                const err = sqrtError instanceof Error ? ': ' + sqrtError.message : '';
+                throw new Error('bad point: is not on curve, sqrt error' + err);
+            }
+            assertCompressionIsSupported();
+            const isYOdd = Fp.isOdd(y); // (y & _1n) === _1n;
+            const isHeadOdd = (head & 1) === 1; // ECDSA-specific
+            if (isHeadOdd !== isYOdd)
+                y = Fp.neg(y);
+            return { x, y };
+        }
+        else if (length === LU && head === 0x04) {
+            // TODO: more checks
+            const x = Fp.fromBytes(tail.subarray(L * 0, L * 1));
+            const y = Fp.fromBytes(tail.subarray(L * 1, L * 2));
+            if (!isValidXY(x, y))
+                throw new Error('bad point: is not on curve');
+            return { x, y };
+        }
+        else {
+            throw new Error(`bad point: got length ${length}, expected compressed=${LC} or uncompressed=${LU}`);
+        }
+    }
+    const toBytes = curveOpts.toBytes || pointToBytes;
+    const fromBytes = curveOpts.fromBytes || pointFromBytes;
+    const weierstrassEquation = _legacyHelperEquat(Fp, CURVE.a, CURVE.b);
+    // TODO: move top-level
+    /** Checks whether equation holds for given x, y: y² == x³ + ax + b */
+    function isValidXY(x, y) {
+        const left = Fp.sqr(y); // y²
+        const right = weierstrassEquation(x); // x³ + ax + b
+        return Fp.eql(left, right);
+    }
+    // Validate whether the passed curve params are valid.
+    // Test 1: equation y² = x³ + ax + b should work for generator point.
+    if (!isValidXY(CURVE.Gx, CURVE.Gy))
+        throw new Error('bad curve params: generator point');
+    // Test 2: discriminant Δ part should be non-zero: 4a³ + 27b² != 0.
+    // Guarantees curve is genus-1, smooth (non-singular).
+    const _4a3 = Fp.mul(Fp.pow(CURVE.a, _3n), _4n);
+    const _27b2 = Fp.mul(Fp.sqr(CURVE.b), BigInt(27));
+    if (Fp.is0(Fp.add(_4a3, _27b2)))
+        throw new Error('bad curve params: a or b');
+    /** Asserts coordinate is valid: 0 <= n < Fp.ORDER. */
+    function acoord(title, n, banZero = false) {
+        if (!Fp.isValid(n) || (banZero && Fp.is0(n)))
+            throw new Error(`bad point coordinate ${title}`);
+        return n;
+    }
+    function aprjpoint(other) {
         if (!(other instanceof Point))
             throw new Error('ProjectivePoint expected');
+    }
+    function splitEndoScalarN(k) {
+        if (!endo || !endo.basises)
+            throw new Error('no endo');
+        return _splitEndoScalar(k, endo.basises, Fn.ORDER);
     }
     // Memoized toAffine / validity check. They are heavy. Points are immutable.
     // Converts Projective point to affine (x, y) coordinates.
     // Can accept precomputed Z^-1 - for example, from invertBatch.
-    // (x, y, z) ∋ (x=x/z, y=y/z)
-    const toAffineMemo = (0, utils_js_1.memoized)((p, iz) => {
-        const { px: x, py: y, pz: z } = p;
+    // (X, Y, Z) ∋ (x=X/Z, y=Y/Z)
+    const toAffineMemo = (0, utils_ts_1.memoized)((p, iz) => {
+        const { X, Y, Z } = p;
         // Fast-path for normalized points
-        if (Fp.eql(z, Fp.ONE))
-            return { x, y };
+        if (Fp.eql(Z, Fp.ONE))
+            return { x: X, y: Y };
         const is0 = p.is0();
         // If invZ was 0, we return zero point. However we still want to execute
         // all operations, so we replace invZ with a random number, 1.
         if (iz == null)
-            iz = is0 ? Fp.ONE : Fp.inv(z);
-        const ax = Fp.mul(x, iz);
-        const ay = Fp.mul(y, iz);
-        const zz = Fp.mul(z, iz);
+            iz = is0 ? Fp.ONE : Fp.inv(Z);
+        const x = Fp.mul(X, iz);
+        const y = Fp.mul(Y, iz);
+        const zz = Fp.mul(Z, iz);
         if (is0)
             return { x: Fp.ZERO, y: Fp.ZERO };
         if (!Fp.eql(zz, Fp.ONE))
             throw new Error('invZ was invalid');
-        return { x: ax, y: ay };
+        return { x, y };
     });
     // NOTE: on exception this will crash 'cached' and no value will be set.
     // Otherwise true will be return
-    const assertValidMemo = (0, utils_js_1.memoized)((p) => {
+    const assertValidMemo = (0, utils_ts_1.memoized)((p) => {
         if (p.is0()) {
             // (0, 1, 0) aka ZERO is invalid in most contexts.
             // In BLS, ZERO can be serialized, so we allow it.
             // (0, 0, 0) is invalid representation of ZERO.
-            if (CURVE.allowInfinityPoint && !Fp.is0(p.py))
+            if (curveOpts.allowInfinityPoint && !Fp.is0(p.Y))
                 return;
             throw new Error('bad point: ZERO');
         }
         // Some 3rd-party test vectors require different wording between here & `fromCompressedHex`
         const { x, y } = p.toAffine();
-        // Check if x, y are valid field elements
         if (!Fp.isValid(x) || !Fp.isValid(y))
-            throw new Error('bad point: x or y not FE');
-        const left = Fp.sqr(y); // y²
-        const right = weierstrassEquation(x); // x³ + ax + b
-        if (!Fp.eql(left, right))
+            throw new Error('bad point: x or y not field elements');
+        if (!isValidXY(x, y))
             throw new Error('bad point: equation left != right');
         if (!p.isTorsionFree())
             throw new Error('bad point: not in prime-order subgroup');
         return true;
     });
+    function finishEndo(endoBeta, k1p, k2p, k1neg, k2neg) {
+        k2p = new Point(Fp.mul(k2p.X, endoBeta), k2p.Y, k2p.Z);
+        k1p = (0, curve_ts_1.negateCt)(k1neg, k1p);
+        k2p = (0, curve_ts_1.negateCt)(k2neg, k2p);
+        return k1p.add(k2p);
+    }
     /**
-     * Projective Point works in 3d / projective (homogeneous) coordinates: (x, y, z) ∋ (x=x/z, y=y/z)
-     * Default Point works in 2d / affine coordinates: (x, y)
+     * Projective Point works in 3d / projective (homogeneous) coordinates:(X, Y, Z) ∋ (x=X/Z, y=Y/Z).
+     * Default Point works in 2d / affine coordinates: (x, y).
      * We're doing calculations in projective, because its operations don't require costly inversion.
      */
     class Point {
-        constructor(px, py, pz) {
-            this.px = px;
-            this.py = py;
-            this.pz = pz;
-            if (px == null || !Fp.isValid(px))
-                throw new Error('x required');
-            if (py == null || !Fp.isValid(py))
-                throw new Error('y required');
-            if (pz == null || !Fp.isValid(pz))
-                throw new Error('z required');
+        /** Does NOT validate if the point is valid. Use `.assertValidity()`. */
+        constructor(X, Y, Z) {
+            this.X = acoord('x', X);
+            this.Y = acoord('y', Y, true);
+            this.Z = acoord('z', Z);
             Object.freeze(this);
         }
-        // Does not validate if the point is on-curve.
-        // Use fromHex instead, or call assertValidity() later.
+        /** Does NOT validate if the point is valid. Use `.assertValidity()`. */
         static fromAffine(p) {
             const { x, y } = p || {};
             if (!p || !Fp.isValid(x) || !Fp.isValid(y))
                 throw new Error('invalid affine point');
             if (p instanceof Point)
                 throw new Error('projective point not allowed');
-            const is0 = (i) => Fp.eql(i, Fp.ZERO);
-            // fromAffine(x:0, y:0) would produce (x:0, y:0, z:1), but we need (x:0, y:1, z:0)
-            if (is0(x) && is0(y))
+            // (0, 0) would've produced (0, 0, 1) - instead, we need (0, 1, 0)
+            if (Fp.is0(x) && Fp.is0(y))
                 return Point.ZERO;
             return new Point(x, y, Fp.ONE);
         }
@@ -6258,63 +6293,75 @@ function weierstrassPoints(opts) {
         get y() {
             return this.toAffine().y;
         }
-        /**
-         * Takes a bunch of Projective Points but executes only one
-         * inversion on all of them. Inversion is very slow operation,
-         * so this improves performance massively.
-         * Optimization: converts a list of projective points to a list of identical points with Z=1.
-         */
-        static normalizeZ(points) {
-            const toInv = Fp.invertBatch(points.map((p) => p.pz));
-            return points.map((p, i) => p.toAffine(toInv[i])).map(Point.fromAffine);
+        // TODO: remove
+        get px() {
+            return this.X;
         }
-        /**
-         * Converts hash string or Uint8Array to Point.
-         * @param hex short/long ECDSA hex
-         */
+        get py() {
+            return this.X;
+        }
+        get pz() {
+            return this.Z;
+        }
+        static normalizeZ(points) {
+            return (0, curve_ts_1.normalizeZ)(Point, points);
+        }
+        static fromBytes(bytes) {
+            (0, utils_ts_1.abytes)(bytes);
+            return Point.fromHex(bytes);
+        }
+        /** Converts hash string or Uint8Array to Point. */
         static fromHex(hex) {
-            const P = Point.fromAffine(fromBytes((0, utils_js_1.ensureBytes)('pointHex', hex)));
+            const P = Point.fromAffine(fromBytes((0, utils_ts_1.ensureBytes)('pointHex', hex)));
             P.assertValidity();
             return P;
         }
-        // Multiplies generator point by privateKey.
+        /** Multiplies generator point by privateKey. */
         static fromPrivateKey(privateKey) {
-            return Point.BASE.multiply(normPrivateKeyToScalar(privateKey));
+            return Point.BASE.multiply(_normFnElement(Fn, privateKey));
         }
-        // Multiscalar Multiplication
+        // TODO: remove
         static msm(points, scalars) {
-            return (0, curve_js_1.pippenger)(Point, Fn, points, scalars);
+            return (0, curve_ts_1.pippenger)(Point, Fn, points, scalars);
         }
-        // "Private method", don't use it directly
         _setWindowSize(windowSize) {
-            wnaf.setWindowSize(this, windowSize);
+            this.precompute(windowSize);
         }
-        // A point on curve is valid if it conforms to equation.
+        /**
+         *
+         * @param windowSize
+         * @param isLazy true will defer table computation until the first multiplication
+         * @returns
+         */
+        precompute(windowSize = 8, isLazy = true) {
+            wnaf.createCache(this, windowSize);
+            if (!isLazy)
+                this.multiply(_3n); // random number
+            return this;
+        }
+        // TODO: return `this`
+        /** A point on curve is valid if it conforms to equation. */
         assertValidity() {
             assertValidMemo(this);
         }
         hasEvenY() {
             const { y } = this.toAffine();
-            if (Fp.isOdd)
-                return !Fp.isOdd(y);
-            throw new Error("Field doesn't support isOdd");
+            if (!Fp.isOdd)
+                throw new Error("Field doesn't support isOdd");
+            return !Fp.isOdd(y);
         }
-        /**
-         * Compare one point to another.
-         */
+        /** Compare one point to another. */
         equals(other) {
-            assertPrjPoint(other);
-            const { px: X1, py: Y1, pz: Z1 } = this;
-            const { px: X2, py: Y2, pz: Z2 } = other;
+            aprjpoint(other);
+            const { X: X1, Y: Y1, Z: Z1 } = this;
+            const { X: X2, Y: Y2, Z: Z2 } = other;
             const U1 = Fp.eql(Fp.mul(X1, Z2), Fp.mul(X2, Z1));
             const U2 = Fp.eql(Fp.mul(Y1, Z2), Fp.mul(Y2, Z1));
             return U1 && U2;
         }
-        /**
-         * Flips point to one corresponding to (x, -y) in Affine coordinates.
-         */
+        /** Flips point to one corresponding to (x, -y) in Affine coordinates. */
         negate() {
-            return new Point(this.px, Fp.neg(this.py), this.pz);
+            return new Point(this.X, Fp.neg(this.Y), this.Z);
         }
         // Renes-Costello-Batina exception-free doubling formula.
         // There is 30% faster Jacobian formula, but it is not complete.
@@ -6323,7 +6370,7 @@ function weierstrassPoints(opts) {
         double() {
             const { a, b } = CURVE;
             const b3 = Fp.mul(b, _3n);
-            const { px: X1, py: Y1, pz: Z1 } = this;
+            const { X: X1, Y: Y1, Z: Z1 } = this;
             let X3 = Fp.ZERO, Y3 = Fp.ZERO, Z3 = Fp.ZERO; // prettier-ignore
             let t0 = Fp.mul(X1, X1); // step 1
             let t1 = Fp.mul(Y1, Y1);
@@ -6363,9 +6410,9 @@ function weierstrassPoints(opts) {
         // https://eprint.iacr.org/2015/1060, algorithm 1
         // Cost: 12M + 0S + 3*a + 3*b3 + 23add.
         add(other) {
-            assertPrjPoint(other);
-            const { px: X1, py: Y1, pz: Z1 } = this;
-            const { px: X2, py: Y2, pz: Z2 } = other;
+            aprjpoint(other);
+            const { X: X1, Y: Y1, Z: Z1 } = this;
+            const { X: X2, Y: Y2, Z: Z2 } = other;
             let X3 = Fp.ZERO, Y3 = Fp.ZERO, Z3 = Fp.ZERO; // prettier-ignore
             const a = CURVE.a;
             const b3 = Fp.mul(CURVE.b, _3n);
@@ -6417,46 +6464,6 @@ function weierstrassPoints(opts) {
         is0() {
             return this.equals(Point.ZERO);
         }
-        wNAF(n) {
-            return wnaf.wNAFCached(this, n, Point.normalizeZ);
-        }
-        /**
-         * Non-constant-time multiplication. Uses double-and-add algorithm.
-         * It's faster, but should only be used when you don't care about
-         * an exposed private key e.g. sig verification, which works over *public* keys.
-         */
-        multiplyUnsafe(sc) {
-            const { endo, n: N } = CURVE;
-            ut.aInRange('scalar', sc, _0n, N);
-            const I = Point.ZERO;
-            if (sc === _0n)
-                return I;
-            if (this.is0() || sc === _1n)
-                return this;
-            // Case a: no endomorphism. Case b: has precomputes.
-            if (!endo || wnaf.hasPrecomputes(this))
-                return wnaf.wNAFCachedUnsafe(this, sc, Point.normalizeZ);
-            // Case c: endomorphism
-            let { k1neg, k1, k2neg, k2 } = endo.splitScalar(sc);
-            let k1p = I;
-            let k2p = I;
-            let d = this;
-            while (k1 > _0n || k2 > _0n) {
-                if (k1 & _1n)
-                    k1p = k1p.add(d);
-                if (k2 & _1n)
-                    k2p = k2p.add(d);
-                d = d.double();
-                k1 >>= _1n;
-                k2 >>= _1n;
-            }
-            if (k1neg)
-                k1p = k1p.negate();
-            if (k2neg)
-                k2p = k2p.negate();
-            k2p = new Point(Fp.mul(k2p.px, endo.beta), k2p.py, k2p.pz);
-            return k1p.add(k2p);
-        }
         /**
          * Constant time multiplication.
          * Uses wNAF method. Windowed method may be 10% faster,
@@ -6467,516 +6474,125 @@ function weierstrassPoints(opts) {
          * @returns New point
          */
         multiply(scalar) {
-            const { endo, n: N } = CURVE;
-            ut.aInRange('scalar', scalar, _1n, N);
+            const { endo } = curveOpts;
+            if (!Fn.isValidNot0(scalar))
+                throw new Error('invalid scalar: out of range'); // 0 is invalid
             let point, fake; // Fake point is used to const-time mult
+            const mul = (n) => wnaf.cached(this, n, (p) => (0, curve_ts_1.normalizeZ)(Point, p));
+            /** See docs for {@link EndomorphismOpts} */
             if (endo) {
-                const { k1neg, k1, k2neg, k2 } = endo.splitScalar(scalar);
-                let { p: k1p, f: f1p } = this.wNAF(k1);
-                let { p: k2p, f: f2p } = this.wNAF(k2);
-                k1p = wnaf.constTimeNegate(k1neg, k1p);
-                k2p = wnaf.constTimeNegate(k2neg, k2p);
-                k2p = new Point(Fp.mul(k2p.px, endo.beta), k2p.py, k2p.pz);
-                point = k1p.add(k2p);
-                fake = f1p.add(f2p);
+                const { k1neg, k1, k2neg, k2 } = splitEndoScalarN(scalar);
+                const { p: k1p, f: k1f } = mul(k1);
+                const { p: k2p, f: k2f } = mul(k2);
+                fake = k1f.add(k2f);
+                point = finishEndo(endo.beta, k1p, k2p, k1neg, k2neg);
             }
             else {
-                const { p, f } = this.wNAF(scalar);
+                const { p, f } = mul(scalar);
                 point = p;
                 fake = f;
             }
             // Normalize `z` for both points, but return only real one
-            return Point.normalizeZ([point, fake])[0];
+            return (0, curve_ts_1.normalizeZ)(Point, [point, fake])[0];
         }
         /**
-         * Efficiently calculate `aP + bQ`. Unsafe, can expose private key, if used incorrectly.
-         * Not using Strauss-Shamir trick: precomputation tables are faster.
-         * The trick could be useful if both P and Q are not G (not in our case).
-         * @returns non-zero affine point
+         * Non-constant-time multiplication. Uses double-and-add algorithm.
+         * It's faster, but should only be used when you don't care about
+         * an exposed secret key e.g. sig verification, which works over *public* keys.
          */
+        multiplyUnsafe(sc) {
+            const { endo } = curveOpts;
+            const p = this;
+            if (!Fn.isValid(sc))
+                throw new Error('invalid scalar: out of range'); // 0 is valid
+            if (sc === _0n || p.is0())
+                return Point.ZERO;
+            if (sc === _1n)
+                return p; // fast-path
+            if (wnaf.hasCache(this))
+                return this.multiply(sc);
+            if (endo) {
+                const { k1neg, k1, k2neg, k2 } = splitEndoScalarN(sc);
+                const { p1, p2 } = (0, curve_ts_1.mulEndoUnsafe)(Point, p, k1, k2); // 30% faster vs wnaf.unsafe
+                return finishEndo(endo.beta, p1, p2, k1neg, k2neg);
+            }
+            else {
+                return wnaf.unsafe(p, sc);
+            }
+        }
         multiplyAndAddUnsafe(Q, a, b) {
-            const G = Point.BASE; // No Strauss-Shamir trick: we have 10% faster G precomputes
-            const mul = (P, a // Select faster multiply() method
-            ) => (a === _0n || a === _1n || !P.equals(G) ? P.multiplyUnsafe(a) : P.multiply(a));
-            const sum = mul(this, a).add(mul(Q, b));
+            const sum = this.multiplyUnsafe(a).add(Q.multiplyUnsafe(b));
             return sum.is0() ? undefined : sum;
         }
-        // Converts Projective point to affine (x, y) coordinates.
-        // Can accept precomputed Z^-1 - for example, from invertBatch.
-        // (x, y, z) ∋ (x=x/z, y=y/z)
-        toAffine(iz) {
-            return toAffineMemo(this, iz);
+        /**
+         * Converts Projective point to affine (x, y) coordinates.
+         * @param invertedZ Z^-1 (inverted zero) - optional, precomputation is useful for invertBatch
+         */
+        toAffine(invertedZ) {
+            return toAffineMemo(this, invertedZ);
         }
+        /**
+         * Checks whether Point is free of torsion elements (is in prime subgroup).
+         * Always torsion-free for cofactor=1 curves.
+         */
         isTorsionFree() {
-            const { h: cofactor, isTorsionFree } = CURVE;
+            const { isTorsionFree } = curveOpts;
             if (cofactor === _1n)
-                return true; // No subgroups, always torsion-free
+                return true;
             if (isTorsionFree)
                 return isTorsionFree(Point, this);
-            throw new Error('isTorsionFree() has not been declared for the elliptic curve');
+            return wnaf.unsafe(this, CURVE_ORDER).is0();
         }
         clearCofactor() {
-            const { h: cofactor, clearCofactor } = CURVE;
+            const { clearCofactor } = curveOpts;
             if (cofactor === _1n)
                 return this; // Fast-path
             if (clearCofactor)
                 return clearCofactor(Point, this);
-            return this.multiplyUnsafe(CURVE.h);
+            return this.multiplyUnsafe(cofactor);
         }
-        toRawBytes(isCompressed = true) {
-            (0, utils_js_1.abool)('isCompressed', isCompressed);
+        isSmallOrder() {
+            // can we use this.clearCofactor()?
+            return this.multiplyUnsafe(cofactor).is0();
+        }
+        toBytes(isCompressed = true) {
+            (0, utils_ts_1.abool)('isCompressed', isCompressed);
             this.assertValidity();
             return toBytes(Point, this, isCompressed);
         }
+        /** @deprecated use `toBytes` */
+        toRawBytes(isCompressed = true) {
+            return this.toBytes(isCompressed);
+        }
         toHex(isCompressed = true) {
-            (0, utils_js_1.abool)('isCompressed', isCompressed);
-            return ut.bytesToHex(this.toRawBytes(isCompressed));
+            return (0, utils_ts_1.bytesToHex)(this.toBytes(isCompressed));
+        }
+        toString() {
+            return `<Point ${this.is0() ? 'ZERO' : this.toHex()}>`;
         }
     }
+    // base / generator point
     Point.BASE = new Point(CURVE.Gx, CURVE.Gy, Fp.ONE);
-    Point.ZERO = new Point(Fp.ZERO, Fp.ONE, Fp.ZERO);
-    const _bits = CURVE.nBitLength;
-    const wnaf = (0, curve_js_1.wNAF)(Point, CURVE.endo ? Math.ceil(_bits / 2) : _bits);
-    // Validate if generator point is on curve
-    return {
-        CURVE,
-        ProjectivePoint: Point,
-        normPrivateKeyToScalar,
-        weierstrassEquation,
-        isWithinCurveOrder,
-    };
+    // zero / infinity / identity point
+    Point.ZERO = new Point(Fp.ZERO, Fp.ONE, Fp.ZERO); // 0, 1, 0
+    // fields
+    Point.Fp = Fp;
+    Point.Fn = Fn;
+    const bits = Fn.BITS;
+    const wnaf = new curve_ts_1.wNAF(Point, curveOpts.endo ? Math.ceil(bits / 2) : bits);
+    return Point;
 }
-function validateOpts(curve) {
-    const opts = (0, curve_js_1.validateBasic)(curve);
-    ut.validateObject(opts, {
-        hash: 'hash',
-        hmac: 'function',
-        randomBytes: 'function',
-    }, {
-        bits2int: 'function',
-        bits2int_modN: 'function',
-        lowS: 'boolean',
-    });
-    return Object.freeze({ lowS: true, ...opts });
+// _legacyWeierstrass
+// TODO: remove
+/** @deprecated use `weierstrass` in newer releases */
+function weierstrassPoints(c) {
+    const { CURVE, curveOpts } = _weierstrass_legacy_opts_to_new(c);
+    const Point = weierstrassN(CURVE, curveOpts);
+    return _weierstrass_new_output_to_legacy(c, Point);
 }
-/**
- * Creates short weierstrass curve and ECDSA signature methods for it.
- * @example
- * import { Field } from '@noble/curves/abstract/modular';
- * // Before that, define BigInt-s: a, b, p, n, Gx, Gy
- * const curve = weierstrass({ a, b, Fp: Field(p), n, Gx, Gy, h: 1n })
- */
-function weierstrass(curveDef) {
-    const CURVE = validateOpts(curveDef);
-    const { Fp, n: CURVE_ORDER } = CURVE;
-    const compressedLen = Fp.BYTES + 1; // e.g. 33 for 32
-    const uncompressedLen = 2 * Fp.BYTES + 1; // e.g. 65 for 32
-    function modN(a) {
-        return (0, modular_js_1.mod)(a, CURVE_ORDER);
-    }
-    function invN(a) {
-        return (0, modular_js_1.invert)(a, CURVE_ORDER);
-    }
-    const { ProjectivePoint: Point, normPrivateKeyToScalar, weierstrassEquation, isWithinCurveOrder, } = weierstrassPoints({
-        ...CURVE,
-        toBytes(_c, point, isCompressed) {
-            const a = point.toAffine();
-            const x = Fp.toBytes(a.x);
-            const cat = ut.concatBytes;
-            (0, utils_js_1.abool)('isCompressed', isCompressed);
-            if (isCompressed) {
-                return cat(Uint8Array.from([point.hasEvenY() ? 0x02 : 0x03]), x);
-            }
-            else {
-                return cat(Uint8Array.from([0x04]), x, Fp.toBytes(a.y));
-            }
-        },
-        fromBytes(bytes) {
-            const len = bytes.length;
-            const head = bytes[0];
-            const tail = bytes.subarray(1);
-            // this.assertValidity() is done inside of fromHex
-            if (len === compressedLen && (head === 0x02 || head === 0x03)) {
-                const x = ut.bytesToNumberBE(tail);
-                if (!ut.inRange(x, _1n, Fp.ORDER))
-                    throw new Error('Point is not on curve');
-                const y2 = weierstrassEquation(x); // y² = x³ + ax + b
-                let y;
-                try {
-                    y = Fp.sqrt(y2); // y = y² ^ (p+1)/4
-                }
-                catch (sqrtError) {
-                    const suffix = sqrtError instanceof Error ? ': ' + sqrtError.message : '';
-                    throw new Error('Point is not on curve' + suffix);
-                }
-                const isYOdd = (y & _1n) === _1n;
-                // ECDSA
-                const isHeadOdd = (head & 1) === 1;
-                if (isHeadOdd !== isYOdd)
-                    y = Fp.neg(y);
-                return { x, y };
-            }
-            else if (len === uncompressedLen && head === 0x04) {
-                const x = Fp.fromBytes(tail.subarray(0, Fp.BYTES));
-                const y = Fp.fromBytes(tail.subarray(Fp.BYTES, 2 * Fp.BYTES));
-                return { x, y };
-            }
-            else {
-                const cl = compressedLen;
-                const ul = uncompressedLen;
-                throw new Error('invalid Point, expected length of ' + cl + ', or uncompressed ' + ul + ', got ' + len);
-            }
-        },
-    });
-    const numToNByteStr = (num) => ut.bytesToHex(ut.numberToBytesBE(num, CURVE.nByteLength));
-    function isBiggerThanHalfOrder(number) {
-        const HALF = CURVE_ORDER >> _1n;
-        return number > HALF;
-    }
-    function normalizeS(s) {
-        return isBiggerThanHalfOrder(s) ? modN(-s) : s;
-    }
-    // slice bytes num
-    const slcNum = (b, from, to) => ut.bytesToNumberBE(b.slice(from, to));
-    /**
-     * ECDSA signature with its (r, s) properties. Supports DER & compact representations.
-     */
-    class Signature {
-        constructor(r, s, recovery) {
-            this.r = r;
-            this.s = s;
-            this.recovery = recovery;
-            this.assertValidity();
-        }
-        // pair (bytes of r, bytes of s)
-        static fromCompact(hex) {
-            const l = CURVE.nByteLength;
-            hex = (0, utils_js_1.ensureBytes)('compactSignature', hex, l * 2);
-            return new Signature(slcNum(hex, 0, l), slcNum(hex, l, 2 * l));
-        }
-        // DER encoded ECDSA signature
-        // https://bitcoin.stackexchange.com/questions/57644/what-are-the-parts-of-a-bitcoin-transaction-input-script
-        static fromDER(hex) {
-            const { r, s } = exports.DER.toSig((0, utils_js_1.ensureBytes)('DER', hex));
-            return new Signature(r, s);
-        }
-        assertValidity() {
-            ut.aInRange('r', this.r, _1n, CURVE_ORDER); // r in [1..N]
-            ut.aInRange('s', this.s, _1n, CURVE_ORDER); // s in [1..N]
-        }
-        addRecoveryBit(recovery) {
-            return new Signature(this.r, this.s, recovery);
-        }
-        recoverPublicKey(msgHash) {
-            const { r, s, recovery: rec } = this;
-            const h = bits2int_modN((0, utils_js_1.ensureBytes)('msgHash', msgHash)); // Truncate hash
-            if (rec == null || ![0, 1, 2, 3].includes(rec))
-                throw new Error('recovery id invalid');
-            const radj = rec === 2 || rec === 3 ? r + CURVE.n : r;
-            if (radj >= Fp.ORDER)
-                throw new Error('recovery id 2 or 3 invalid');
-            const prefix = (rec & 1) === 0 ? '02' : '03';
-            const R = Point.fromHex(prefix + numToNByteStr(radj));
-            const ir = invN(radj); // r^-1
-            const u1 = modN(-h * ir); // -hr^-1
-            const u2 = modN(s * ir); // sr^-1
-            const Q = Point.BASE.multiplyAndAddUnsafe(R, u1, u2); // (sr^-1)R-(hr^-1)G = -(hr^-1)G + (sr^-1)
-            if (!Q)
-                throw new Error('point at infinify'); // unsafe is fine: no priv data leaked
-            Q.assertValidity();
-            return Q;
-        }
-        // Signatures should be low-s, to prevent malleability.
-        hasHighS() {
-            return isBiggerThanHalfOrder(this.s);
-        }
-        normalizeS() {
-            return this.hasHighS() ? new Signature(this.r, modN(-this.s), this.recovery) : this;
-        }
-        // DER-encoded
-        toDERRawBytes() {
-            return ut.hexToBytes(this.toDERHex());
-        }
-        toDERHex() {
-            return exports.DER.hexFromSig({ r: this.r, s: this.s });
-        }
-        // padded bytes of r, then padded bytes of s
-        toCompactRawBytes() {
-            return ut.hexToBytes(this.toCompactHex());
-        }
-        toCompactHex() {
-            return numToNByteStr(this.r) + numToNByteStr(this.s);
-        }
-    }
-    const utils = {
-        isValidPrivateKey(privateKey) {
-            try {
-                normPrivateKeyToScalar(privateKey);
-                return true;
-            }
-            catch (error) {
-                return false;
-            }
-        },
-        normPrivateKeyToScalar: normPrivateKeyToScalar,
-        /**
-         * Produces cryptographically secure private key from random of size
-         * (groupLen + ceil(groupLen / 2)) with modulo bias being negligible.
-         */
-        randomPrivateKey: () => {
-            const length = (0, modular_js_1.getMinHashLength)(CURVE.n);
-            return (0, modular_js_1.mapHashToField)(CURVE.randomBytes(length), CURVE.n);
-        },
-        /**
-         * Creates precompute table for an arbitrary EC point. Makes point "cached".
-         * Allows to massively speed-up `point.multiply(scalar)`.
-         * @returns cached point
-         * @example
-         * const fast = utils.precompute(8, ProjectivePoint.fromHex(someonesPubKey));
-         * fast.multiply(privKey); // much faster ECDH now
-         */
-        precompute(windowSize = 8, point = Point.BASE) {
-            point._setWindowSize(windowSize);
-            point.multiply(BigInt(3)); // 3 is arbitrary, just need any number here
-            return point;
-        },
-    };
-    /**
-     * Computes public key for a private key. Checks for validity of the private key.
-     * @param privateKey private key
-     * @param isCompressed whether to return compact (default), or full key
-     * @returns Public key, full when isCompressed=false; short when isCompressed=true
-     */
-    function getPublicKey(privateKey, isCompressed = true) {
-        return Point.fromPrivateKey(privateKey).toRawBytes(isCompressed);
-    }
-    /**
-     * Quick and dirty check for item being public key. Does not validate hex, or being on-curve.
-     */
-    function isProbPub(item) {
-        const arr = ut.isBytes(item);
-        const str = typeof item === 'string';
-        const len = (arr || str) && item.length;
-        if (arr)
-            return len === compressedLen || len === uncompressedLen;
-        if (str)
-            return len === 2 * compressedLen || len === 2 * uncompressedLen;
-        if (item instanceof Point)
-            return true;
-        return false;
-    }
-    /**
-     * ECDH (Elliptic Curve Diffie Hellman).
-     * Computes shared public key from private key and public key.
-     * Checks: 1) private key validity 2) shared key is on-curve.
-     * Does NOT hash the result.
-     * @param privateA private key
-     * @param publicB different public key
-     * @param isCompressed whether to return compact (default), or full key
-     * @returns shared public key
-     */
-    function getSharedSecret(privateA, publicB, isCompressed = true) {
-        if (isProbPub(privateA))
-            throw new Error('first arg must be private key');
-        if (!isProbPub(publicB))
-            throw new Error('second arg must be public key');
-        const b = Point.fromHex(publicB); // check for being on-curve
-        return b.multiply(normPrivateKeyToScalar(privateA)).toRawBytes(isCompressed);
-    }
-    // RFC6979: ensure ECDSA msg is X bytes and < N. RFC suggests optional truncating via bits2octets.
-    // FIPS 186-4 4.6 suggests the leftmost min(nBitLen, outLen) bits, which matches bits2int.
-    // bits2int can produce res>N, we can do mod(res, N) since the bitLen is the same.
-    // int2octets can't be used; pads small msgs with 0: unacceptatble for trunc as per RFC vectors
-    const bits2int = CURVE.bits2int ||
-        function (bytes) {
-            // Our custom check "just in case"
-            if (bytes.length > 8192)
-                throw new Error('input is too large');
-            // For curves with nBitLength % 8 !== 0: bits2octets(bits2octets(m)) !== bits2octets(m)
-            // for some cases, since bytes.length * 8 is not actual bitLength.
-            const num = ut.bytesToNumberBE(bytes); // check for == u8 done here
-            const delta = bytes.length * 8 - CURVE.nBitLength; // truncate to nBitLength leftmost bits
-            return delta > 0 ? num >> BigInt(delta) : num;
-        };
-    const bits2int_modN = CURVE.bits2int_modN ||
-        function (bytes) {
-            return modN(bits2int(bytes)); // can't use bytesToNumberBE here
-        };
-    // NOTE: pads output with zero as per spec
-    const ORDER_MASK = ut.bitMask(CURVE.nBitLength);
-    /**
-     * Converts to bytes. Checks if num in `[0..ORDER_MASK-1]` e.g.: `[0..2^256-1]`.
-     */
-    function int2octets(num) {
-        ut.aInRange('num < 2^' + CURVE.nBitLength, num, _0n, ORDER_MASK);
-        // works with order, can have different size than numToField!
-        return ut.numberToBytesBE(num, CURVE.nByteLength);
-    }
-    // Steps A, D of RFC6979 3.2
-    // Creates RFC6979 seed; converts msg/privKey to numbers.
-    // Used only in sign, not in verify.
-    // NOTE: we cannot assume here that msgHash has same amount of bytes as curve order,
-    // this will be invalid at least for P521. Also it can be bigger for P224 + SHA256
-    function prepSig(msgHash, privateKey, opts = defaultSigOpts) {
-        if (['recovered', 'canonical'].some((k) => k in opts))
-            throw new Error('sign() legacy options not supported');
-        const { hash, randomBytes } = CURVE;
-        let { lowS, prehash, extraEntropy: ent } = opts; // generates low-s sigs by default
-        if (lowS == null)
-            lowS = true; // RFC6979 3.2: we skip step A, because we already provide hash
-        msgHash = (0, utils_js_1.ensureBytes)('msgHash', msgHash);
-        validateSigVerOpts(opts);
-        if (prehash)
-            msgHash = (0, utils_js_1.ensureBytes)('prehashed msgHash', hash(msgHash));
-        // We can't later call bits2octets, since nested bits2int is broken for curves
-        // with nBitLength % 8 !== 0. Because of that, we unwrap it here as int2octets call.
-        // const bits2octets = (bits) => int2octets(bits2int_modN(bits))
-        const h1int = bits2int_modN(msgHash);
-        const d = normPrivateKeyToScalar(privateKey); // validate private key, convert to bigint
-        const seedArgs = [int2octets(d), int2octets(h1int)];
-        // extraEntropy. RFC6979 3.6: additional k' (optional).
-        if (ent != null && ent !== false) {
-            // K = HMAC_K(V || 0x00 || int2octets(x) || bits2octets(h1) || k')
-            const e = ent === true ? randomBytes(Fp.BYTES) : ent; // generate random bytes OR pass as-is
-            seedArgs.push((0, utils_js_1.ensureBytes)('extraEntropy', e)); // check for being bytes
-        }
-        const seed = ut.concatBytes(...seedArgs); // Step D of RFC6979 3.2
-        const m = h1int; // NOTE: no need to call bits2int second time here, it is inside truncateHash!
-        // Converts signature params into point w r/s, checks result for validity.
-        function k2sig(kBytes) {
-            // RFC 6979 Section 3.2, step 3: k = bits2int(T)
-            const k = bits2int(kBytes); // Cannot use fields methods, since it is group element
-            if (!isWithinCurveOrder(k))
-                return; // Important: all mod() calls here must be done over N
-            const ik = invN(k); // k^-1 mod n
-            const q = Point.BASE.multiply(k).toAffine(); // q = Gk
-            const r = modN(q.x); // r = q.x mod n
-            if (r === _0n)
-                return;
-            // Can use scalar blinding b^-1(bm + bdr) where b ∈ [1,q−1] according to
-            // https://tches.iacr.org/index.php/TCHES/article/view/7337/6509. We've decided against it:
-            // a) dependency on CSPRNG b) 15% slowdown c) doesn't really help since bigints are not CT
-            const s = modN(ik * modN(m + r * d)); // Not using blinding here
-            if (s === _0n)
-                return;
-            let recovery = (q.x === r ? 0 : 2) | Number(q.y & _1n); // recovery bit (2 or 3, when q.x > n)
-            let normS = s;
-            if (lowS && isBiggerThanHalfOrder(s)) {
-                normS = normalizeS(s); // if lowS was passed, ensure s is always
-                recovery ^= 1; // // in the bottom half of N
-            }
-            return new Signature(r, normS, recovery); // use normS, not s
-        }
-        return { seed, k2sig };
-    }
-    const defaultSigOpts = { lowS: CURVE.lowS, prehash: false };
-    const defaultVerOpts = { lowS: CURVE.lowS, prehash: false };
-    /**
-     * Signs message hash with a private key.
-     * ```
-     * sign(m, d, k) where
-     *   (x, y) = G × k
-     *   r = x mod n
-     *   s = (m + dr)/k mod n
-     * ```
-     * @param msgHash NOT message. msg needs to be hashed to `msgHash`, or use `prehash`.
-     * @param privKey private key
-     * @param opts lowS for non-malleable sigs. extraEntropy for mixing randomness into k. prehash will hash first arg.
-     * @returns signature with recovery param
-     */
-    function sign(msgHash, privKey, opts = defaultSigOpts) {
-        const { seed, k2sig } = prepSig(msgHash, privKey, opts); // Steps A, D of RFC6979 3.2.
-        const C = CURVE;
-        const drbg = ut.createHmacDrbg(C.hash.outputLen, C.nByteLength, C.hmac);
-        return drbg(seed, k2sig); // Steps B, C, D, E, F, G
-    }
-    // Enable precomputes. Slows down first publicKey computation by 20ms.
-    Point.BASE._setWindowSize(8);
-    // utils.precompute(8, ProjectivePoint.BASE)
-    /**
-     * Verifies a signature against message hash and public key.
-     * Rejects lowS signatures by default: to override,
-     * specify option `{lowS: false}`. Implements section 4.1.4 from https://www.secg.org/sec1-v2.pdf:
-     *
-     * ```
-     * verify(r, s, h, P) where
-     *   U1 = hs^-1 mod n
-     *   U2 = rs^-1 mod n
-     *   R = U1⋅G - U2⋅P
-     *   mod(R.x, n) == r
-     * ```
-     */
-    function verify(signature, msgHash, publicKey, opts = defaultVerOpts) {
-        const sg = signature;
-        msgHash = (0, utils_js_1.ensureBytes)('msgHash', msgHash);
-        publicKey = (0, utils_js_1.ensureBytes)('publicKey', publicKey);
-        const { lowS, prehash, format } = opts;
-        // Verify opts, deduce signature format
-        validateSigVerOpts(opts);
-        if ('strict' in opts)
-            throw new Error('options.strict was renamed to lowS');
-        if (format !== undefined && format !== 'compact' && format !== 'der')
-            throw new Error('format must be compact or der');
-        const isHex = typeof sg === 'string' || ut.isBytes(sg);
-        const isObj = !isHex &&
-            !format &&
-            typeof sg === 'object' &&
-            sg !== null &&
-            typeof sg.r === 'bigint' &&
-            typeof sg.s === 'bigint';
-        if (!isHex && !isObj)
-            throw new Error('invalid signature, expected Uint8Array, hex string or Signature instance');
-        let _sig = undefined;
-        let P;
-        try {
-            if (isObj)
-                _sig = new Signature(sg.r, sg.s);
-            if (isHex) {
-                // Signature can be represented in 2 ways: compact (2*nByteLength) & DER (variable-length).
-                // Since DER can also be 2*nByteLength bytes, we check for it first.
-                try {
-                    if (format !== 'compact')
-                        _sig = Signature.fromDER(sg);
-                }
-                catch (derError) {
-                    if (!(derError instanceof exports.DER.Err))
-                        throw derError;
-                }
-                if (!_sig && format !== 'der')
-                    _sig = Signature.fromCompact(sg);
-            }
-            P = Point.fromHex(publicKey);
-        }
-        catch (error) {
-            return false;
-        }
-        if (!_sig)
-            return false;
-        if (lowS && _sig.hasHighS())
-            return false;
-        if (prehash)
-            msgHash = CURVE.hash(msgHash);
-        const { r, s } = _sig;
-        const h = bits2int_modN(msgHash); // Cannot use fields methods, since it is group element
-        const is = invN(s); // s^-1
-        const u1 = modN(h * is); // u1 = hs^-1 mod n
-        const u2 = modN(r * is); // u2 = rs^-1 mod n
-        const R = Point.BASE.multiplyAndAddUnsafe(P, u1, u2)?.toAffine(); // R = u1⋅G + u2⋅P
-        if (!R)
-            return false;
-        const v = modN(R.x);
-        return v === r;
-    }
-    return {
-        CURVE,
-        getPublicKey,
-        getSharedSecret,
-        sign,
-        verify,
-        ProjectivePoint: Point,
-        Signature,
-        utils,
-    };
+// Points start with byte 0x02 when y is even; otherwise 0x03
+function pprefix(hasEvenY) {
+    return Uint8Array.of(hasEvenY ? 0x02 : 0x03);
 }
 /**
  * Implementation of the Shallue and van de Woestijne method for any weierstrass curve.
@@ -7061,32 +6677,33 @@ function SWUFpSqrtRatio(Fp, Z) {
  * https://www.rfc-editor.org/rfc/rfc9380#section-6.6.2
  */
 function mapToCurveSimpleSWU(Fp, opts) {
-    (0, modular_js_1.validateField)(Fp);
-    if (!Fp.isValid(opts.A) || !Fp.isValid(opts.B) || !Fp.isValid(opts.Z))
+    (0, modular_ts_1.validateField)(Fp);
+    const { A, B, Z } = opts;
+    if (!Fp.isValid(A) || !Fp.isValid(B) || !Fp.isValid(Z))
         throw new Error('mapToCurveSimpleSWU: invalid opts');
-    const sqrtRatio = SWUFpSqrtRatio(Fp, opts.Z);
+    const sqrtRatio = SWUFpSqrtRatio(Fp, Z);
     if (!Fp.isOdd)
-        throw new Error('Fp.isOdd is not implemented!');
+        throw new Error('Field does not have .isOdd()');
     // Input: u, an element of F.
     // Output: (x, y), a point on E.
     return (u) => {
         // prettier-ignore
         let tv1, tv2, tv3, tv4, tv5, tv6, x, y;
         tv1 = Fp.sqr(u); // 1.  tv1 = u^2
-        tv1 = Fp.mul(tv1, opts.Z); // 2.  tv1 = Z * tv1
+        tv1 = Fp.mul(tv1, Z); // 2.  tv1 = Z * tv1
         tv2 = Fp.sqr(tv1); // 3.  tv2 = tv1^2
         tv2 = Fp.add(tv2, tv1); // 4.  tv2 = tv2 + tv1
         tv3 = Fp.add(tv2, Fp.ONE); // 5.  tv3 = tv2 + 1
-        tv3 = Fp.mul(tv3, opts.B); // 6.  tv3 = B * tv3
-        tv4 = Fp.cmov(opts.Z, Fp.neg(tv2), !Fp.eql(tv2, Fp.ZERO)); // 7.  tv4 = CMOV(Z, -tv2, tv2 != 0)
-        tv4 = Fp.mul(tv4, opts.A); // 8.  tv4 = A * tv4
+        tv3 = Fp.mul(tv3, B); // 6.  tv3 = B * tv3
+        tv4 = Fp.cmov(Z, Fp.neg(tv2), !Fp.eql(tv2, Fp.ZERO)); // 7.  tv4 = CMOV(Z, -tv2, tv2 != 0)
+        tv4 = Fp.mul(tv4, A); // 8.  tv4 = A * tv4
         tv2 = Fp.sqr(tv3); // 9.  tv2 = tv3^2
         tv6 = Fp.sqr(tv4); // 10. tv6 = tv4^2
-        tv5 = Fp.mul(tv6, opts.A); // 11. tv5 = A * tv6
+        tv5 = Fp.mul(tv6, A); // 11. tv5 = A * tv6
         tv2 = Fp.add(tv2, tv5); // 12. tv2 = tv2 + tv5
         tv2 = Fp.mul(tv2, tv3); // 13. tv2 = tv2 * tv3
         tv6 = Fp.mul(tv6, tv4); // 14. tv6 = tv6 * tv4
-        tv5 = Fp.mul(tv6, opts.B); // 15. tv5 = B * tv6
+        tv5 = Fp.mul(tv6, B); // 15. tv5 = B * tv6
         tv2 = Fp.add(tv2, tv5); // 16. tv2 = tv2 + tv5
         x = Fp.mul(tv1, tv3); // 17.   x = tv1 * tv3
         const { isValid, value } = sqrtRatio(tv2, tv6); // 18. (is_gx1_square, y1) = sqrt_ratio(tv2, tv6)
@@ -7096,9 +6713,527 @@ function mapToCurveSimpleSWU(Fp, opts) {
         y = Fp.cmov(y, value, isValid); // 22.   y = CMOV(y, y1, is_gx1_square)
         const e1 = Fp.isOdd(u) === Fp.isOdd(y); // 23.  e1 = sgn0(u) == sgn0(y)
         y = Fp.cmov(Fp.neg(y), y, e1); // 24.   y = CMOV(-y, y, e1)
-        x = Fp.div(x, tv4); // 25.   x = x / tv4
+        const tv4_inv = (0, modular_ts_1.FpInvertBatch)(Fp, [tv4], true)[0];
+        x = Fp.mul(x, tv4_inv); // 25.   x = x / tv4
         return { x, y };
     };
+}
+/**
+ * Creates ECDSA for given elliptic curve Point and hash function.
+ */
+function ecdsa(Point, hash, ecdsaOpts = {}) {
+    (0, utils_1.ahash)(hash);
+    (0, utils_ts_1._validateObject)(ecdsaOpts, {}, {
+        hmac: 'function',
+        lowS: 'boolean',
+        randomBytes: 'function',
+        bits2int: 'function',
+        bits2int_modN: 'function',
+    });
+    const randomBytes_ = ecdsaOpts.randomBytes || utils_ts_1.randomBytes;
+    const hmac_ = ecdsaOpts.hmac ||
+        ((key, ...msgs) => (0, hmac_js_1.hmac)(hash, key, (0, utils_ts_1.concatBytes)(...msgs)));
+    const { Fp, Fn } = Point;
+    const { ORDER: CURVE_ORDER, BITS: fnBits } = Fn;
+    const seedLen = (0, modular_ts_1.getMinHashLength)(CURVE_ORDER);
+    const lengths = {
+        secret: Fn.BYTES,
+        public: 1 + Fp.BYTES,
+        publicUncompressed: 1 + 2 * Fp.BYTES,
+        signature: 2 * Fn.BYTES,
+        seed: seedLen,
+    };
+    function isBiggerThanHalfOrder(number) {
+        const HALF = CURVE_ORDER >> _1n;
+        return number > HALF;
+    }
+    function normalizeS(s) {
+        return isBiggerThanHalfOrder(s) ? Fn.neg(s) : s;
+    }
+    function aValidRS(title, num) {
+        if (!Fn.isValidNot0(num))
+            throw new Error(`invalid signature ${title}: out of range 1..CURVE.n`);
+    }
+    /**
+     * ECDSA signature with its (r, s) properties. Supports DER & compact representations.
+     */
+    class Signature {
+        constructor(r, s, recovery) {
+            aValidRS('r', r); // r in [1..N-1]
+            aValidRS('s', s); // s in [1..N-1]
+            this.r = r;
+            this.s = s;
+            if (recovery != null)
+                this.recovery = recovery;
+            Object.freeze(this);
+        }
+        static fromBytes(bytes, format = 'compact') {
+            if (format === 'compact') {
+                const L = Fn.BYTES;
+                (0, utils_ts_1.abytes)(bytes, L * 2);
+                const r = bytes.subarray(0, L);
+                const s = bytes.subarray(L, L * 2);
+                return new Signature(Fn.fromBytes(r), Fn.fromBytes(s));
+            }
+            if (format === 'der') {
+                (0, utils_ts_1.abytes)(bytes);
+                const { r, s } = exports.DER.toSig(bytes);
+                return new Signature(r, s);
+            }
+            throw new Error('invalid format');
+        }
+        static fromHex(hex, format) {
+            return this.fromBytes((0, utils_ts_1.hexToBytes)(hex), format);
+        }
+        addRecoveryBit(recovery) {
+            return new Signature(this.r, this.s, recovery);
+        }
+        // ProjPointType<bigint>
+        recoverPublicKey(msgHash) {
+            const FIELD_ORDER = Fp.ORDER;
+            const { r, s, recovery: rec } = this;
+            if (rec == null || ![0, 1, 2, 3].includes(rec))
+                throw new Error('recovery id invalid');
+            // ECDSA recovery is hard for cofactor > 1 curves.
+            // In sign, `r = q.x mod n`, and here we recover q.x from r.
+            // While recovering q.x >= n, we need to add r+n for cofactor=1 curves.
+            // However, for cofactor>1, r+n may not get q.x:
+            // r+n*i would need to be done instead where i is unknown.
+            // To easily get i, we either need to:
+            // a. increase amount of valid recid values (4, 5...); OR
+            // b. prohibit non-prime-order signatures (recid > 1).
+            const hasCofactor = CURVE_ORDER * _2n < FIELD_ORDER;
+            if (hasCofactor && rec > 1)
+                throw new Error('recovery id is ambiguous for h>1 curve');
+            const radj = rec === 2 || rec === 3 ? r + CURVE_ORDER : r;
+            if (!Fp.isValid(radj))
+                throw new Error('recovery id 2 or 3 invalid');
+            const x = Fp.toBytes(radj);
+            const R = Point.fromHex((0, utils_ts_1.concatBytes)(pprefix((rec & 1) === 0), x));
+            const ir = Fn.inv(radj); // r^-1
+            const h = bits2int_modN((0, utils_ts_1.ensureBytes)('msgHash', msgHash)); // Truncate hash
+            const u1 = Fn.create(-h * ir); // -hr^-1
+            const u2 = Fn.create(s * ir); // sr^-1
+            // (sr^-1)R-(hr^-1)G = -(hr^-1)G + (sr^-1). unsafe is fine: there is no private data.
+            const Q = Point.BASE.multiplyUnsafe(u1).add(R.multiplyUnsafe(u2));
+            if (Q.is0())
+                throw new Error('point at infinify');
+            Q.assertValidity();
+            return Q;
+        }
+        // Signatures should be low-s, to prevent malleability.
+        hasHighS() {
+            return isBiggerThanHalfOrder(this.s);
+        }
+        normalizeS() {
+            return this.hasHighS() ? new Signature(this.r, Fn.neg(this.s), this.recovery) : this;
+        }
+        toBytes(format = 'compact') {
+            if (format === 'compact')
+                return (0, utils_ts_1.concatBytes)(Fn.toBytes(this.r), Fn.toBytes(this.s));
+            if (format === 'der')
+                return (0, utils_ts_1.hexToBytes)(exports.DER.hexFromSig(this));
+            throw new Error('invalid format');
+        }
+        toHex(format) {
+            return (0, utils_ts_1.bytesToHex)(this.toBytes(format));
+        }
+        // TODO: remove
+        assertValidity() { }
+        static fromCompact(hex) {
+            return Signature.fromBytes((0, utils_ts_1.ensureBytes)('sig', hex), 'compact');
+        }
+        static fromDER(hex) {
+            return Signature.fromBytes((0, utils_ts_1.ensureBytes)('sig', hex), 'der');
+        }
+        toDERRawBytes() {
+            return this.toBytes('der');
+        }
+        toDERHex() {
+            return (0, utils_ts_1.bytesToHex)(this.toBytes('der'));
+        }
+        toCompactRawBytes() {
+            return this.toBytes('compact');
+        }
+        toCompactHex() {
+            return (0, utils_ts_1.bytesToHex)(this.toBytes('compact'));
+        }
+    }
+    function isValidSecretKey(privateKey) {
+        try {
+            return !!_normFnElement(Fn, privateKey);
+        }
+        catch (error) {
+            return false;
+        }
+    }
+    function isValidPublicKey(publicKey, isCompressed) {
+        try {
+            const l = publicKey.length;
+            if (isCompressed === true && l !== lengths.public)
+                return false;
+            if (isCompressed === false && l !== lengths.publicUncompressed)
+                return false;
+            return !!Point.fromBytes(publicKey);
+        }
+        catch (error) {
+            return false;
+        }
+    }
+    /**
+     * Produces cryptographically secure secret key from random of size
+     * (groupLen + ceil(groupLen / 2)) with modulo bias being negligible.
+     */
+    function randomSecretKey(seed = randomBytes_(seedLen)) {
+        return (0, modular_ts_1.mapHashToField)(seed, CURVE_ORDER);
+    }
+    const utils = {
+        isValidSecretKey,
+        isValidPublicKey,
+        randomSecretKey,
+        // TODO: remove
+        isValidPrivateKey: isValidSecretKey,
+        randomPrivateKey: randomSecretKey,
+        normPrivateKeyToScalar: (key) => _normFnElement(Fn, key),
+        precompute(windowSize = 8, point = Point.BASE) {
+            return point.precompute(windowSize, false);
+        },
+    };
+    /**
+     * Computes public key for a secret key. Checks for validity of the secret key.
+     * @param isCompressed whether to return compact (default), or full key
+     * @returns Public key, full when isCompressed=false; short when isCompressed=true
+     */
+    function getPublicKey(secretKey, isCompressed = true) {
+        return Point.BASE.multiply(_normFnElement(Fn, secretKey)).toBytes(isCompressed);
+    }
+    /**
+     * Quick and dirty check for item being public key. Does not validate hex, or being on-curve.
+     */
+    function isProbPub(item) {
+        // TODO: remove
+        if (typeof item === 'bigint')
+            return false;
+        // TODO: remove
+        if (item instanceof Point)
+            return true;
+        if (Fn.allowedLengths || lengths.secret === lengths.public)
+            return undefined;
+        const l = (0, utils_ts_1.ensureBytes)('key', item).length;
+        return l === lengths.public || l === lengths.publicUncompressed;
+    }
+    /**
+     * ECDH (Elliptic Curve Diffie Hellman).
+     * Computes shared public key from secret key A and public key B.
+     * Checks: 1) secret key validity 2) shared key is on-curve.
+     * Does NOT hash the result.
+     * @param isCompressed whether to return compact (default), or full key
+     * @returns shared public key
+     */
+    function getSharedSecret(secretKeyA, publicKeyB, isCompressed = true) {
+        if (isProbPub(secretKeyA) === true)
+            throw new Error('first arg must be private key');
+        if (isProbPub(publicKeyB) === false)
+            throw new Error('second arg must be public key');
+        const s = _normFnElement(Fn, secretKeyA);
+        const b = Point.fromHex(publicKeyB); // checks for being on-curve
+        return b.multiply(s).toBytes(isCompressed);
+    }
+    // RFC6979: ensure ECDSA msg is X bytes and < N. RFC suggests optional truncating via bits2octets.
+    // FIPS 186-4 4.6 suggests the leftmost min(nBitLen, outLen) bits, which matches bits2int.
+    // bits2int can produce res>N, we can do mod(res, N) since the bitLen is the same.
+    // int2octets can't be used; pads small msgs with 0: unacceptatble for trunc as per RFC vectors
+    const bits2int = ecdsaOpts.bits2int ||
+        function (bytes) {
+            // Our custom check "just in case", for protection against DoS
+            if (bytes.length > 8192)
+                throw new Error('input is too large');
+            // For curves with nBitLength % 8 !== 0: bits2octets(bits2octets(m)) !== bits2octets(m)
+            // for some cases, since bytes.length * 8 is not actual bitLength.
+            const num = (0, utils_ts_1.bytesToNumberBE)(bytes); // check for == u8 done here
+            const delta = bytes.length * 8 - fnBits; // truncate to nBitLength leftmost bits
+            return delta > 0 ? num >> BigInt(delta) : num;
+        };
+    const bits2int_modN = ecdsaOpts.bits2int_modN ||
+        function (bytes) {
+            return Fn.create(bits2int(bytes)); // can't use bytesToNumberBE here
+        };
+    // NOTE: pads output with zero as per spec
+    const ORDER_MASK = (0, utils_ts_1.bitMask)(fnBits);
+    /**
+     * Converts to bytes. Checks if num in `[0..ORDER_MASK-1]` e.g.: `[0..2^256-1]`.
+     */
+    function int2octets(num) {
+        // IMPORTANT: the check ensures working for case `Fn.BYTES != Fn.BITS * 8`
+        (0, utils_ts_1.aInRange)('num < 2^' + fnBits, num, _0n, ORDER_MASK);
+        return Fn.toBytes(num);
+    }
+    // Steps A, D of RFC6979 3.2
+    // Creates RFC6979 seed; converts msg/privKey to numbers.
+    // Used only in sign, not in verify.
+    // NOTE: we cannot assume here that msgHash has same amount of bytes as curve order,
+    // this will be invalid at least for P521. Also it can be bigger for P224 + SHA256
+    function prepSig(msgHash, privateKey, opts = defaultSigOpts) {
+        if (['recovered', 'canonical'].some((k) => k in opts))
+            throw new Error('sign() legacy options not supported');
+        let { lowS, prehash, extraEntropy: ent } = opts; // generates low-s sigs by default
+        if (lowS == null)
+            lowS = true; // RFC6979 3.2: we skip step A, because we already provide hash
+        msgHash = (0, utils_ts_1.ensureBytes)('msgHash', msgHash);
+        validateSigVerOpts(opts);
+        if (prehash)
+            msgHash = (0, utils_ts_1.ensureBytes)('prehashed msgHash', hash(msgHash));
+        // We can't later call bits2octets, since nested bits2int is broken for curves
+        // with fnBits % 8 !== 0. Because of that, we unwrap it here as int2octets call.
+        // const bits2octets = (bits) => int2octets(bits2int_modN(bits))
+        const h1int = bits2int_modN(msgHash);
+        const d = _normFnElement(Fn, privateKey); // validate secret key, convert to bigint
+        const seedArgs = [int2octets(d), int2octets(h1int)];
+        // extraEntropy. RFC6979 3.6: additional k' (optional).
+        if (ent != null && ent !== false) {
+            // K = HMAC_K(V || 0x00 || int2octets(x) || bits2octets(h1) || k')
+            const e = ent === true ? randomBytes_(lengths.secret) : ent; // gen random bytes OR pass as-is
+            seedArgs.push((0, utils_ts_1.ensureBytes)('extraEntropy', e)); // check for being bytes
+        }
+        const seed = (0, utils_ts_1.concatBytes)(...seedArgs); // Step D of RFC6979 3.2
+        const m = h1int; // NOTE: no need to call bits2int second time here, it is inside truncateHash!
+        // Converts signature params into point w r/s, checks result for validity.
+        // To transform k => Signature:
+        // q = k⋅G
+        // r = q.x mod n
+        // s = k^-1(m + rd) mod n
+        // Can use scalar blinding b^-1(bm + bdr) where b ∈ [1,q−1] according to
+        // https://tches.iacr.org/index.php/TCHES/article/view/7337/6509. We've decided against it:
+        // a) dependency on CSPRNG b) 15% slowdown c) doesn't really help since bigints are not CT
+        function k2sig(kBytes) {
+            // RFC 6979 Section 3.2, step 3: k = bits2int(T)
+            // Important: all mod() calls here must be done over N
+            const k = bits2int(kBytes); // Cannot use fields methods, since it is group element
+            if (!Fn.isValidNot0(k))
+                return; // Valid scalars (including k) must be in 1..N-1
+            const ik = Fn.inv(k); // k^-1 mod n
+            const q = Point.BASE.multiply(k).toAffine(); // q = k⋅G
+            const r = Fn.create(q.x); // r = q.x mod n
+            if (r === _0n)
+                return;
+            const s = Fn.create(ik * Fn.create(m + r * d)); // Not using blinding here, see comment above
+            if (s === _0n)
+                return;
+            let recovery = (q.x === r ? 0 : 2) | Number(q.y & _1n); // recovery bit (2 or 3, when q.x > n)
+            let normS = s;
+            if (lowS && isBiggerThanHalfOrder(s)) {
+                normS = normalizeS(s); // if lowS was passed, ensure s is always
+                recovery ^= 1; // // in the bottom half of N
+            }
+            return new Signature(r, normS, recovery); // use normS, not s
+        }
+        return { seed, k2sig };
+    }
+    const defaultSigOpts = { lowS: ecdsaOpts.lowS, prehash: false };
+    const defaultVerOpts = { lowS: ecdsaOpts.lowS, prehash: false };
+    /**
+     * Signs message hash with a secret key.
+     * ```
+     * sign(m, d, k) where
+     *   (x, y) = G × k
+     *   r = x mod n
+     *   s = (m + dr)/k mod n
+     * ```
+     */
+    function sign(msgHash, secretKey, opts = defaultSigOpts) {
+        const { seed, k2sig } = prepSig(msgHash, secretKey, opts); // Steps A, D of RFC6979 3.2.
+        const drbg = (0, utils_ts_1.createHmacDrbg)(hash.outputLen, Fn.BYTES, hmac_);
+        return drbg(seed, k2sig); // Steps B, C, D, E, F, G
+    }
+    // Enable precomputes. Slows down first publicKey computation by 20ms.
+    Point.BASE.precompute(8);
+    /**
+     * Verifies a signature against message hash and public key.
+     * Rejects lowS signatures by default: to override,
+     * specify option `{lowS: false}`. Implements section 4.1.4 from https://www.secg.org/sec1-v2.pdf:
+     *
+     * ```
+     * verify(r, s, h, P) where
+     *   U1 = hs^-1 mod n
+     *   U2 = rs^-1 mod n
+     *   R = U1⋅G - U2⋅P
+     *   mod(R.x, n) == r
+     * ```
+     */
+    function verify(signature, msgHash, publicKey, opts = defaultVerOpts) {
+        const sg = signature;
+        msgHash = (0, utils_ts_1.ensureBytes)('msgHash', msgHash);
+        publicKey = (0, utils_ts_1.ensureBytes)('publicKey', publicKey);
+        // Verify opts
+        validateSigVerOpts(opts);
+        const { lowS, prehash, format } = opts;
+        // TODO: remove
+        if ('strict' in opts)
+            throw new Error('options.strict was renamed to lowS');
+        let _sig = undefined;
+        let P;
+        if (format === undefined) {
+            // Try to deduce format
+            const isHex = typeof sg === 'string' || (0, utils_ts_1.isBytes)(sg);
+            const isObj = !isHex &&
+                sg !== null &&
+                typeof sg === 'object' &&
+                typeof sg.r === 'bigint' &&
+                typeof sg.s === 'bigint';
+            if (!isHex && !isObj)
+                throw new Error('invalid signature, expected Uint8Array, hex string or Signature instance');
+            if (isObj) {
+                _sig = new Signature(sg.r, sg.s);
+            }
+            else if (isHex) {
+                // TODO: remove this malleable check
+                // Signature can be represented in 2 ways: compact (2*Fn.BYTES) & DER (variable-length).
+                // Since DER can also be 2*Fn.BYTES bytes, we check for it first.
+                try {
+                    _sig = Signature.fromDER(sg);
+                }
+                catch (derError) {
+                    if (!(derError instanceof exports.DER.Err))
+                        throw derError;
+                }
+                if (!_sig) {
+                    try {
+                        _sig = Signature.fromCompact(sg);
+                    }
+                    catch (error) {
+                        return false;
+                    }
+                }
+            }
+        }
+        else {
+            if (format === 'compact' || format === 'der') {
+                if (typeof sg !== 'string' && !(0, utils_ts_1.isBytes)(sg))
+                    throw new Error('"der" / "compact" format expects Uint8Array signature');
+                _sig = Signature.fromBytes((0, utils_ts_1.ensureBytes)('sig', sg), format);
+            }
+            else if (format === 'js') {
+                if (!(sg instanceof Signature))
+                    throw new Error('"js" format expects Signature instance');
+                _sig = sg;
+            }
+            else {
+                throw new Error('format must be "compact", "der" or "js"');
+            }
+        }
+        if (!_sig)
+            return false;
+        try {
+            P = Point.fromHex(publicKey);
+            if (lowS && _sig.hasHighS())
+                return false;
+            // todo: optional.hash => hash
+            if (prehash)
+                msgHash = hash(msgHash);
+            const { r, s } = _sig;
+            const h = bits2int_modN(msgHash); // Cannot use fields methods, since it is group element
+            const is = Fn.inv(s); // s^-1
+            const u1 = Fn.create(h * is); // u1 = hs^-1 mod n
+            const u2 = Fn.create(r * is); // u2 = rs^-1 mod n
+            const R = Point.BASE.multiplyUnsafe(u1).add(P.multiplyUnsafe(u2));
+            if (R.is0())
+                return false;
+            const v = Fn.create(R.x); // v = r.x mod n
+            return v === r;
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    function keygen(seed) {
+        const secretKey = utils.randomSecretKey(seed);
+        return { secretKey, publicKey: getPublicKey(secretKey) };
+    }
+    return Object.freeze({
+        keygen,
+        getPublicKey,
+        sign,
+        verify,
+        getSharedSecret,
+        utils,
+        Point,
+        Signature,
+        info: { type: 'weierstrass', lengths, publicKeyHasPrefix: true },
+    });
+}
+// TODO: remove
+function _weierstrass_legacy_opts_to_new(c) {
+    const CURVE = {
+        a: c.a,
+        b: c.b,
+        p: c.Fp.ORDER,
+        n: c.n,
+        h: c.h,
+        Gx: c.Gx,
+        Gy: c.Gy,
+    };
+    const Fp = c.Fp;
+    let allowedLengths = c.allowedPrivateKeyLengths
+        ? Array.from(new Set(c.allowedPrivateKeyLengths.map((l) => Math.ceil(l / 2))))
+        : undefined;
+    const Fn = (0, modular_ts_1.Field)(CURVE.n, {
+        BITS: c.nBitLength,
+        allowedLengths: allowedLengths,
+        modOnDecode: c.wrapPrivateKey,
+    });
+    const curveOpts = {
+        Fp,
+        Fn,
+        allowInfinityPoint: c.allowInfinityPoint,
+        endo: c.endo,
+        isTorsionFree: c.isTorsionFree,
+        clearCofactor: c.clearCofactor,
+        fromBytes: c.fromBytes,
+        toBytes: c.toBytes,
+    };
+    return { CURVE, curveOpts };
+}
+function _ecdsa_legacy_opts_to_new(c) {
+    const { CURVE, curveOpts } = _weierstrass_legacy_opts_to_new(c);
+    const ecdsaOpts = {
+        hmac: c.hmac,
+        randomBytes: c.randomBytes,
+        lowS: c.lowS,
+        bits2int: c.bits2int,
+        bits2int_modN: c.bits2int_modN,
+    };
+    return { CURVE, curveOpts, hash: c.hash, ecdsaOpts };
+}
+// TODO: remove
+function _weierstrass_new_output_to_legacy(c, Point) {
+    const { Fp, Fn } = Point;
+    // TODO: remove
+    function isWithinCurveOrder(num) {
+        return (0, utils_ts_1.inRange)(num, _1n, Fn.ORDER);
+    }
+    const weierstrassEquation = _legacyHelperEquat(Fp, c.a, c.b);
+    return Object.assign({}, {
+        CURVE: c,
+        Point: Point,
+        ProjectivePoint: Point,
+        normPrivateKeyToScalar: (key) => _normFnElement(Fn, key),
+        weierstrassEquation,
+        isWithinCurveOrder,
+    });
+}
+// TODO: remove
+function _ecdsa_new_output_to_legacy(c, ecdsa) {
+    return Object.assign({}, ecdsa, {
+        ProjectivePoint: ecdsa.Point,
+        CURVE: c,
+    });
+}
+// _ecdsa_legacy
+function weierstrass(c) {
+    const { CURVE, curveOpts, hash, ecdsaOpts } = _ecdsa_legacy_opts_to_new(c);
+    const Point = weierstrassN(CURVE, curveOpts);
+    const signs = ecdsa(Point, hash, ecdsaOpts);
+    return _ecdsa_new_output_to_legacy(c, signs);
 }
 //# sourceMappingURL=weierstrass.js.map
 
@@ -7110,7 +7245,7 @@ function mapToCurveSimpleSWU(Fp, opts) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.hash_to_ristretto255 = exports.hashToRistretto255 = exports.RistrettoPoint = exports.encodeToCurve = exports.hashToCurve = exports.edwardsToMontgomery = exports.x25519 = exports.ed25519ph = exports.ed25519ctx = exports.ed25519 = exports.ED25519_TORSION_SUBGROUP = void 0;
+exports.ED25519_TORSION_SUBGROUP = exports.hash_to_ristretto255 = exports.hashToRistretto255 = exports.encodeToCurve = exports.hashToCurve = exports.ristretto255_hasher = exports.ristretto255 = exports.RistrettoPoint = exports.ed25519_hasher = exports.edwardsToMontgomery = exports.x25519 = exports.ed25519ph = exports.ed25519ctx = exports.ed25519 = void 0;
 exports.edwardsToMontgomeryPub = edwardsToMontgomeryPub;
 exports.edwardsToMontgomeryPriv = edwardsToMontgomeryPriv;
 /**
@@ -7121,37 +7256,47 @@ exports.edwardsToMontgomeryPriv = edwardsToMontgomeryPriv;
  * @module
  */
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const sha512_1 = __nccwpck_require__(57507);
-const utils_1 = __nccwpck_require__(4248);
-const curve_js_1 = __nccwpck_require__(78015);
-const edwards_js_1 = __nccwpck_require__(88416);
-const hash_to_curve_js_1 = __nccwpck_require__(32660);
-const modular_js_1 = __nccwpck_require__(49542);
-const montgomery_js_1 = __nccwpck_require__(91433);
-const utils_js_1 = __nccwpck_require__(43901);
-const ED25519_P = BigInt('57896044618658097711785492504343953926634992332820282019728792003956564819949');
-// √(-1) aka √(a) aka 2^((p-1)/4)
-const ED25519_SQRT_M1 = /* @__PURE__ */ BigInt('19681161376707505956807079304988542015446066515923890162744021073123829784752');
+const sha2_js_1 = __nccwpck_require__(7645);
+const utils_js_1 = __nccwpck_require__(4248);
+const curve_ts_1 = __nccwpck_require__(78015);
+const edwards_ts_1 = __nccwpck_require__(88416);
+const hash_to_curve_ts_1 = __nccwpck_require__(32660);
+const modular_ts_1 = __nccwpck_require__(49542);
+const montgomery_ts_1 = __nccwpck_require__(91433);
+const utils_ts_1 = __nccwpck_require__(28816);
 // prettier-ignore
 const _0n = BigInt(0), _1n = BigInt(1), _2n = BigInt(2), _3n = BigInt(3);
 // prettier-ignore
 const _5n = BigInt(5), _8n = BigInt(8);
+// P = 2n**255n - 19n
+// N = 2n**252n + 27742317777372353535851937790883648493n
+// a = Fp.create(BigInt(-1))
+// d = -121665/121666 a.k.a. Fp.neg(121665 * Fp.inv(121666))
+const ed25519_CURVE = {
+    p: BigInt('0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed'),
+    n: BigInt('0x1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed'),
+    h: _8n,
+    a: BigInt('0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffec'),
+    d: BigInt('0x52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3'),
+    Gx: BigInt('0x216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51a'),
+    Gy: BigInt('0x6666666666666666666666666666666666666666666666666666666666666658'),
+};
 function ed25519_pow_2_252_3(x) {
     // prettier-ignore
     const _10n = BigInt(10), _20n = BigInt(20), _40n = BigInt(40), _80n = BigInt(80);
-    const P = ED25519_P;
+    const P = ed25519_CURVE.p;
     const x2 = (x * x) % P;
     const b2 = (x2 * x) % P; // x^3, 11
-    const b4 = ((0, modular_js_1.pow2)(b2, _2n, P) * b2) % P; // x^15, 1111
-    const b5 = ((0, modular_js_1.pow2)(b4, _1n, P) * x) % P; // x^31
-    const b10 = ((0, modular_js_1.pow2)(b5, _5n, P) * b5) % P;
-    const b20 = ((0, modular_js_1.pow2)(b10, _10n, P) * b10) % P;
-    const b40 = ((0, modular_js_1.pow2)(b20, _20n, P) * b20) % P;
-    const b80 = ((0, modular_js_1.pow2)(b40, _40n, P) * b40) % P;
-    const b160 = ((0, modular_js_1.pow2)(b80, _80n, P) * b80) % P;
-    const b240 = ((0, modular_js_1.pow2)(b160, _80n, P) * b80) % P;
-    const b250 = ((0, modular_js_1.pow2)(b240, _10n, P) * b10) % P;
-    const pow_p_5_8 = ((0, modular_js_1.pow2)(b250, _2n, P) * x) % P;
+    const b4 = ((0, modular_ts_1.pow2)(b2, _2n, P) * b2) % P; // x^15, 1111
+    const b5 = ((0, modular_ts_1.pow2)(b4, _1n, P) * x) % P; // x^31
+    const b10 = ((0, modular_ts_1.pow2)(b5, _5n, P) * b5) % P;
+    const b20 = ((0, modular_ts_1.pow2)(b10, _10n, P) * b10) % P;
+    const b40 = ((0, modular_ts_1.pow2)(b20, _20n, P) * b20) % P;
+    const b80 = ((0, modular_ts_1.pow2)(b40, _40n, P) * b40) % P;
+    const b160 = ((0, modular_ts_1.pow2)(b80, _80n, P) * b80) % P;
+    const b240 = ((0, modular_ts_1.pow2)(b160, _80n, P) * b80) % P;
+    const b250 = ((0, modular_ts_1.pow2)(b240, _10n, P) * b10) % P;
+    const pow_p_5_8 = ((0, modular_ts_1.pow2)(b250, _2n, P) * x) % P;
     // ^ To pow to (p+3)/8, multiply it by x.
     return { pow_p_5_8, b2 };
 }
@@ -7165,58 +7310,37 @@ function adjustScalarBytes(bytes) {
     bytes[31] |= 64; // 0b0100_0000
     return bytes;
 }
+// √(-1) aka √(a) aka 2^((p-1)/4)
+// Fp.sqrt(Fp.neg(1))
+const ED25519_SQRT_M1 = /* @__PURE__ */ BigInt('19681161376707505956807079304988542015446066515923890162744021073123829784752');
 // sqrt(u/v)
 function uvRatio(u, v) {
-    const P = ED25519_P;
-    const v3 = (0, modular_js_1.mod)(v * v * v, P); // v³
-    const v7 = (0, modular_js_1.mod)(v3 * v3 * v, P); // v⁷
+    const P = ed25519_CURVE.p;
+    const v3 = (0, modular_ts_1.mod)(v * v * v, P); // v³
+    const v7 = (0, modular_ts_1.mod)(v3 * v3 * v, P); // v⁷
     // (p+3)/8 and (p-5)/8
     const pow = ed25519_pow_2_252_3(u * v7).pow_p_5_8;
-    let x = (0, modular_js_1.mod)(u * v3 * pow, P); // (uv³)(uv⁷)^(p-5)/8
-    const vx2 = (0, modular_js_1.mod)(v * x * x, P); // vx²
+    let x = (0, modular_ts_1.mod)(u * v3 * pow, P); // (uv³)(uv⁷)^(p-5)/8
+    const vx2 = (0, modular_ts_1.mod)(v * x * x, P); // vx²
     const root1 = x; // First root candidate
-    const root2 = (0, modular_js_1.mod)(x * ED25519_SQRT_M1, P); // Second root candidate
+    const root2 = (0, modular_ts_1.mod)(x * ED25519_SQRT_M1, P); // Second root candidate
     const useRoot1 = vx2 === u; // If vx² = u (mod p), x is a square root
-    const useRoot2 = vx2 === (0, modular_js_1.mod)(-u, P); // If vx² = -u, set x <-- x * 2^((p-1)/4)
-    const noRoot = vx2 === (0, modular_js_1.mod)(-u * ED25519_SQRT_M1, P); // There is no valid root, vx² = -u√(-1)
+    const useRoot2 = vx2 === (0, modular_ts_1.mod)(-u, P); // If vx² = -u, set x <-- x * 2^((p-1)/4)
+    const noRoot = vx2 === (0, modular_ts_1.mod)(-u * ED25519_SQRT_M1, P); // There is no valid root, vx² = -u√(-1)
     if (useRoot1)
         x = root1;
     if (useRoot2 || noRoot)
         x = root2; // We return root2 anyway, for const-time
-    if ((0, modular_js_1.isNegativeLE)(x, P))
-        x = (0, modular_js_1.mod)(-x, P);
+    if ((0, modular_ts_1.isNegativeLE)(x, P))
+        x = (0, modular_ts_1.mod)(-x, P);
     return { isValid: useRoot1 || useRoot2, value: x };
 }
-// Just in case
-exports.ED25519_TORSION_SUBGROUP = [
-    '0100000000000000000000000000000000000000000000000000000000000000',
-    'c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a',
-    '0000000000000000000000000000000000000000000000000000000000000080',
-    '26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05',
-    'ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f',
-    '26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85',
-    '0000000000000000000000000000000000000000000000000000000000000000',
-    'c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa',
-];
-const Fp = /* @__PURE__ */ (() => (0, modular_js_1.Field)(ED25519_P, undefined, true))();
+const Fp = /* @__PURE__ */ (() => (0, modular_ts_1.Field)(ed25519_CURVE.p, { isLE: true }))();
+const Fn = /* @__PURE__ */ (() => (0, modular_ts_1.Field)(ed25519_CURVE.n, { isLE: true }))();
 const ed25519Defaults = /* @__PURE__ */ (() => ({
-    // Param: a
-    a: BigInt(-1), // Fp.create(-1) is proper; our way still works and is faster
-    // d is equal to -121665/121666 over finite field.
-    // Negative number is P - number, and division is invert(number, P)
-    d: BigInt('37095705934669439343138083508754565189542113879843219016388785533085940283555'),
-    // Finite field 𝔽p over which we'll do calculations; 2n**255n - 19n
+    ...ed25519_CURVE,
     Fp,
-    // Subgroup order: how many points curve has
-    // 2n**252n + 27742317777372353535851937790883648493n;
-    n: BigInt('7237005577332262213973186563042994240857116359379907606001950938285454250989'),
-    // Cofactor
-    h: _8n,
-    // Base point (x, y) aka generator point
-    Gx: BigInt('15112221349535400772501151409588531511454012693041857206046113283949847762202'),
-    Gy: BigInt('46316835694926478169428394003475163141307993866256225615783033603165251855960'),
-    hash: sha512_1.sha512,
-    randomBytes: utils_1.randomBytes,
+    hash: sha2_js_1.sha512,
     adjustScalarBytes,
     // dom2
     // Ratio of u to v. Allows us to combine inversion and square root. Uses algo from RFC8032 5.1.3.
@@ -7227,26 +7351,27 @@ const ed25519Defaults = /* @__PURE__ */ (() => ({
  * ed25519 curve with EdDSA signatures.
  * @example
  * import { ed25519 } from '@noble/curves/ed25519';
- * const priv = ed25519.utils.randomPrivateKey();
- * const pub = ed25519.getPublicKey(priv);
+ * const { secretKey, publicKey } = ed25519.keygen();
  * const msg = new TextEncoder().encode('hello');
  * const sig = ed25519.sign(msg, priv);
  * ed25519.verify(sig, msg, pub); // Default mode: follows ZIP215
  * ed25519.verify(sig, msg, pub, { zip215: false }); // RFC8032 / FIPS 186-5
  */
-exports.ed25519 = (() => (0, edwards_js_1.twistedEdwards)(ed25519Defaults))();
+exports.ed25519 = (() => (0, edwards_ts_1.twistedEdwards)(ed25519Defaults))();
 function ed25519_domain(data, ctx, phflag) {
     if (ctx.length > 255)
         throw new Error('Context is too big');
-    return (0, utils_1.concatBytes)((0, utils_1.utf8ToBytes)('SigEd25519 no Ed25519 collisions'), new Uint8Array([phflag ? 1 : 0, ctx.length]), ctx, data);
+    return (0, utils_js_1.concatBytes)((0, utils_js_1.utf8ToBytes)('SigEd25519 no Ed25519 collisions'), new Uint8Array([phflag ? 1 : 0, ctx.length]), ctx, data);
 }
-exports.ed25519ctx = (() => (0, edwards_js_1.twistedEdwards)({
+/** Context of ed25519. Uses context for domain separation. */
+exports.ed25519ctx = (() => (0, edwards_ts_1.twistedEdwards)({
     ...ed25519Defaults,
     domain: ed25519_domain,
 }))();
-exports.ed25519ph = (() => (0, edwards_js_1.twistedEdwards)(Object.assign({}, ed25519Defaults, {
+/** Prehashed version of ed25519. Accepts already-hashed messages in sign() and verify(). */
+exports.ed25519ph = (() => (0, edwards_ts_1.twistedEdwards)(Object.assign({}, ed25519Defaults, {
     domain: ed25519_domain,
-    prehash: sha512_1.sha512,
+    prehash: sha2_js_1.sha512,
 })))();
 /**
  * ECDH using curve25519 aka x25519.
@@ -7256,48 +7381,30 @@ exports.ed25519ph = (() => (0, edwards_js_1.twistedEdwards)(Object.assign({}, ed
  * const pub = 'e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c';
  * x25519.getSharedSecret(priv, pub) === x25519.scalarMult(priv, pub); // aliases
  * x25519.getPublicKey(priv) === x25519.scalarMultBase(priv);
- * x25519.getPublicKey(x25519.utils.randomPrivateKey());
+ * x25519.getPublicKey(x25519.utils.randomSecretKey());
  */
-exports.x25519 = (() => (0, montgomery_js_1.montgomery)({
-    P: ED25519_P,
-    a: BigInt(486662),
-    montgomeryBits: 255, // n is 253 bits
-    nByteLength: 32,
-    Gu: BigInt(9),
-    powPminus2: (x) => {
-        const P = ED25519_P;
-        // x^(p-2) aka x^(2^255-21)
-        const { pow_p_5_8, b2 } = ed25519_pow_2_252_3(x);
-        return (0, modular_js_1.mod)((0, modular_js_1.pow2)(pow_p_5_8, _3n, P) * b2, P);
-    },
-    adjustScalarBytes,
-    randomBytes: utils_1.randomBytes,
-}))();
-/**
- * Converts ed25519 public key to x25519 public key. Uses formula:
- * * `(u, v) = ((1+y)/(1-y), sqrt(-486664)*u/x)`
- * * `(x, y) = (sqrt(-486664)*u/v, (u-1)/(u+1))`
- * @example
- *   const someonesPub = ed25519.getPublicKey(ed25519.utils.randomPrivateKey());
- *   const aPriv = x25519.utils.randomPrivateKey();
- *   x25519.getSharedSecret(aPriv, edwardsToMontgomeryPub(someonesPub))
- */
+exports.x25519 = (() => {
+    const P = ed25519_CURVE.p;
+    return (0, montgomery_ts_1.montgomery)({
+        P,
+        type: 'x25519',
+        powPminus2: (x) => {
+            // x^(p-2) aka x^(2^255-21)
+            const { pow_p_5_8, b2 } = ed25519_pow_2_252_3(x);
+            return (0, modular_ts_1.mod)((0, modular_ts_1.pow2)(pow_p_5_8, _3n, P) * b2, P);
+        },
+        adjustScalarBytes,
+    });
+})();
+/** @deprecated use `ed25519.utils.toMontgomery` */
 function edwardsToMontgomeryPub(edwardsPub) {
-    const { y } = exports.ed25519.ExtendedPoint.fromHex(edwardsPub);
-    const _1n = BigInt(1);
-    return Fp.toBytes(Fp.create((_1n + y) * Fp.inv(_1n - y)));
+    return exports.ed25519.utils.toMontgomery((0, utils_ts_1.ensureBytes)('pub', edwardsPub));
 }
-exports.edwardsToMontgomery = edwardsToMontgomeryPub; // deprecated
-/**
- * Converts ed25519 secret key to x25519 secret key.
- * @example
- *   const someonesPub = x25519.getPublicKey(x25519.utils.randomPrivateKey());
- *   const aPriv = ed25519.utils.randomPrivateKey();
- *   x25519.getSharedSecret(edwardsToMontgomeryPriv(aPriv), someonesPub)
- */
+/** @deprecated use `ed25519.utils.toMontgomery` */
+exports.edwardsToMontgomery = edwardsToMontgomeryPub;
+/** @deprecated use `ed25519.utils.toMontgomeryPriv` */
 function edwardsToMontgomeryPriv(edwardsPriv) {
-    const hashed = ed25519Defaults.hash(edwardsPriv.subarray(0, 32));
-    return ed25519Defaults.adjustScalarBytes(hashed).subarray(0, 32);
+    return exports.ed25519.utils.toMontgomeryPriv((0, utils_ts_1.ensureBytes)('pub', edwardsPriv));
 }
 // Hash To Curve Elligator2 Map (NOTE: different from ristretto255 elligator)
 // NOTE: very important part is usage of FpSqrtEven for ELL2_C1_EDWARDS, since
@@ -7349,7 +7456,7 @@ function map_to_curve_elligator2_curve25519(u) {
     y = Fp.cmov(y, Fp.neg(y), e3 !== e4); //  38.   y = CMOV(y, -y, e3 XOR e4)
     return { xMn: xn, xMd: xd, yMn: y, yMd: _1n }; //  39. return (xn, xd, y, 1)
 }
-const ELL2_C1_EDWARDS = /* @__PURE__ */ (() => (0, modular_js_1.FpSqrtEven)(Fp, Fp.neg(BigInt(486664))))(); // sgn0(c1) MUST equal 0
+const ELL2_C1_EDWARDS = /* @__PURE__ */ (() => (0, modular_ts_1.FpSqrtEven)(Fp, Fp.neg(BigInt(486664))))(); // sgn0(c1) MUST equal 0
 function map_to_curve_elligator2_edwards25519(u) {
     const { xMn, xMd, yMn, yMd } = map_to_curve_elligator2_curve25519(u); //  1.  (xMn, xMd, yMn, yMd) =
     // map_to_curve_elligator2_curve25519(u)
@@ -7364,24 +7471,19 @@ function map_to_curve_elligator2_edwards25519(u) {
     xd = Fp.cmov(xd, Fp.ONE, e); //  10. xd = CMOV(xd, 1, e)
     yn = Fp.cmov(yn, Fp.ONE, e); //  11. yn = CMOV(yn, 1, e)
     yd = Fp.cmov(yd, Fp.ONE, e); //  12. yd = CMOV(yd, 1, e)
-    const inv = Fp.invertBatch([xd, yd]); // batch division
-    return { x: Fp.mul(xn, inv[0]), y: Fp.mul(yn, inv[1]) }; //  13. return (xn, xd, yn, yd)
+    const [xd_inv, yd_inv] = (0, modular_ts_1.FpInvertBatch)(Fp, [xd, yd], true); // batch division
+    return { x: Fp.mul(xn, xd_inv), y: Fp.mul(yn, yd_inv) }; //  13. return (xn, xd, yn, yd)
 }
-const htf = /* @__PURE__ */ (() => (0, hash_to_curve_js_1.createHasher)(exports.ed25519.ExtendedPoint, (scalars) => map_to_curve_elligator2_edwards25519(scalars[0]), {
+/** Hashing to ed25519 points / field. RFC 9380 methods. */
+exports.ed25519_hasher = (() => (0, hash_to_curve_ts_1.createHasher)(exports.ed25519.Point, (scalars) => map_to_curve_elligator2_edwards25519(scalars[0]), {
     DST: 'edwards25519_XMD:SHA-512_ELL2_RO_',
     encodeDST: 'edwards25519_XMD:SHA-512_ELL2_NU_',
     p: Fp.ORDER,
     m: 1,
     k: 128,
     expand: 'xmd',
-    hash: sha512_1.sha512,
+    hash: sha2_js_1.sha512,
 }))();
-exports.hashToCurve = (() => htf.hashToCurve)();
-exports.encodeToCurve = (() => htf.encodeToCurve)();
-function assertRstPoint(other) {
-    if (!(other instanceof RistPoint))
-        throw new Error('RistrettoPoint expected');
-}
 // √(-1) aka √(a) aka 2^((p-1)/4)
 const SQRT_M1 = ED25519_SQRT_M1;
 // √(ad - 1)
@@ -7395,9 +7497,12 @@ const D_MINUS_ONE_SQ = /* @__PURE__ */ BigInt('404408343463085368581010424693231
 // Calculates 1/√(number)
 const invertSqrt = (number) => uvRatio(_1n, number);
 const MAX_255B = /* @__PURE__ */ BigInt('0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
-const bytes255ToNumberLE = (bytes) => exports.ed25519.CURVE.Fp.create((0, utils_js_1.bytesToNumberLE)(bytes) & MAX_255B);
-// Computes Elligator map for Ristretto
-// https://ristretto.group/formulas/elligator.html
+const bytes255ToNumberLE = (bytes) => exports.ed25519.CURVE.Fp.create((0, utils_ts_1.bytesToNumberLE)(bytes) & MAX_255B);
+/**
+ * Computes Elligator map for Ristretto255.
+ * Described in [RFC9380](https://www.rfc-editor.org/rfc/rfc9380#appendix-B) and on
+ * the [website](https://ristretto.group/formulas/elligator.html).
+ */
 function calcElligatorRistrettoMap(r0) {
     const { d } = exports.ed25519.CURVE;
     const P = exports.ed25519.CURVE.Fp.ORDER;
@@ -7408,7 +7513,7 @@ function calcElligatorRistrettoMap(r0) {
     const D = mod((c - d * r) * mod(r + d)); // 4
     let { isValid: Ns_D_is_sq, value: s } = uvRatio(Ns, D); // 5
     let s_ = mod(s * r0); // 6
-    if (!(0, modular_js_1.isNegativeLE)(s_, P))
+    if (!(0, modular_ts_1.isNegativeLE)(s_, P))
         s_ = mod(-s_);
     if (!Ns_D_is_sq)
         s = s_; // 7
@@ -7420,55 +7525,53 @@ function calcElligatorRistrettoMap(r0) {
     const W1 = mod(Nt * SQRT_AD_MINUS_ONE); // 11
     const W2 = mod(_1n - s2); // 12
     const W3 = mod(_1n + s2); // 13
-    return new exports.ed25519.ExtendedPoint(mod(W0 * W3), mod(W2 * W1), mod(W1 * W3), mod(W0 * W2));
+    return new exports.ed25519.Point(mod(W0 * W3), mod(W2 * W1), mod(W1 * W3), mod(W0 * W2));
+}
+function ristretto255_map(bytes) {
+    (0, utils_js_1.abytes)(bytes, 64);
+    const r1 = bytes255ToNumberLE(bytes.subarray(0, 32));
+    const R1 = calcElligatorRistrettoMap(r1);
+    const r2 = bytes255ToNumberLE(bytes.subarray(32, 64));
+    const R2 = calcElligatorRistrettoMap(r2);
+    return new _RistrettoPoint(R1.add(R2));
 }
 /**
+ * Wrapper over Edwards Point for ristretto255.
+ *
  * Each ed25519/ExtendedPoint has 8 different equivalent points. This can be
  * a source of bugs for protocols like ring signatures. Ristretto was created to solve this.
  * Ristretto point operates in X:Y:Z:T extended coordinates like ExtendedPoint,
  * but it should work in its own namespace: do not combine those two.
- * https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-ristretto255-decaf448
+ * See [RFC9496](https://www.rfc-editor.org/rfc/rfc9496).
  */
-class RistPoint {
-    // Private property to discourage combining ExtendedPoint + RistrettoPoint
-    // Always use Ristretto encoding/decoding instead.
+class _RistrettoPoint extends edwards_ts_1.PrimeEdwardsPoint {
     constructor(ep) {
-        this.ep = ep;
+        super(ep);
     }
     static fromAffine(ap) {
-        return new RistPoint(exports.ed25519.ExtendedPoint.fromAffine(ap));
+        return new _RistrettoPoint(exports.ed25519.Point.fromAffine(ap));
     }
-    /**
-     * Takes uniform output of 64-byte hash function like sha512 and converts it to `RistrettoPoint`.
-     * The hash-to-group operation applies Elligator twice and adds the results.
-     * **Note:** this is one-way map, there is no conversion from point to hash.
-     * https://ristretto.group/formulas/elligator.html
-     * @param hex 64-byte output of a hash function
-     */
+    assertSame(other) {
+        if (!(other instanceof _RistrettoPoint))
+            throw new Error('RistrettoPoint expected');
+    }
+    init(ep) {
+        return new _RistrettoPoint(ep);
+    }
+    /** @deprecated use `import { ristretto255_hasher } from '@noble/curves/ed25519.js';` */
     static hashToCurve(hex) {
-        hex = (0, utils_js_1.ensureBytes)('ristrettoHash', hex, 64);
-        const r1 = bytes255ToNumberLE(hex.slice(0, 32));
-        const R1 = calcElligatorRistrettoMap(r1);
-        const r2 = bytes255ToNumberLE(hex.slice(32, 64));
-        const R2 = calcElligatorRistrettoMap(r2);
-        return new RistPoint(R1.add(R2));
+        return ristretto255_map((0, utils_ts_1.ensureBytes)('ristrettoHash', hex, 64));
     }
-    /**
-     * Converts ristretto-encoded string to ristretto point.
-     * https://ristretto.group/formulas/decoding.html
-     * @param hex Ristretto-encoded 32 bytes. Not every 32-byte string is valid ristretto encoding
-     */
-    static fromHex(hex) {
-        hex = (0, utils_js_1.ensureBytes)('ristrettoHex', hex, 32);
+    static fromBytes(bytes) {
+        (0, utils_js_1.abytes)(bytes, 32);
         const { a, d } = exports.ed25519.CURVE;
-        const P = exports.ed25519.CURVE.Fp.ORDER;
-        const mod = exports.ed25519.CURVE.Fp.create;
-        const emsg = 'RistrettoPoint.fromHex: the hex is not valid encoding of RistrettoPoint';
-        const s = bytes255ToNumberLE(hex);
+        const P = Fp.ORDER;
+        const mod = Fp.create;
+        const s = bytes255ToNumberLE(bytes);
         // 1. Check that s_bytes is the canonical encoding of a field element, or else abort.
         // 3. Check that s is non-negative, or else abort
-        if (!(0, utils_js_1.equalBytes)((0, utils_js_1.numberToBytesLE)(s, 32), hex) || (0, modular_js_1.isNegativeLE)(s, P))
-            throw new Error(emsg);
+        if (!(0, utils_ts_1.equalBytes)((0, utils_ts_1.numberToBytesLE)(s, 32), bytes) || (0, modular_ts_1.isNegativeLE)(s, P))
+            throw new Error('invalid ristretto255 encoding 1');
         const s2 = mod(s * s);
         const u1 = mod(_1n + a * s2); // 4 (a is -1)
         const u2 = mod(_1n - a * s2); // 5
@@ -7479,108 +7582,272 @@ class RistPoint {
         const Dx = mod(I * u2); // 8
         const Dy = mod(I * Dx * v); // 9
         let x = mod((s + s) * Dx); // 10
-        if ((0, modular_js_1.isNegativeLE)(x, P))
+        if ((0, modular_ts_1.isNegativeLE)(x, P))
             x = mod(-x); // 10
         const y = mod(u1 * Dy); // 11
         const t = mod(x * y); // 12
-        if (!isValid || (0, modular_js_1.isNegativeLE)(t, P) || y === _0n)
-            throw new Error(emsg);
-        return new RistPoint(new exports.ed25519.ExtendedPoint(x, y, _1n, t));
+        if (!isValid || (0, modular_ts_1.isNegativeLE)(t, P) || y === _0n)
+            throw new Error('invalid ristretto255 encoding 2');
+        return new _RistrettoPoint(new exports.ed25519.Point(x, y, _1n, t));
+    }
+    /**
+     * Converts ristretto-encoded string to ristretto point.
+     * Described in [RFC9496](https://www.rfc-editor.org/rfc/rfc9496#name-decode).
+     * @param hex Ristretto-encoded 32 bytes. Not every 32-byte string is valid ristretto encoding
+     */
+    static fromHex(hex) {
+        return _RistrettoPoint.fromBytes((0, utils_ts_1.ensureBytes)('ristrettoHex', hex, 32));
     }
     static msm(points, scalars) {
-        const Fn = (0, modular_js_1.Field)(exports.ed25519.CURVE.n, exports.ed25519.CURVE.nBitLength);
-        return (0, curve_js_1.pippenger)(RistPoint, Fn, points, scalars);
+        return (0, curve_ts_1.pippenger)(_RistrettoPoint, exports.ed25519.Point.Fn, points, scalars);
     }
     /**
      * Encodes ristretto point to Uint8Array.
-     * https://ristretto.group/formulas/encoding.html
+     * Described in [RFC9496](https://www.rfc-editor.org/rfc/rfc9496#name-encode).
      */
-    toRawBytes() {
-        let { ex: x, ey: y, ez: z, et: t } = this.ep;
-        const P = exports.ed25519.CURVE.Fp.ORDER;
-        const mod = exports.ed25519.CURVE.Fp.create;
-        const u1 = mod(mod(z + y) * mod(z - y)); // 1
-        const u2 = mod(x * y); // 2
+    toBytes() {
+        let { X, Y, Z, T } = this.ep;
+        const P = Fp.ORDER;
+        const mod = Fp.create;
+        const u1 = mod(mod(Z + Y) * mod(Z - Y)); // 1
+        const u2 = mod(X * Y); // 2
         // Square root always exists
         const u2sq = mod(u2 * u2);
         const { value: invsqrt } = invertSqrt(mod(u1 * u2sq)); // 3
         const D1 = mod(invsqrt * u1); // 4
         const D2 = mod(invsqrt * u2); // 5
-        const zInv = mod(D1 * D2 * t); // 6
+        const zInv = mod(D1 * D2 * T); // 6
         let D; // 7
-        if ((0, modular_js_1.isNegativeLE)(t * zInv, P)) {
-            let _x = mod(y * SQRT_M1);
-            let _y = mod(x * SQRT_M1);
-            x = _x;
-            y = _y;
+        if ((0, modular_ts_1.isNegativeLE)(T * zInv, P)) {
+            let _x = mod(Y * SQRT_M1);
+            let _y = mod(X * SQRT_M1);
+            X = _x;
+            Y = _y;
             D = mod(D1 * INVSQRT_A_MINUS_D);
         }
         else {
             D = D2; // 8
         }
-        if ((0, modular_js_1.isNegativeLE)(x * zInv, P))
-            y = mod(-y); // 9
-        let s = mod((z - y) * D); // 10 (check footer's note, no sqrt(-a))
-        if ((0, modular_js_1.isNegativeLE)(s, P))
+        if ((0, modular_ts_1.isNegativeLE)(X * zInv, P))
+            Y = mod(-Y); // 9
+        let s = mod((Z - Y) * D); // 10 (check footer's note, no sqrt(-a))
+        if ((0, modular_ts_1.isNegativeLE)(s, P))
             s = mod(-s);
-        return (0, utils_js_1.numberToBytesLE)(s, 32); // 11
+        return (0, utils_ts_1.numberToBytesLE)(s, 32); // 11
     }
-    toHex() {
-        return (0, utils_js_1.bytesToHex)(this.toRawBytes());
-    }
-    toString() {
-        return this.toHex();
-    }
-    // Compare one point to another.
+    /**
+     * Compares two Ristretto points.
+     * Described in [RFC9496](https://www.rfc-editor.org/rfc/rfc9496#name-equals).
+     */
     equals(other) {
-        assertRstPoint(other);
-        const { ex: X1, ey: Y1 } = this.ep;
-        const { ex: X2, ey: Y2 } = other.ep;
-        const mod = exports.ed25519.CURVE.Fp.create;
+        this.assertSame(other);
+        const { X: X1, Y: Y1 } = this.ep;
+        const { X: X2, Y: Y2 } = other.ep;
+        const mod = Fp.create;
         // (x1 * y2 == y1 * x2) | (y1 * y2 == x1 * x2)
         const one = mod(X1 * Y2) === mod(Y1 * X2);
         const two = mod(Y1 * Y2) === mod(X1 * X2);
         return one || two;
     }
-    add(other) {
-        assertRstPoint(other);
-        return new RistPoint(this.ep.add(other.ep));
-    }
-    subtract(other) {
-        assertRstPoint(other);
-        return new RistPoint(this.ep.subtract(other.ep));
-    }
-    multiply(scalar) {
-        return new RistPoint(this.ep.multiply(scalar));
-    }
-    multiplyUnsafe(scalar) {
-        return new RistPoint(this.ep.multiplyUnsafe(scalar));
-    }
-    double() {
-        return new RistPoint(this.ep.double());
-    }
-    negate() {
-        return new RistPoint(this.ep.negate());
+    is0() {
+        return this.equals(_RistrettoPoint.ZERO);
     }
 }
-exports.RistrettoPoint = (() => {
-    if (!RistPoint.BASE)
-        RistPoint.BASE = new RistPoint(exports.ed25519.ExtendedPoint.BASE);
-    if (!RistPoint.ZERO)
-        RistPoint.ZERO = new RistPoint(exports.ed25519.ExtendedPoint.ZERO);
-    return RistPoint;
-})();
-// Hashing to ristretto255. https://www.rfc-editor.org/rfc/rfc9380#appendix-B
-const hashToRistretto255 = (msg, options) => {
-    const d = options.DST;
-    const DST = typeof d === 'string' ? (0, utils_1.utf8ToBytes)(d) : d;
-    const uniform_bytes = (0, hash_to_curve_js_1.expand_message_xmd)(msg, DST, 64, sha512_1.sha512);
-    const P = RistPoint.hashToCurve(uniform_bytes);
-    return P;
+// Do NOT change syntax: the following gymnastics is done,
+// because typescript strips comments, which makes bundlers disable tree-shaking.
+// prettier-ignore
+_RistrettoPoint.BASE = 
+/* @__PURE__ */ (() => new _RistrettoPoint(exports.ed25519.Point.BASE))();
+// prettier-ignore
+_RistrettoPoint.ZERO = 
+/* @__PURE__ */ (() => new _RistrettoPoint(exports.ed25519.Point.ZERO))();
+// prettier-ignore
+_RistrettoPoint.Fp = 
+/* @__PURE__ */ Fp;
+// prettier-ignore
+_RistrettoPoint.Fn = 
+/* @__PURE__ */ Fn;
+/** @deprecated use `ristretto255.Point` */
+exports.RistrettoPoint = _RistrettoPoint;
+exports.ristretto255 = { Point: _RistrettoPoint };
+/** Hashing to ristretto255 points / field. RFC 9380 methods. */
+exports.ristretto255_hasher = {
+    hashToCurve(msg, options) {
+        const DST = options?.DST || 'ristretto255_XMD:SHA-512_R255MAP_RO_';
+        return ristretto255_map((0, hash_to_curve_ts_1.expand_message_xmd)(msg, DST, 64, sha2_js_1.sha512));
+    },
+    hashToScalar(msg, options = { DST: hash_to_curve_ts_1._DST_scalar }) {
+        return Fn.create((0, utils_ts_1.bytesToNumberLE)((0, hash_to_curve_ts_1.expand_message_xmd)(msg, options.DST, 64, sha2_js_1.sha512)));
+    },
 };
-exports.hashToRistretto255 = hashToRistretto255;
-exports.hash_to_ristretto255 = exports.hashToRistretto255; // legacy
+// export const ristretto255_oprf: OPRF = createORPF({
+//   name: 'ristretto255-SHA512',
+//   Point: RistrettoPoint,
+//   hash: sha512,
+//   hashToGroup: ristretto255_hasher.hashToCurve,
+//   hashToScalar: ristretto255_hasher.hashToScalar,
+// });
+/** @deprecated use `import { ed25519_hasher } from '@noble/curves/ed25519.js';` */
+exports.hashToCurve = (() => exports.ed25519_hasher.hashToCurve)();
+/** @deprecated use `import { ed25519_hasher } from '@noble/curves/ed25519.js';` */
+exports.encodeToCurve = (() => exports.ed25519_hasher.encodeToCurve)();
+/** @deprecated use `import { ristretto255_hasher } from '@noble/curves/ed25519.js';` */
+exports.hashToRistretto255 = (() => exports.ristretto255_hasher.hashToCurve)();
+/** @deprecated use `import { ristretto255_hasher } from '@noble/curves/ed25519.js';` */
+exports.hash_to_ristretto255 = (() => exports.ristretto255_hasher.hashToCurve)();
+/**
+ * Weird / bogus points, useful for debugging.
+ * All 8 ed25519 points of 8-torsion subgroup can be generated from the point
+ * T = `26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05`.
+ * ⟨T⟩ = { O, T, 2T, 3T, 4T, 5T, 6T, 7T }
+ */
+exports.ED25519_TORSION_SUBGROUP = [
+    '0100000000000000000000000000000000000000000000000000000000000000',
+    'c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a',
+    '0000000000000000000000000000000000000000000000000000000000000080',
+    '26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05',
+    'ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f',
+    '26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85',
+    '0000000000000000000000000000000000000000000000000000000000000000',
+    'c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa',
+];
 //# sourceMappingURL=ed25519.js.map
+
+/***/ }),
+
+/***/ 67083:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.p521_hasher = exports.p521 = exports.p384_hasher = exports.p384 = exports.p256_hasher = exports.p256 = void 0;
+/**
+ * Internal module for NIST P256, P384, P521 curves.
+ * Do not use for now.
+ * @module
+ */
+/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
+const sha2_js_1 = __nccwpck_require__(7645);
+const _shortw_utils_ts_1 = __nccwpck_require__(24781);
+const hash_to_curve_ts_1 = __nccwpck_require__(32660);
+const modular_ts_1 = __nccwpck_require__(49542);
+const weierstrass_ts_1 = __nccwpck_require__(3396);
+// p = 2n**224n * (2n**32n-1n) + 2n**192n + 2n**96n - 1n
+// a = Fp256.create(BigInt('-3'));
+const p256_CURVE = {
+    p: BigInt('0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff'),
+    n: BigInt('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551'),
+    h: BigInt(1),
+    a: BigInt('0xffffffff00000001000000000000000000000000fffffffffffffffffffffffc'),
+    b: BigInt('0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b'),
+    Gx: BigInt('0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296'),
+    Gy: BigInt('0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5'),
+};
+// p = 2n**384n - 2n**128n - 2n**96n + 2n**32n - 1n
+const p384_CURVE = {
+    p: BigInt('0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000ffffffff'),
+    n: BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf581a0db248b0a77aecec196accc52973'),
+    h: BigInt(1),
+    a: BigInt('0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000fffffffc'),
+    b: BigInt('0xb3312fa7e23ee7e4988e056be3f82d19181d9c6efe8141120314088f5013875ac656398d8a2ed19d2a85c8edd3ec2aef'),
+    Gx: BigInt('0xaa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760ab7'),
+    Gy: BigInt('0x3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f'),
+};
+// p = 2n**521n - 1n
+const p521_CURVE = {
+    p: BigInt('0x1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'),
+    n: BigInt('0x01fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47aebb6fb71e91386409'),
+    h: BigInt(1),
+    a: BigInt('0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc'),
+    b: BigInt('0x0051953eb9618e1c9a1f929a21a0b68540eea2da725b99b315f3b8b489918ef109e156193951ec7e937b1652c0bd3bb1bf073573df883d2c34f1ef451fd46b503f00'),
+    Gx: BigInt('0x00c6858e06b70404e9cd9e3ecb662395b4429c648139053fb521f828af606b4d3dbaa14b5e77efe75928fe1dc127a2ffa8de3348b3c1856a429bf97e7e31c2e5bd66'),
+    Gy: BigInt('0x011839296a789a3bc0045c8a5fb42c7d1bd998f54449579b446817afbd17273e662c97ee72995ef42640c550b9013fad0761353c7086a272c24088be94769fd16650'),
+};
+const Fp256 = (0, modular_ts_1.Field)(p256_CURVE.p);
+const Fp384 = (0, modular_ts_1.Field)(p384_CURVE.p);
+const Fp521 = (0, modular_ts_1.Field)(p521_CURVE.p);
+function createSWU(Point, opts) {
+    const map = (0, weierstrass_ts_1.mapToCurveSimpleSWU)(Point.Fp, opts);
+    return (scalars) => map(scalars[0]);
+}
+/** NIST P256 (aka secp256r1, prime256v1) curve, ECDSA and ECDH methods. */
+exports.p256 = (0, _shortw_utils_ts_1.createCurve)({ ...p256_CURVE, Fp: Fp256, lowS: false }, sha2_js_1.sha256);
+/** Hashing / encoding to p256 points / field. RFC 9380 methods. */
+exports.p256_hasher = (() => {
+    return (0, hash_to_curve_ts_1.createHasher)(exports.p256.Point, createSWU(exports.p256.Point, {
+        A: p256_CURVE.a,
+        B: p256_CURVE.b,
+        Z: exports.p256.Point.Fp.create(BigInt('-10')),
+    }), {
+        DST: 'P256_XMD:SHA-256_SSWU_RO_',
+        encodeDST: 'P256_XMD:SHA-256_SSWU_NU_',
+        p: p256_CURVE.p,
+        m: 1,
+        k: 128,
+        expand: 'xmd',
+        hash: sha2_js_1.sha256,
+    });
+})();
+// export const p256_oprf: OPRF = createORPF({
+//   name: 'P256-SHA256',
+//   Point: p256.Point,
+//   hash: sha256,
+//   hashToGroup: p256_hasher.hashToCurve,
+//   hashToScalar: p256_hasher.hashToScalar,
+// });
+/** NIST P384 (aka secp384r1) curve, ECDSA and ECDH methods. */
+exports.p384 = (0, _shortw_utils_ts_1.createCurve)({ ...p384_CURVE, Fp: Fp384, lowS: false }, sha2_js_1.sha384);
+/** Hashing / encoding to p384 points / field. RFC 9380 methods. */
+exports.p384_hasher = (() => {
+    return (0, hash_to_curve_ts_1.createHasher)(exports.p384.Point, createSWU(exports.p384.Point, {
+        A: p384_CURVE.a,
+        B: p384_CURVE.b,
+        Z: exports.p384.Point.Fp.create(BigInt('-12')),
+    }), {
+        DST: 'P384_XMD:SHA-384_SSWU_RO_',
+        encodeDST: 'P384_XMD:SHA-384_SSWU_NU_',
+        p: p384_CURVE.p,
+        m: 1,
+        k: 192,
+        expand: 'xmd',
+        hash: sha2_js_1.sha384,
+    });
+})();
+// export const p384_oprf: OPRF = createORPF({
+//   name: 'P384-SHA384',
+//   Point: p384.Point,
+//   hash: sha384,
+//   hashToGroup: p384_hasher.hashToCurve,
+//   hashToScalar: p384_hasher.hashToScalar,
+// });
+// const Fn521 = Field(p521_CURVE.n, { allowedScalarLengths: [65, 66] });
+/** NIST P521 (aka secp521r1) curve, ECDSA and ECDH methods. */
+exports.p521 = (0, _shortw_utils_ts_1.createCurve)({ ...p521_CURVE, Fp: Fp521, lowS: false, allowedPrivateKeyLengths: [130, 131, 132] }, sha2_js_1.sha512);
+/** Hashing / encoding to p521 points / field. RFC 9380 methods. */
+exports.p521_hasher = (() => {
+    return (0, hash_to_curve_ts_1.createHasher)(exports.p521.Point, createSWU(exports.p521.Point, {
+        A: p521_CURVE.a,
+        B: p521_CURVE.b,
+        Z: exports.p521.Point.Fp.create(BigInt('-4')),
+    }), {
+        DST: 'P521_XMD:SHA-512_SSWU_RO_',
+        encodeDST: 'P521_XMD:SHA-512_SSWU_NU_',
+        p: p521_CURVE.p,
+        m: 1,
+        k: 256,
+        expand: 'xmd',
+        hash: sha2_js_1.sha512,
+    });
+})();
+// export const p521_oprf: OPRF = createORPF({
+//   name: 'P521-SHA512',
+//   Point: p521.Point,
+//   hash: sha512,
+//   hashToGroup: p521_hasher.hashToCurve,
+//   hashToScalar: p521_hasher.hashToScalar, // produces L=98 just like in RFC
+// });
+//# sourceMappingURL=nist.js.map
 
 /***/ }),
 
@@ -7591,54 +7858,15 @@ exports.hash_to_ristretto255 = exports.hashToRistretto255; // legacy
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.encodeToCurve = exports.hashToCurve = exports.secp256r1 = exports.p256 = void 0;
-/**
- * NIST secp256r1 aka p256.
- * https://www.secg.org/sec2-v2.pdf, https://neuromancer.sk/std/nist/P-256
- * @module
- */
-/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const sha256_1 = __nccwpck_require__(77178);
-const _shortw_utils_js_1 = __nccwpck_require__(24781);
-const hash_to_curve_js_1 = __nccwpck_require__(32660);
-const modular_js_1 = __nccwpck_require__(49542);
-const weierstrass_js_1 = __nccwpck_require__(3396);
-const Fp256 = (0, modular_js_1.Field)(BigInt('0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff'));
-const CURVE_A = Fp256.create(BigInt('-3'));
-const CURVE_B = BigInt('0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b');
-/** secp256r1 curve, ECDSA and ECDH methods. */
-// prettier-ignore
-exports.p256 = (0, _shortw_utils_js_1.createCurve)({
-    a: CURVE_A, // Equation params: a, b
-    b: CURVE_B,
-    Fp: Fp256, // Field: 2n**224n * (2n**32n-1n) + 2n**192n + 2n**96n-1n
-    // Curve order, total count of valid points in the field
-    n: BigInt('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551'),
-    // Base (generator) point (x, y)
-    Gx: BigInt('0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296'),
-    Gy: BigInt('0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5'),
-    h: BigInt(1),
-    lowS: false,
-}, sha256_1.sha256);
-/** Alias to p256. */
-exports.secp256r1 = exports.p256;
-const mapSWU = /* @__PURE__ */ (() => (0, weierstrass_js_1.mapToCurveSimpleSWU)(Fp256, {
-    A: CURVE_A,
-    B: CURVE_B,
-    Z: Fp256.create(BigInt('-10')),
-}))();
-const htf = /* @__PURE__ */ (() => (0, hash_to_curve_js_1.createHasher)(exports.secp256r1.ProjectivePoint, (scalars) => mapSWU(scalars[0]), {
-    DST: 'P256_XMD:SHA-256_SSWU_RO_',
-    encodeDST: 'P256_XMD:SHA-256_SSWU_NU_',
-    p: Fp256.ORDER,
-    m: 1,
-    k: 128,
-    expand: 'xmd',
-    hash: sha256_1.sha256,
-}))();
-/** secp256r1 hash-to-curve from [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380). */
-exports.hashToCurve = (() => htf.hashToCurve)();
-/** secp256r1 encode-to-curve from [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380). */
-exports.encodeToCurve = (() => htf.encodeToCurve)();
+const nist_ts_1 = __nccwpck_require__(67083);
+/** @deprecated use `import { p256 } from '@noble/curves/nist.js';` */
+exports.p256 = nist_ts_1.p256;
+/** @deprecated use `import { p256 } from '@noble/curves/nist.js';` */
+exports.secp256r1 = nist_ts_1.p256;
+/** @deprecated use `import { p256_hasher } from '@noble/curves/nist.js';` */
+exports.hashToCurve = (() => nist_ts_1.p256_hasher.hashToCurve)();
+/** @deprecated use `import { p256_hasher } from '@noble/curves/nist.js';` */
+exports.encodeToCurve = (() => nist_ts_1.p256_hasher.encodeToCurve)();
 //# sourceMappingURL=p256.js.map
 
 /***/ }),
@@ -7649,154 +7877,132 @@ exports.encodeToCurve = (() => htf.encodeToCurve)();
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.encodeToCurve = exports.hashToCurve = exports.schnorr = exports.secp256k1 = void 0;
+exports.encodeToCurve = exports.hashToCurve = exports.secp256k1_hasher = exports.schnorr = exports.secp256k1 = void 0;
 /**
- * NIST secp256k1. See [pdf](https://www.secg.org/sec2-v2.pdf).
+ * SECG secp256k1. See [pdf](https://www.secg.org/sec2-v2.pdf).
  *
- * Seems to be rigid (not backdoored)
- * [as per discussion](https://bitcointalk.org/index.php?topic=289795.msg3183975#msg3183975).
- *
- * secp256k1 belongs to Koblitz curves: it has efficiently computable endomorphism.
- * Endomorphism uses 2x less RAM, speeds up precomputation by 2x and ECDH / key recovery by 20%.
- * For precomputed wNAF it trades off 1/2 init time & 1/3 ram for 20% perf hit.
- * [See explanation](https://gist.github.com/paulmillr/eb670806793e84df628a7c434a873066).
+ * Belongs to Koblitz curves: it has efficiently-computable GLV endomorphism ψ,
+ * check out {@link EndomorphismOpts}. Seems to be rigid (not backdoored).
  * @module
  */
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-const sha256_1 = __nccwpck_require__(77178);
-const utils_1 = __nccwpck_require__(4248);
-const _shortw_utils_js_1 = __nccwpck_require__(24781);
-const hash_to_curve_js_1 = __nccwpck_require__(32660);
-const modular_js_1 = __nccwpck_require__(49542);
-const utils_js_1 = __nccwpck_require__(43901);
-const weierstrass_js_1 = __nccwpck_require__(3396);
-const secp256k1P = BigInt('0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f');
-const secp256k1N = BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141');
-const _1n = BigInt(1);
-const _2n = BigInt(2);
-const divNearest = (a, b) => (a + b / _2n) / b;
+const sha2_js_1 = __nccwpck_require__(7645);
+const utils_js_1 = __nccwpck_require__(4248);
+const _shortw_utils_ts_1 = __nccwpck_require__(24781);
+const hash_to_curve_ts_1 = __nccwpck_require__(32660);
+const modular_ts_1 = __nccwpck_require__(49542);
+const weierstrass_ts_1 = __nccwpck_require__(3396);
+const utils_ts_1 = __nccwpck_require__(28816);
+// Seems like generator was produced from some seed:
+// `Point.BASE.multiply(Point.Fn.inv(2n, N)).toAffine().x`
+// // gives short x 0x3b78ce563f89a0ed9414f5aa28ad0d96d6795f9c63n
+const secp256k1_CURVE = {
+    p: BigInt('0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f'),
+    n: BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141'),
+    h: BigInt(1),
+    a: BigInt(0),
+    b: BigInt(7),
+    Gx: BigInt('0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'),
+    Gy: BigInt('0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'),
+};
+const secp256k1_ENDO = {
+    beta: BigInt('0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee'),
+    basises: [
+        [BigInt('0x3086d221a7d46bcde86c90e49284eb15'), -BigInt('0xe4437ed6010e88286f547fa90abfe4c3')],
+        [BigInt('0x114ca50f7a8e2f3f657c1108d9d44cfd8'), BigInt('0x3086d221a7d46bcde86c90e49284eb15')],
+    ],
+};
+const _0n = /* @__PURE__ */ BigInt(0);
+const _1n = /* @__PURE__ */ BigInt(1);
+const _2n = /* @__PURE__ */ BigInt(2);
 /**
  * √n = n^((p+1)/4) for fields p = 3 mod 4. We unwrap the loop and multiply bit-by-bit.
  * (P+1n/4n).toString(2) would produce bits [223x 1, 0, 22x 1, 4x 0, 11, 00]
  */
 function sqrtMod(y) {
-    const P = secp256k1P;
+    const P = secp256k1_CURVE.p;
     // prettier-ignore
     const _3n = BigInt(3), _6n = BigInt(6), _11n = BigInt(11), _22n = BigInt(22);
     // prettier-ignore
     const _23n = BigInt(23), _44n = BigInt(44), _88n = BigInt(88);
     const b2 = (y * y * y) % P; // x^3, 11
     const b3 = (b2 * b2 * y) % P; // x^7
-    const b6 = ((0, modular_js_1.pow2)(b3, _3n, P) * b3) % P;
-    const b9 = ((0, modular_js_1.pow2)(b6, _3n, P) * b3) % P;
-    const b11 = ((0, modular_js_1.pow2)(b9, _2n, P) * b2) % P;
-    const b22 = ((0, modular_js_1.pow2)(b11, _11n, P) * b11) % P;
-    const b44 = ((0, modular_js_1.pow2)(b22, _22n, P) * b22) % P;
-    const b88 = ((0, modular_js_1.pow2)(b44, _44n, P) * b44) % P;
-    const b176 = ((0, modular_js_1.pow2)(b88, _88n, P) * b88) % P;
-    const b220 = ((0, modular_js_1.pow2)(b176, _44n, P) * b44) % P;
-    const b223 = ((0, modular_js_1.pow2)(b220, _3n, P) * b3) % P;
-    const t1 = ((0, modular_js_1.pow2)(b223, _23n, P) * b22) % P;
-    const t2 = ((0, modular_js_1.pow2)(t1, _6n, P) * b2) % P;
-    const root = (0, modular_js_1.pow2)(t2, _2n, P);
+    const b6 = ((0, modular_ts_1.pow2)(b3, _3n, P) * b3) % P;
+    const b9 = ((0, modular_ts_1.pow2)(b6, _3n, P) * b3) % P;
+    const b11 = ((0, modular_ts_1.pow2)(b9, _2n, P) * b2) % P;
+    const b22 = ((0, modular_ts_1.pow2)(b11, _11n, P) * b11) % P;
+    const b44 = ((0, modular_ts_1.pow2)(b22, _22n, P) * b22) % P;
+    const b88 = ((0, modular_ts_1.pow2)(b44, _44n, P) * b44) % P;
+    const b176 = ((0, modular_ts_1.pow2)(b88, _88n, P) * b88) % P;
+    const b220 = ((0, modular_ts_1.pow2)(b176, _44n, P) * b44) % P;
+    const b223 = ((0, modular_ts_1.pow2)(b220, _3n, P) * b3) % P;
+    const t1 = ((0, modular_ts_1.pow2)(b223, _23n, P) * b22) % P;
+    const t2 = ((0, modular_ts_1.pow2)(t1, _6n, P) * b2) % P;
+    const root = (0, modular_ts_1.pow2)(t2, _2n, P);
     if (!Fpk1.eql(Fpk1.sqr(root), y))
         throw new Error('Cannot find square root');
     return root;
 }
-const Fpk1 = (0, modular_js_1.Field)(secp256k1P, undefined, undefined, { sqrt: sqrtMod });
+const Fpk1 = (0, modular_ts_1.Field)(secp256k1_CURVE.p, undefined, undefined, { sqrt: sqrtMod });
 /**
- * secp256k1 short weierstrass curve and ECDSA signatures over it.
+ * secp256k1 curve, ECDSA and ECDH methods.
+ *
+ * Field: `2n**256n - 2n**32n - 2n**9n - 2n**8n - 2n**7n - 2n**6n - 2n**4n - 1n`
  *
  * @example
+ * ```js
  * import { secp256k1 } from '@noble/curves/secp256k1';
- *
- * const priv = secp256k1.utils.randomPrivateKey();
- * const pub = secp256k1.getPublicKey(priv);
- * const msg = new Uint8Array(32).fill(1); // message hash (not message) in ecdsa
- * const sig = secp256k1.sign(msg, priv); // `{prehash: true}` option is available
- * const isValid = secp256k1.verify(sig, msg, pub) === true;
+ * const { secretKey, publicKey } = secp256k1.keygen();
+ * const msg = new TextEncoder().encode('hello');
+ * const sig = secp256k1.sign(msg, secretKey);
+ * const isValid = secp256k1.verify(sig, msg, publicKey) === true;
+ * ```
  */
-exports.secp256k1 = (0, _shortw_utils_js_1.createCurve)({
-    a: BigInt(0), // equation params: a, b
-    b: BigInt(7),
-    Fp: Fpk1, // Field's prime: 2n**256n - 2n**32n - 2n**9n - 2n**8n - 2n**7n - 2n**6n - 2n**4n - 1n
-    n: secp256k1N, // Curve order, total count of valid points in the field
-    // Base point (x, y) aka generator point
-    Gx: BigInt('55066263022277343669578718895168534326250603453777594175500187360389116729240'),
-    Gy: BigInt('32670510020758816978083085130507043184471273380659243275938904335757337482424'),
-    h: BigInt(1), // Cofactor
-    lowS: true, // Allow only low-S signatures by default in sign() and verify()
-    endo: {
-        // Endomorphism, see above
-        beta: BigInt('0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee'),
-        splitScalar: (k) => {
-            const n = secp256k1N;
-            const a1 = BigInt('0x3086d221a7d46bcde86c90e49284eb15');
-            const b1 = -_1n * BigInt('0xe4437ed6010e88286f547fa90abfe4c3');
-            const a2 = BigInt('0x114ca50f7a8e2f3f657c1108d9d44cfd8');
-            const b2 = a1;
-            const POW_2_128 = BigInt('0x100000000000000000000000000000000'); // (2n**128n).toString(16)
-            const c1 = divNearest(b2 * k, n);
-            const c2 = divNearest(-b1 * k, n);
-            let k1 = (0, modular_js_1.mod)(k - c1 * a1 - c2 * a2, n);
-            let k2 = (0, modular_js_1.mod)(-c1 * b1 - c2 * b2, n);
-            const k1neg = k1 > POW_2_128;
-            const k2neg = k2 > POW_2_128;
-            if (k1neg)
-                k1 = n - k1;
-            if (k2neg)
-                k2 = n - k2;
-            if (k1 > POW_2_128 || k2 > POW_2_128) {
-                throw new Error('splitScalar: Endomorphism failed, k=' + k);
-            }
-            return { k1neg, k1, k2neg, k2 };
-        },
-    },
-}, sha256_1.sha256);
+exports.secp256k1 = (0, _shortw_utils_ts_1.createCurve)({ ...secp256k1_CURVE, Fp: Fpk1, lowS: true, endo: secp256k1_ENDO }, sha2_js_1.sha256);
 // Schnorr signatures are superior to ECDSA from above. Below is Schnorr-specific BIP0340 code.
 // https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-const _0n = BigInt(0);
 /** An object mapping tags to their tagged hash prefix of [SHA256(tag) | SHA256(tag)] */
 const TAGGED_HASH_PREFIXES = {};
 function taggedHash(tag, ...messages) {
     let tagP = TAGGED_HASH_PREFIXES[tag];
     if (tagP === undefined) {
-        const tagH = (0, sha256_1.sha256)(Uint8Array.from(tag, (c) => c.charCodeAt(0)));
-        tagP = (0, utils_js_1.concatBytes)(tagH, tagH);
+        const tagH = (0, sha2_js_1.sha256)(Uint8Array.from(tag, (c) => c.charCodeAt(0)));
+        tagP = (0, utils_ts_1.concatBytes)(tagH, tagH);
         TAGGED_HASH_PREFIXES[tag] = tagP;
     }
-    return (0, sha256_1.sha256)((0, utils_js_1.concatBytes)(tagP, ...messages));
+    return (0, sha2_js_1.sha256)((0, utils_ts_1.concatBytes)(tagP, ...messages));
 }
 // ECDSA compact points are 33-byte. Schnorr is 32: we strip first byte 0x02 or 0x03
-const pointToBytes = (point) => point.toRawBytes(true).slice(1);
-const numTo32b = (n) => (0, utils_js_1.numberToBytesBE)(n, 32);
-const modP = (x) => (0, modular_js_1.mod)(x, secp256k1P);
-const modN = (x) => (0, modular_js_1.mod)(x, secp256k1N);
-const Point = exports.secp256k1.ProjectivePoint;
-const GmulAdd = (Q, a, b) => Point.BASE.multiplyAndAddUnsafe(Q, a, b);
+const pointToBytes = (point) => point.toBytes(true).slice(1);
+const numTo32b = (n) => (0, utils_ts_1.numberToBytesBE)(n, 32);
+const modP = (x) => (0, modular_ts_1.mod)(x, secp256k1_CURVE.p);
+const modN = (x) => (0, modular_ts_1.mod)(x, secp256k1_CURVE.n);
+const Point = /* @__PURE__ */ (() => exports.secp256k1.Point)();
+const hasEven = (y) => y % _2n === _0n;
 // Calculate point, scalar and bytes
 function schnorrGetExtPubKey(priv) {
-    let d_ = exports.secp256k1.utils.normPrivateKeyToScalar(priv); // same method executed in fromPrivateKey
-    let p = Point.fromPrivateKey(d_); // P = d'⋅G; 0 < d' < n check is done inside
-    const scalar = p.hasEvenY() ? d_ : modN(-d_);
-    return { scalar: scalar, bytes: pointToBytes(p) };
+    // TODO: replace with Point.Fn.fromBytes(priv)
+    let d_ = (0, weierstrass_ts_1._normFnElement)(Point.Fn, priv);
+    let p = Point.BASE.multiply(d_); // P = d'⋅G; 0 < d' < n check is done inside
+    const scalar = hasEven(p.y) ? d_ : modN(-d_);
+    return { scalar, bytes: pointToBytes(p) };
 }
 /**
  * lift_x from BIP340. Convert 32-byte x coordinate to elliptic curve point.
  * @returns valid point checked for being on-curve
  */
 function lift_x(x) {
-    (0, utils_js_1.aInRange)('x', x, _1n, secp256k1P); // Fail if x ≥ p.
+    (0, utils_ts_1.aInRange)('x', x, _1n, secp256k1_CURVE.p); // Fail if x ≥ p.
     const xx = modP(x * x);
     const c = modP(xx * x + BigInt(7)); // Let c = x³ + 7 mod p.
     let y = sqrtMod(c); // Let y = c^(p+1)/4 mod p.
-    if (y % _2n !== _0n)
+    if (!hasEven(y))
         y = modP(-y); // Return the unique point P such that x(P) = x and
-    const p = new Point(x, y, _1n); // y(P) = y if y mod 2 = 0 or y(P) = p-y otherwise.
+    const p = Point.fromAffine({ x, y }); // y(P) = y if y mod 2 = 0 or y(P) = p-y otherwise.
     p.assertValidity();
     return p;
 }
-const num = utils_js_1.bytesToNumberBE;
+const num = utils_ts_1.bytesToNumberBE;
 /**
  * Create tagged hash, convert it to bigint, reduce modulo-n.
  */
@@ -7806,17 +8012,17 @@ function challenge(...args) {
 /**
  * Schnorr public key is just `x` coordinate of Point as per BIP340.
  */
-function schnorrGetPublicKey(privateKey) {
-    return schnorrGetExtPubKey(privateKey).bytes; // d'=int(sk). Fail if d'=0 or d'≥n. Ret bytes(d'⋅G)
+function schnorrGetPublicKey(secretKey) {
+    return schnorrGetExtPubKey(secretKey).bytes; // d'=int(sk). Fail if d'=0 or d'≥n. Ret bytes(d'⋅G)
 }
 /**
  * Creates Schnorr signature as per BIP340. Verifies itself before returning anything.
  * auxRand is optional and is not the sole source of k generation: bad CSPRNG won't be dangerous.
  */
-function schnorrSign(message, privateKey, auxRand = (0, utils_1.randomBytes)(32)) {
-    const m = (0, utils_js_1.ensureBytes)('message', message);
-    const { bytes: px, scalar: d } = schnorrGetExtPubKey(privateKey); // checks for isWithinCurveOrder
-    const a = (0, utils_js_1.ensureBytes)('auxRand', auxRand, 32); // Auxiliary random data a: a 32-byte array
+function schnorrSign(message, secretKey, auxRand = (0, utils_js_1.randomBytes)(32)) {
+    const m = (0, utils_ts_1.ensureBytes)('message', message);
+    const { bytes: px, scalar: d } = schnorrGetExtPubKey(secretKey); // checks for isWithinCurveOrder
+    const a = (0, utils_ts_1.ensureBytes)('auxRand', auxRand, 32); // Auxiliary random data a: a 32-byte array
     const t = numTo32b(d ^ num(taggedHash('BIP0340/aux', a))); // Let t be the byte-wise xor of bytes(d) and hash/aux(a)
     const rand = taggedHash('BIP0340/nonce', t, px, m); // Let rand = hash/nonce(t || bytes(P) || m)
     const k_ = modN(num(rand)); // Let k' = int(rand) mod n
@@ -7837,22 +8043,25 @@ function schnorrSign(message, privateKey, auxRand = (0, utils_1.randomBytes)(32)
  * Will swallow errors & return false except for initial type validation of arguments.
  */
 function schnorrVerify(signature, message, publicKey) {
-    const sig = (0, utils_js_1.ensureBytes)('signature', signature, 64);
-    const m = (0, utils_js_1.ensureBytes)('message', message);
-    const pub = (0, utils_js_1.ensureBytes)('publicKey', publicKey, 32);
+    const sig = (0, utils_ts_1.ensureBytes)('signature', signature, 64);
+    const m = (0, utils_ts_1.ensureBytes)('message', message);
+    const pub = (0, utils_ts_1.ensureBytes)('publicKey', publicKey, 32);
     try {
         const P = lift_x(num(pub)); // P = lift_x(int(pk)); fail if that fails
         const r = num(sig.subarray(0, 32)); // Let r = int(sig[0:32]); fail if r ≥ p.
-        if (!(0, utils_js_1.inRange)(r, _1n, secp256k1P))
+        if (!(0, utils_ts_1.inRange)(r, _1n, secp256k1_CURVE.p))
             return false;
         const s = num(sig.subarray(32, 64)); // Let s = int(sig[32:64]); fail if s ≥ n.
-        if (!(0, utils_js_1.inRange)(s, _1n, secp256k1N))
+        if (!(0, utils_ts_1.inRange)(s, _1n, secp256k1_CURVE.n))
             return false;
         const e = challenge(numTo32b(r), pointToBytes(P), m); // int(challenge(bytes(r)||bytes(P)||m))%n
-        const R = GmulAdd(P, s, modN(-e)); // R = s⋅G - e⋅P
-        if (!R || !R.hasEvenY() || R.toAffine().x !== r)
-            return false; // -eP == (n-e)P
-        return true; // Fail if is_infinite(R) / not has_even_y(R) / x(R) ≠ r.
+        // R = s⋅G - e⋅P, where -eP == (n-e)P
+        const R = Point.BASE.multiplyUnsafe(s).add(P.multiplyUnsafe(modN(-e)));
+        const { x, y } = R.toAffine();
+        // Fail if is_infinite(R) / not has_even_y(R) / x(R) ≠ r.
+        if (R.is0() || !hasEven(y) || x !== r)
+            return false;
+        return true;
     }
     catch (error) {
         return false;
@@ -7862,28 +8071,57 @@ function schnorrVerify(signature, message, publicKey) {
  * Schnorr signatures over secp256k1.
  * https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
  * @example
+ * ```js
  * import { schnorr } from '@noble/curves/secp256k1';
- * const priv = schnorr.utils.randomPrivateKey();
- * const pub = schnorr.getPublicKey(priv);
+ * const { secretKey, publicKey } = schnorr.keygen();
+ * // const publicKey = schnorr.getPublicKey(secretKey);
  * const msg = new TextEncoder().encode('hello');
- * const sig = schnorr.sign(msg, priv);
- * const isValid = schnorr.verify(sig, msg, pub);
+ * const sig = schnorr.sign(msg, secretKey);
+ * const isValid = schnorr.verify(sig, msg, publicKey);
+ * ```
  */
-exports.schnorr = (() => ({
-    getPublicKey: schnorrGetPublicKey,
-    sign: schnorrSign,
-    verify: schnorrVerify,
-    utils: {
-        randomPrivateKey: exports.secp256k1.utils.randomPrivateKey,
-        lift_x,
-        pointToBytes,
-        numberToBytesBE: utils_js_1.numberToBytesBE,
-        bytesToNumberBE: utils_js_1.bytesToNumberBE,
-        taggedHash,
-        mod: modular_js_1.mod,
-    },
-}))();
-const isoMap = /* @__PURE__ */ (() => (0, hash_to_curve_js_1.isogenyMap)(Fpk1, [
+exports.schnorr = (() => {
+    const size = 32;
+    const seedLength = 48;
+    const randomSecretKey = (seed = (0, utils_js_1.randomBytes)(seedLength)) => {
+        return (0, modular_ts_1.mapHashToField)(seed, secp256k1_CURVE.n);
+    };
+    // TODO: remove
+    exports.secp256k1.utils.randomSecretKey;
+    function keygen(seed) {
+        const secretKey = randomSecretKey(seed);
+        return { secretKey, publicKey: schnorrGetPublicKey(secretKey) };
+    }
+    return {
+        keygen,
+        getPublicKey: schnorrGetPublicKey,
+        sign: schnorrSign,
+        verify: schnorrVerify,
+        Point,
+        utils: {
+            randomSecretKey: randomSecretKey,
+            randomPrivateKey: randomSecretKey,
+            taggedHash,
+            // TODO: remove
+            lift_x,
+            pointToBytes,
+            numberToBytesBE: utils_ts_1.numberToBytesBE,
+            bytesToNumberBE: utils_ts_1.bytesToNumberBE,
+            mod: modular_ts_1.mod,
+        },
+        info: {
+            type: 'weierstrass',
+            publicKeyHasPrefix: false,
+            lengths: {
+                secret: size,
+                public: size,
+                signature: size * 2,
+                seed: seedLength,
+            },
+        },
+    };
+})();
+const isoMap = /* @__PURE__ */ (() => (0, hash_to_curve_ts_1.isogenyMap)(Fpk1, [
     // xNum
     [
         '0x8e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38daaaaa8c7',
@@ -7912,12 +8150,13 @@ const isoMap = /* @__PURE__ */ (() => (0, hash_to_curve_js_1.isogenyMap)(Fpk1, [
         '0x0000000000000000000000000000000000000000000000000000000000000001', // LAST 1
     ],
 ].map((i) => i.map((j) => BigInt(j)))))();
-const mapSWU = /* @__PURE__ */ (() => (0, weierstrass_js_1.mapToCurveSimpleSWU)(Fpk1, {
+const mapSWU = /* @__PURE__ */ (() => (0, weierstrass_ts_1.mapToCurveSimpleSWU)(Fpk1, {
     A: BigInt('0x3f8731abdd661adca08a5558f0f5d272e953d363cb6f0e5d405447c01a444533'),
     B: BigInt('1771'),
     Z: Fpk1.create(BigInt('-11')),
 }))();
-const htf = /* @__PURE__ */ (() => (0, hash_to_curve_js_1.createHasher)(exports.secp256k1.ProjectivePoint, (scalars) => {
+/** Hashing / encoding to secp256k1 points / field. RFC 9380 methods. */
+exports.secp256k1_hasher = (() => (0, hash_to_curve_ts_1.createHasher)(exports.secp256k1.Point, (scalars) => {
     const { x, y } = mapSWU(Fpk1.create(scalars[0]));
     return isoMap(x, y);
 }, {
@@ -7927,70 +8166,333 @@ const htf = /* @__PURE__ */ (() => (0, hash_to_curve_js_1.createHasher)(exports.
     m: 1,
     k: 128,
     expand: 'xmd',
-    hash: sha256_1.sha256,
+    hash: sha2_js_1.sha256,
 }))();
-/** secp256k1 hash-to-curve from [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380). */
-exports.hashToCurve = (() => htf.hashToCurve)();
-/** secp256k1 encode-to-curve from [RFC 9380](https://www.rfc-editor.org/rfc/rfc9380). */
-exports.encodeToCurve = (() => htf.encodeToCurve)();
+/** @deprecated use `import { secp256k1_hasher } from '@noble/curves/secp256k1.js';` */
+exports.hashToCurve = (() => exports.secp256k1_hasher.hashToCurve)();
+/** @deprecated use `import { secp256k1_hasher } from '@noble/curves/secp256k1.js';` */
+exports.encodeToCurve = (() => exports.secp256k1_hasher.encodeToCurve)();
 //# sourceMappingURL=secp256k1.js.map
 
 /***/ }),
 
-/***/ 44894:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ 28816:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.notImplemented = exports.bitMask = exports.utf8ToBytes = exports.randomBytes = exports.isBytes = exports.hexToBytes = exports.concatBytes = exports.bytesToUtf8 = exports.bytesToHex = exports.anumber = exports.abytes = void 0;
+exports.abool = abool;
+exports.numberToHexUnpadded = numberToHexUnpadded;
+exports.hexToNumber = hexToNumber;
+exports.bytesToNumberBE = bytesToNumberBE;
+exports.bytesToNumberLE = bytesToNumberLE;
+exports.numberToBytesBE = numberToBytesBE;
+exports.numberToBytesLE = numberToBytesLE;
+exports.numberToVarBytesBE = numberToVarBytesBE;
+exports.ensureBytes = ensureBytes;
+exports.equalBytes = equalBytes;
+exports.inRange = inRange;
+exports.aInRange = aInRange;
+exports.bitLen = bitLen;
+exports.bitGet = bitGet;
+exports.bitSet = bitSet;
+exports.createHmacDrbg = createHmacDrbg;
+exports.validateObject = validateObject;
+exports.isHash = isHash;
+exports._validateObject = _validateObject;
+exports.memoized = memoized;
 /**
- * Internal assertion helpers.
+ * Hex, bytes and number utilities.
  * @module
  */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.anumber = anumber;
-exports.abytes = abytes;
-exports.ahash = ahash;
-exports.aexists = aexists;
-exports.aoutput = aoutput;
-/** Asserts something is positive integer. */
-function anumber(n) {
-    if (!Number.isSafeInteger(n) || n < 0)
-        throw new Error('positive integer expected, got ' + n);
+/*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
+const utils_js_1 = __nccwpck_require__(4248);
+var utils_js_2 = __nccwpck_require__(4248);
+Object.defineProperty(exports, "abytes", ({ enumerable: true, get: function () { return utils_js_2.abytes; } }));
+Object.defineProperty(exports, "anumber", ({ enumerable: true, get: function () { return utils_js_2.anumber; } }));
+Object.defineProperty(exports, "bytesToHex", ({ enumerable: true, get: function () { return utils_js_2.bytesToHex; } }));
+Object.defineProperty(exports, "bytesToUtf8", ({ enumerable: true, get: function () { return utils_js_2.bytesToUtf8; } }));
+Object.defineProperty(exports, "concatBytes", ({ enumerable: true, get: function () { return utils_js_2.concatBytes; } }));
+Object.defineProperty(exports, "hexToBytes", ({ enumerable: true, get: function () { return utils_js_2.hexToBytes; } }));
+Object.defineProperty(exports, "isBytes", ({ enumerable: true, get: function () { return utils_js_2.isBytes; } }));
+Object.defineProperty(exports, "randomBytes", ({ enumerable: true, get: function () { return utils_js_2.randomBytes; } }));
+Object.defineProperty(exports, "utf8ToBytes", ({ enumerable: true, get: function () { return utils_js_2.utf8ToBytes; } }));
+const _0n = /* @__PURE__ */ BigInt(0);
+const _1n = /* @__PURE__ */ BigInt(1);
+function abool(title, value) {
+    if (typeof value !== 'boolean')
+        throw new Error(title + ' boolean expected, got ' + value);
 }
-/** Is number an Uint8Array? Copied from utils for perf. */
-function isBytes(a) {
-    return a instanceof Uint8Array || (ArrayBuffer.isView(a) && a.constructor.name === 'Uint8Array');
+// Used in weierstrass, der
+function numberToHexUnpadded(num) {
+    const hex = num.toString(16);
+    return hex.length & 1 ? '0' + hex : hex;
 }
-/** Asserts something is Uint8Array. */
-function abytes(b, ...lengths) {
-    if (!isBytes(b))
-        throw new Error('Uint8Array expected');
-    if (lengths.length > 0 && !lengths.includes(b.length))
-        throw new Error('Uint8Array expected of length ' + lengths + ', got length=' + b.length);
+function hexToNumber(hex) {
+    if (typeof hex !== 'string')
+        throw new Error('hex string expected, got ' + typeof hex);
+    return hex === '' ? _0n : BigInt('0x' + hex); // Big Endian
 }
-/** Asserts something is hash */
-function ahash(h) {
-    if (typeof h !== 'function' || typeof h.create !== 'function')
-        throw new Error('Hash should be wrapped by utils.wrapConstructor');
-    anumber(h.outputLen);
-    anumber(h.blockLen);
+// BE: Big Endian, LE: Little Endian
+function bytesToNumberBE(bytes) {
+    return hexToNumber((0, utils_js_1.bytesToHex)(bytes));
 }
-/** Asserts a hash instance has not been destroyed / finished */
-function aexists(instance, checkFinished = true) {
-    if (instance.destroyed)
-        throw new Error('Hash instance has been destroyed');
-    if (checkFinished && instance.finished)
-        throw new Error('Hash#digest() has already been called');
+function bytesToNumberLE(bytes) {
+    (0, utils_js_1.abytes)(bytes);
+    return hexToNumber((0, utils_js_1.bytesToHex)(Uint8Array.from(bytes).reverse()));
 }
-/** Asserts output is properly-sized byte array */
-function aoutput(out, instance) {
-    abytes(out);
-    const min = instance.outputLen;
-    if (out.length < min) {
-        throw new Error('digestInto() expects output buffer of length at least ' + min);
+function numberToBytesBE(n, len) {
+    return (0, utils_js_1.hexToBytes)(n.toString(16).padStart(len * 2, '0'));
+}
+function numberToBytesLE(n, len) {
+    return numberToBytesBE(n, len).reverse();
+}
+// Unpadded, rarely used
+function numberToVarBytesBE(n) {
+    return (0, utils_js_1.hexToBytes)(numberToHexUnpadded(n));
+}
+/**
+ * Takes hex string or Uint8Array, converts to Uint8Array.
+ * Validates output length.
+ * Will throw error for other types.
+ * @param title descriptive title for an error e.g. 'secret key'
+ * @param hex hex string or Uint8Array
+ * @param expectedLength optional, will compare to result array's length
+ * @returns
+ */
+function ensureBytes(title, hex, expectedLength) {
+    let res;
+    if (typeof hex === 'string') {
+        try {
+            res = (0, utils_js_1.hexToBytes)(hex);
+        }
+        catch (e) {
+            throw new Error(title + ' must be hex string or Uint8Array, cause: ' + e);
+        }
     }
+    else if ((0, utils_js_1.isBytes)(hex)) {
+        // Uint8Array.from() instead of hash.slice() because node.js Buffer
+        // is instance of Uint8Array, and its slice() creates **mutable** copy
+        res = Uint8Array.from(hex);
+    }
+    else {
+        throw new Error(title + ' must be hex string or Uint8Array');
+    }
+    const len = res.length;
+    if (typeof expectedLength === 'number' && len !== expectedLength)
+        throw new Error(title + ' of length ' + expectedLength + ' expected, got ' + len);
+    return res;
 }
-//# sourceMappingURL=_assert.js.map
+// Compares 2 u8a-s in kinda constant time
+function equalBytes(a, b) {
+    if (a.length !== b.length)
+        return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++)
+        diff |= a[i] ^ b[i];
+    return diff === 0;
+}
+/**
+ * @example utf8ToBytes('abc') // new Uint8Array([97, 98, 99])
+ */
+// export const utf8ToBytes: typeof utf8ToBytes_ = utf8ToBytes_;
+/**
+ * Converts bytes to string using UTF8 encoding.
+ * @example bytesToUtf8(Uint8Array.from([97, 98, 99])) // 'abc'
+ */
+// export const bytesToUtf8: typeof bytesToUtf8_ = bytesToUtf8_;
+// Is positive bigint
+const isPosBig = (n) => typeof n === 'bigint' && _0n <= n;
+function inRange(n, min, max) {
+    return isPosBig(n) && isPosBig(min) && isPosBig(max) && min <= n && n < max;
+}
+/**
+ * Asserts min <= n < max. NOTE: It's < max and not <= max.
+ * @example
+ * aInRange('x', x, 1n, 256n); // would assume x is in (1n..255n)
+ */
+function aInRange(title, n, min, max) {
+    // Why min <= n < max and not a (min < n < max) OR b (min <= n <= max)?
+    // consider P=256n, min=0n, max=P
+    // - a for min=0 would require -1:          `inRange('x', x, -1n, P)`
+    // - b would commonly require subtraction:  `inRange('x', x, 0n, P - 1n)`
+    // - our way is the cleanest:               `inRange('x', x, 0n, P)
+    if (!inRange(n, min, max))
+        throw new Error('expected valid ' + title + ': ' + min + ' <= n < ' + max + ', got ' + n);
+}
+// Bit operations
+/**
+ * Calculates amount of bits in a bigint.
+ * Same as `n.toString(2).length`
+ * TODO: merge with nLength in modular
+ */
+function bitLen(n) {
+    let len;
+    for (len = 0; n > _0n; n >>= _1n, len += 1)
+        ;
+    return len;
+}
+/**
+ * Gets single bit at position.
+ * NOTE: first bit position is 0 (same as arrays)
+ * Same as `!!+Array.from(n.toString(2)).reverse()[pos]`
+ */
+function bitGet(n, pos) {
+    return (n >> BigInt(pos)) & _1n;
+}
+/**
+ * Sets single bit at position.
+ */
+function bitSet(n, pos, value) {
+    return n | ((value ? _1n : _0n) << BigInt(pos));
+}
+/**
+ * Calculate mask for N bits. Not using ** operator with bigints because of old engines.
+ * Same as BigInt(`0b${Array(i).fill('1').join('')}`)
+ */
+const bitMask = (n) => (_1n << BigInt(n)) - _1n;
+exports.bitMask = bitMask;
+/**
+ * Minimal HMAC-DRBG from NIST 800-90 for RFC6979 sigs.
+ * @returns function that will call DRBG until 2nd arg returns something meaningful
+ * @example
+ *   const drbg = createHmacDRBG<Key>(32, 32, hmac);
+ *   drbg(seed, bytesToKey); // bytesToKey must return Key or undefined
+ */
+function createHmacDrbg(hashLen, qByteLen, hmacFn) {
+    if (typeof hashLen !== 'number' || hashLen < 2)
+        throw new Error('hashLen must be a number');
+    if (typeof qByteLen !== 'number' || qByteLen < 2)
+        throw new Error('qByteLen must be a number');
+    if (typeof hmacFn !== 'function')
+        throw new Error('hmacFn must be a function');
+    // Step B, Step C: set hashLen to 8*ceil(hlen/8)
+    const u8n = (len) => new Uint8Array(len); // creates Uint8Array
+    const u8of = (byte) => Uint8Array.of(byte); // another shortcut
+    let v = u8n(hashLen); // Minimal non-full-spec HMAC-DRBG from NIST 800-90 for RFC6979 sigs.
+    let k = u8n(hashLen); // Steps B and C of RFC6979 3.2: set hashLen, in our case always same
+    let i = 0; // Iterations counter, will throw when over 1000
+    const reset = () => {
+        v.fill(1);
+        k.fill(0);
+        i = 0;
+    };
+    const h = (...b) => hmacFn(k, v, ...b); // hmac(k)(v, ...values)
+    const reseed = (seed = u8n(0)) => {
+        // HMAC-DRBG reseed() function. Steps D-G
+        k = h(u8of(0x00), seed); // k = hmac(k || v || 0x00 || seed)
+        v = h(); // v = hmac(k || v)
+        if (seed.length === 0)
+            return;
+        k = h(u8of(0x01), seed); // k = hmac(k || v || 0x01 || seed)
+        v = h(); // v = hmac(k || v)
+    };
+    const gen = () => {
+        // HMAC-DRBG generate() function
+        if (i++ >= 1000)
+            throw new Error('drbg: tried 1000 values');
+        let len = 0;
+        const out = [];
+        while (len < qByteLen) {
+            v = h();
+            const sl = v.slice();
+            out.push(sl);
+            len += v.length;
+        }
+        return (0, utils_js_1.concatBytes)(...out);
+    };
+    const genUntil = (seed, pred) => {
+        reset();
+        reseed(seed); // Steps D-G
+        let res = undefined; // Step H: grind until k is in [1..n-1]
+        while (!(res = pred(gen())))
+            reseed();
+        reset();
+        return res;
+    };
+    return genUntil;
+}
+// Validating curves and fields
+const validatorFns = {
+    bigint: (val) => typeof val === 'bigint',
+    function: (val) => typeof val === 'function',
+    boolean: (val) => typeof val === 'boolean',
+    string: (val) => typeof val === 'string',
+    stringOrUint8Array: (val) => typeof val === 'string' || (0, utils_js_1.isBytes)(val),
+    isSafeInteger: (val) => Number.isSafeInteger(val),
+    array: (val) => Array.isArray(val),
+    field: (val, object) => object.Fp.isValid(val),
+    hash: (val) => typeof val === 'function' && Number.isSafeInteger(val.outputLen),
+};
+// type Record<K extends string | number | symbol, T> = { [P in K]: T; }
+function validateObject(object, validators, optValidators = {}) {
+    const checkField = (fieldName, type, isOptional) => {
+        const checkVal = validatorFns[type];
+        if (typeof checkVal !== 'function')
+            throw new Error('invalid validator function');
+        const val = object[fieldName];
+        if (isOptional && val === undefined)
+            return;
+        if (!checkVal(val, object)) {
+            throw new Error('param ' + String(fieldName) + ' is invalid. Expected ' + type + ', got ' + val);
+        }
+    };
+    for (const [fieldName, type] of Object.entries(validators))
+        checkField(fieldName, type, false);
+    for (const [fieldName, type] of Object.entries(optValidators))
+        checkField(fieldName, type, true);
+    return object;
+}
+// validate type tests
+// const o: { a: number; b: number; c: number } = { a: 1, b: 5, c: 6 };
+// const z0 = validateObject(o, { a: 'isSafeInteger' }, { c: 'bigint' }); // Ok!
+// // Should fail type-check
+// const z1 = validateObject(o, { a: 'tmp' }, { c: 'zz' });
+// const z2 = validateObject(o, { a: 'isSafeInteger' }, { c: 'zz' });
+// const z3 = validateObject(o, { test: 'boolean', z: 'bug' });
+// const z4 = validateObject(o, { a: 'boolean', z: 'bug' });
+function isHash(val) {
+    return typeof val === 'function' && Number.isSafeInteger(val.outputLen);
+}
+function _validateObject(object, fields, optFields = {}) {
+    if (!object || typeof object !== 'object')
+        throw new Error('expected valid options object');
+    function checkField(fieldName, expectedType, isOpt) {
+        const val = object[fieldName];
+        if (isOpt && val === undefined)
+            return;
+        const current = typeof val;
+        if (current !== expectedType || val === null)
+            throw new Error(`param "${fieldName}" is invalid: expected ${expectedType}, got ${current}`);
+    }
+    Object.entries(fields).forEach(([k, v]) => checkField(k, v, false));
+    Object.entries(optFields).forEach(([k, v]) => checkField(k, v, true));
+}
+/**
+ * throws not implemented error
+ */
+const notImplemented = () => {
+    throw new Error('not implemented');
+};
+exports.notImplemented = notImplemented;
+/**
+ * Memoizes (caches) computation result.
+ * Uses WeakMap: the value is going auto-cleaned by GC after last reference is removed.
+ */
+function memoized(fn) {
+    const map = new WeakMap();
+    return (arg, ...args) => {
+        const val = map.get(arg);
+        if (val !== undefined)
+            return val;
+        const computed = fn(arg, ...args);
+        map.set(arg, computed);
+        return computed;
+    };
+}
+//# sourceMappingURL=utils.js.map
 
 /***/ }),
 
@@ -8000,19 +8502,20 @@ function aoutput(out, instance) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BLAKE = exports.SIGMA = void 0;
+exports.BSIGMA = void 0;
+exports.G1s = G1s;
+exports.G2s = G2s;
 /**
  * Internal helpers for blake hash.
  * @module
  */
-const _assert_js_1 = __nccwpck_require__(44894);
-const utils_js_1 = __nccwpck_require__(4248);
+const utils_ts_1 = __nccwpck_require__(4248);
 /**
  * Internal blake variable.
  * For BLAKE2b, the two extra permutations for rounds 10 and 11 are SIGMA[10..11] = SIGMA[0..1].
  */
 // prettier-ignore
-exports.SIGMA = new Uint8Array([
+exports.BSIGMA = Uint8Array.from([
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3,
     11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4,
@@ -8031,109 +8534,21 @@ exports.SIGMA = new Uint8Array([
     9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13,
     2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9,
 ]);
-/** Class, from which others are subclassed. */
-class BLAKE extends utils_js_1.Hash {
-    constructor(blockLen, outputLen, opts = {}, keyLen, saltLen, persLen) {
-        super();
-        this.blockLen = blockLen;
-        this.outputLen = outputLen;
-        this.length = 0;
-        this.pos = 0;
-        this.finished = false;
-        this.destroyed = false;
-        (0, _assert_js_1.anumber)(blockLen);
-        (0, _assert_js_1.anumber)(outputLen);
-        (0, _assert_js_1.anumber)(keyLen);
-        if (outputLen < 0 || outputLen > keyLen)
-            throw new Error('outputLen bigger than keyLen');
-        if (opts.key !== undefined && (opts.key.length < 1 || opts.key.length > keyLen))
-            throw new Error('key length must be undefined or 1..' + keyLen);
-        if (opts.salt !== undefined && opts.salt.length !== saltLen)
-            throw new Error('salt must be undefined or ' + saltLen);
-        if (opts.personalization !== undefined && opts.personalization.length !== persLen)
-            throw new Error('personalization must be undefined or ' + persLen);
-        this.buffer = new Uint8Array(blockLen);
-        this.buffer32 = (0, utils_js_1.u32)(this.buffer);
-    }
-    update(data) {
-        (0, _assert_js_1.aexists)(this);
-        // Main difference with other hashes: there is flag for last block,
-        // so we cannot process current block before we know that there
-        // is the next one. This significantly complicates logic and reduces ability
-        // to do zero-copy processing
-        const { blockLen, buffer, buffer32 } = this;
-        data = (0, utils_js_1.toBytes)(data);
-        const len = data.length;
-        const offset = data.byteOffset;
-        const buf = data.buffer;
-        for (let pos = 0; pos < len;) {
-            // If buffer is full and we still have input (don't process last block, same as blake2s)
-            if (this.pos === blockLen) {
-                if (!utils_js_1.isLE)
-                    (0, utils_js_1.byteSwap32)(buffer32);
-                this.compress(buffer32, 0, false);
-                if (!utils_js_1.isLE)
-                    (0, utils_js_1.byteSwap32)(buffer32);
-                this.pos = 0;
-            }
-            const take = Math.min(blockLen - this.pos, len - pos);
-            const dataOffset = offset + pos;
-            // full block && aligned to 4 bytes && not last in input
-            if (take === blockLen && !(dataOffset % 4) && pos + take < len) {
-                const data32 = new Uint32Array(buf, dataOffset, Math.floor((len - pos) / 4));
-                if (!utils_js_1.isLE)
-                    (0, utils_js_1.byteSwap32)(data32);
-                for (let pos32 = 0; pos + blockLen < len; pos32 += buffer32.length, pos += blockLen) {
-                    this.length += blockLen;
-                    this.compress(data32, pos32, false);
-                }
-                if (!utils_js_1.isLE)
-                    (0, utils_js_1.byteSwap32)(data32);
-                continue;
-            }
-            buffer.set(data.subarray(pos, pos + take), this.pos);
-            this.pos += take;
-            this.length += take;
-            pos += take;
-        }
-        return this;
-    }
-    digestInto(out) {
-        (0, _assert_js_1.aexists)(this);
-        (0, _assert_js_1.aoutput)(out, this);
-        const { pos, buffer32 } = this;
-        this.finished = true;
-        // Padding
-        this.buffer.subarray(pos).fill(0);
-        if (!utils_js_1.isLE)
-            (0, utils_js_1.byteSwap32)(buffer32);
-        this.compress(buffer32, 0, true);
-        if (!utils_js_1.isLE)
-            (0, utils_js_1.byteSwap32)(buffer32);
-        const out32 = (0, utils_js_1.u32)(out);
-        this.get().forEach((v, i) => (out32[i] = (0, utils_js_1.byteSwapIfBE)(v)));
-    }
-    digest() {
-        const { buffer, outputLen } = this;
-        this.digestInto(buffer);
-        const res = buffer.slice(0, outputLen);
-        this.destroy();
-        return res;
-    }
-    _cloneInto(to) {
-        const { buffer, length, finished, destroyed, outputLen, pos } = this;
-        to || (to = new this.constructor({ dkLen: outputLen }));
-        to.set(...this.get());
-        to.length = length;
-        to.finished = finished;
-        to.destroyed = destroyed;
-        to.outputLen = outputLen;
-        to.buffer.set(buffer);
-        to.pos = pos;
-        return to;
-    }
+// Mixing function G splitted in two halfs
+function G1s(a, b, c, d, x) {
+    a = (a + b + x) | 0;
+    d = (0, utils_ts_1.rotr)(d ^ a, 16);
+    c = (c + d) | 0;
+    b = (0, utils_ts_1.rotr)(b ^ c, 12);
+    return { a, b, c, d };
 }
-exports.BLAKE = BLAKE;
+function G2s(a, b, c, d, x) {
+    a = (a + b + x) | 0;
+    d = (0, utils_ts_1.rotr)(d ^ a, 8);
+    c = (c + d) | 0;
+    b = (0, utils_ts_1.rotr)(b ^ c, 7);
+    return { a, b, c, d };
+}
 //# sourceMappingURL=_blake.js.map
 
 /***/ }),
@@ -8144,7 +8559,7 @@ exports.BLAKE = BLAKE;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HashMD = void 0;
+exports.SHA512_IV = exports.SHA384_IV = exports.SHA224_IV = exports.SHA256_IV = exports.HashMD = void 0;
 exports.setBigUint64 = setBigUint64;
 exports.Chi = Chi;
 exports.Maj = Maj;
@@ -8152,8 +8567,7 @@ exports.Maj = Maj;
  * Internal Merkle-Damgard hash utils.
  * @module
  */
-const _assert_js_1 = __nccwpck_require__(44894);
-const utils_js_1 = __nccwpck_require__(4248);
+const utils_ts_1 = __nccwpck_require__(4248);
 /** Polyfill for Safari 14. https://caniuse.com/mdn-javascript_builtins_dataview_setbiguint64 */
 function setBigUint64(view, byteOffset, value, isLE) {
     if (typeof view.setBigUint64 === 'function')
@@ -8179,30 +8593,31 @@ function Maj(a, b, c) {
  * Merkle-Damgard hash construction base class.
  * Could be used to create MD5, RIPEMD, SHA1, SHA2.
  */
-class HashMD extends utils_js_1.Hash {
+class HashMD extends utils_ts_1.Hash {
     constructor(blockLen, outputLen, padOffset, isLE) {
         super();
-        this.blockLen = blockLen;
-        this.outputLen = outputLen;
-        this.padOffset = padOffset;
-        this.isLE = isLE;
         this.finished = false;
         this.length = 0;
         this.pos = 0;
         this.destroyed = false;
+        this.blockLen = blockLen;
+        this.outputLen = outputLen;
+        this.padOffset = padOffset;
+        this.isLE = isLE;
         this.buffer = new Uint8Array(blockLen);
-        this.view = (0, utils_js_1.createView)(this.buffer);
+        this.view = (0, utils_ts_1.createView)(this.buffer);
     }
     update(data) {
-        (0, _assert_js_1.aexists)(this);
+        (0, utils_ts_1.aexists)(this);
+        data = (0, utils_ts_1.toBytes)(data);
+        (0, utils_ts_1.abytes)(data);
         const { view, buffer, blockLen } = this;
-        data = (0, utils_js_1.toBytes)(data);
         const len = data.length;
         for (let pos = 0; pos < len;) {
             const take = Math.min(blockLen - this.pos, len - pos);
             // Fast path: we have at least one block in input, cast it to view and process
             if (take === blockLen) {
-                const dataView = (0, utils_js_1.createView)(data);
+                const dataView = (0, utils_ts_1.createView)(data);
                 for (; blockLen <= len - pos; pos += blockLen)
                     this.process(dataView, pos);
                 continue;
@@ -8220,8 +8635,8 @@ class HashMD extends utils_js_1.Hash {
         return this;
     }
     digestInto(out) {
-        (0, _assert_js_1.aexists)(this);
-        (0, _assert_js_1.aoutput)(out, this);
+        (0, utils_ts_1.aexists)(this);
+        (0, utils_ts_1.aoutput)(out, this);
         this.finished = true;
         // Padding
         // We can avoid allocation of buffer for padding completely if it
@@ -8230,7 +8645,7 @@ class HashMD extends utils_js_1.Hash {
         let { pos } = this;
         // append the bit '1' to the message
         buffer[pos++] = 0b10000000;
-        this.buffer.subarray(pos).fill(0);
+        (0, utils_ts_1.clean)(this.buffer.subarray(pos));
         // we have less than padOffset left in buffer, so we cannot put length in
         // current block, need process it and pad again
         if (this.padOffset > blockLen - pos) {
@@ -8245,7 +8660,7 @@ class HashMD extends utils_js_1.Hash {
         // So we just write lowest 64 bits of that value.
         setBigUint64(view, blockLen - 8, BigInt(this.length * 8), isLE);
         this.process(view, 0);
-        const oview = (0, utils_js_1.createView)(out);
+        const oview = (0, utils_ts_1.createView)(out);
         const len = this.outputLen;
         // NOTE: we do division by 4 later, which should be fused in single op with modulo by JIT
         if (len % 4)
@@ -8268,16 +8683,41 @@ class HashMD extends utils_js_1.Hash {
         to || (to = new this.constructor());
         to.set(...this.get());
         const { blockLen, buffer, length, finished, destroyed, pos } = this;
+        to.destroyed = destroyed;
+        to.finished = finished;
         to.length = length;
         to.pos = pos;
-        to.finished = finished;
-        to.destroyed = destroyed;
         if (length % blockLen)
             to.buffer.set(buffer);
         return to;
     }
+    clone() {
+        return this._cloneInto();
+    }
 }
 exports.HashMD = HashMD;
+/**
+ * Initial SHA-2 state: fractional parts of square roots of first 16 primes 2..53.
+ * Check out `test/misc/sha2-gen-iv.js` for recomputation guide.
+ */
+/** Initial SHA256 state. Bits 0..32 of frac part of sqrt of primes 2..19 */
+exports.SHA256_IV = Uint32Array.from([
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+]);
+/** Initial SHA224 state. Bits 32..64 of frac part of sqrt of primes 23..53 */
+exports.SHA224_IV = Uint32Array.from([
+    0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4,
+]);
+/** Initial SHA384 state. Bits 0..64 of frac part of sqrt of primes 23..53 */
+exports.SHA384_IV = Uint32Array.from([
+    0xcbbb9d5d, 0xc1059ed8, 0x629a292a, 0x367cd507, 0x9159015a, 0x3070dd17, 0x152fecd8, 0xf70e5939,
+    0x67332667, 0xffc00b31, 0x8eb44a87, 0x68581511, 0xdb0c2e0d, 0x64f98fa7, 0x47b5481d, 0xbefa4fa4,
+]);
+/** Initial SHA512 state. Bits 0..64 of frac part of sqrt of primes 2..19 */
+exports.SHA512_IV = Uint32Array.from([
+    0x6a09e667, 0xf3bcc908, 0xbb67ae85, 0x84caa73b, 0x3c6ef372, 0xfe94f82b, 0xa54ff53a, 0x5f1d36f1,
+    0x510e527f, 0xade682d1, 0x9b05688c, 0x2b3e6c1f, 0x1f83d9ab, 0xfb41bd6b, 0x5be0cd19, 0x137e2179,
+]);
 //# sourceMappingURL=_md.js.map
 
 /***/ }),
@@ -8288,10 +8728,10 @@ exports.HashMD = HashMD;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.add5L = exports.add5H = exports.add4H = exports.add4L = exports.add3H = exports.add3L = exports.rotlBL = exports.rotlBH = exports.rotlSL = exports.rotlSH = exports.rotr32L = exports.rotr32H = exports.rotrBL = exports.rotrBH = exports.rotrSL = exports.rotrSH = exports.shrSL = exports.shrSH = exports.toBig = void 0;
+exports.toBig = exports.shrSL = exports.shrSH = exports.rotrSL = exports.rotrSH = exports.rotrBL = exports.rotrBH = exports.rotr32L = exports.rotr32H = exports.rotlSL = exports.rotlSH = exports.rotlBL = exports.rotlBH = exports.add5L = exports.add5H = exports.add4L = exports.add4H = exports.add3L = exports.add3H = void 0;
+exports.add = add;
 exports.fromBig = fromBig;
 exports.split = split;
-exports.add = add;
 /**
  * Internal helpers for u64. BigUint64Array is too slow as per 2025, so we implement it using Uint32Array.
  * @todo re-check https://issues.chromium.org/issues/42212588
@@ -8305,9 +8745,10 @@ function fromBig(n, le = false) {
     return { h: Number((n >> _32n) & U32_MASK64) | 0, l: Number(n & U32_MASK64) | 0 };
 }
 function split(lst, le = false) {
-    let Ah = new Uint32Array(lst.length);
-    let Al = new Uint32Array(lst.length);
-    for (let i = 0; i < lst.length; i++) {
+    const len = lst.length;
+    let Ah = new Uint32Array(len);
+    let Al = new Uint32Array(len);
+    for (let i = 0; i < len; i++) {
         const { h, l } = fromBig(lst[i], le);
         [Ah[i], Al[i]] = [h, l];
     }
@@ -8378,25 +8819,28 @@ exports["default"] = u64;
 
 /***/ }),
 
-/***/ 15596:
+/***/ 58412:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.blake2b = exports.BLAKE2b = void 0;
+exports.blake2s = exports.BLAKE2s = exports.blake2b = exports.BLAKE2b = exports.BLAKE2 = void 0;
+exports.compress = compress;
 /**
- * Blake2b hash function. Focuses on 64-bit platforms, but in JS speed different from Blake2s is negligible.
+ * blake2b (64-bit) & blake2s (8 to 32-bit) hash functions.
+ * b could have been faster, but there is no fast u64 in js, so s is 1.5x faster.
  * @module
  */
-const _blake_js_1 = __nccwpck_require__(24599);
-const _u64_js_1 = __nccwpck_require__(26255);
-const utils_js_1 = __nccwpck_require__(4248);
-// Same as SHA-512 but LE
+const _blake_ts_1 = __nccwpck_require__(24599);
+const _md_ts_1 = __nccwpck_require__(24901);
+const u64 = __nccwpck_require__(26255);
 // prettier-ignore
-const B2B_IV = /* @__PURE__ */ new Uint32Array([
+const utils_ts_1 = __nccwpck_require__(4248);
+// Same as SHA512_IV, but swapped endianness: LE instead of BE. iv[1] is iv[0], etc.
+const B2B_IV = /* @__PURE__ */ Uint32Array.from([
     0xf3bcc908, 0x6a09e667, 0x84caa73b, 0xbb67ae85, 0xfe94f82b, 0x3c6ef372, 0x5f1d36f1, 0xa54ff53a,
-    0xade682d1, 0x510e527f, 0x2b3e6c1f, 0x9b05688c, 0xfb41bd6b, 0x1f83d9ab, 0x137e2179, 0x5be0cd19
+    0xade682d1, 0x510e527f, 0x2b3e6c1f, 0x9b05688c, 0xfb41bd6b, 0x1f83d9ab, 0x137e2179, 0x5be0cd19,
 ]);
 // Temporary buffer
 const BBUF = /* @__PURE__ */ new Uint32Array(32);
@@ -8409,17 +8853,17 @@ function G1b(a, b, c, d, msg, x) {
     let Cl = BBUF[2 * c], Ch = BBUF[2 * c + 1]; // prettier-ignore
     let Dl = BBUF[2 * d], Dh = BBUF[2 * d + 1]; // prettier-ignore
     // v[a] = (v[a] + v[b] + x) | 0;
-    let ll = _u64_js_1.default.add3L(Al, Bl, Xl);
-    Ah = _u64_js_1.default.add3H(ll, Ah, Bh, Xh);
+    let ll = u64.add3L(Al, Bl, Xl);
+    Ah = u64.add3H(ll, Ah, Bh, Xh);
     Al = ll | 0;
     // v[d] = rotr(v[d] ^ v[a], 32)
     ({ Dh, Dl } = { Dh: Dh ^ Ah, Dl: Dl ^ Al });
-    ({ Dh, Dl } = { Dh: _u64_js_1.default.rotr32H(Dh, Dl), Dl: _u64_js_1.default.rotr32L(Dh, Dl) });
+    ({ Dh, Dl } = { Dh: u64.rotr32H(Dh, Dl), Dl: u64.rotr32L(Dh, Dl) });
     // v[c] = (v[c] + v[d]) | 0;
-    ({ h: Ch, l: Cl } = _u64_js_1.default.add(Ch, Cl, Dh, Dl));
+    ({ h: Ch, l: Cl } = u64.add(Ch, Cl, Dh, Dl));
     // v[b] = rotr(v[b] ^ v[c], 24)
     ({ Bh, Bl } = { Bh: Bh ^ Ch, Bl: Bl ^ Cl });
-    ({ Bh, Bl } = { Bh: _u64_js_1.default.rotrSH(Bh, Bl, 24), Bl: _u64_js_1.default.rotrSL(Bh, Bl, 24) });
+    ({ Bh, Bl } = { Bh: u64.rotrSH(Bh, Bl, 24), Bl: u64.rotrSL(Bh, Bl, 24) });
     (BBUF[2 * a] = Al), (BBUF[2 * a + 1] = Ah);
     (BBUF[2 * b] = Bl), (BBUF[2 * b + 1] = Bh);
     (BBUF[2 * c] = Cl), (BBUF[2 * c + 1] = Ch);
@@ -8433,25 +8877,131 @@ function G2b(a, b, c, d, msg, x) {
     let Cl = BBUF[2 * c], Ch = BBUF[2 * c + 1]; // prettier-ignore
     let Dl = BBUF[2 * d], Dh = BBUF[2 * d + 1]; // prettier-ignore
     // v[a] = (v[a] + v[b] + x) | 0;
-    let ll = _u64_js_1.default.add3L(Al, Bl, Xl);
-    Ah = _u64_js_1.default.add3H(ll, Ah, Bh, Xh);
+    let ll = u64.add3L(Al, Bl, Xl);
+    Ah = u64.add3H(ll, Ah, Bh, Xh);
     Al = ll | 0;
     // v[d] = rotr(v[d] ^ v[a], 16)
     ({ Dh, Dl } = { Dh: Dh ^ Ah, Dl: Dl ^ Al });
-    ({ Dh, Dl } = { Dh: _u64_js_1.default.rotrSH(Dh, Dl, 16), Dl: _u64_js_1.default.rotrSL(Dh, Dl, 16) });
+    ({ Dh, Dl } = { Dh: u64.rotrSH(Dh, Dl, 16), Dl: u64.rotrSL(Dh, Dl, 16) });
     // v[c] = (v[c] + v[d]) | 0;
-    ({ h: Ch, l: Cl } = _u64_js_1.default.add(Ch, Cl, Dh, Dl));
+    ({ h: Ch, l: Cl } = u64.add(Ch, Cl, Dh, Dl));
     // v[b] = rotr(v[b] ^ v[c], 63)
     ({ Bh, Bl } = { Bh: Bh ^ Ch, Bl: Bl ^ Cl });
-    ({ Bh, Bl } = { Bh: _u64_js_1.default.rotrBH(Bh, Bl, 63), Bl: _u64_js_1.default.rotrBL(Bh, Bl, 63) });
+    ({ Bh, Bl } = { Bh: u64.rotrBH(Bh, Bl, 63), Bl: u64.rotrBL(Bh, Bl, 63) });
     (BBUF[2 * a] = Al), (BBUF[2 * a + 1] = Ah);
     (BBUF[2 * b] = Bl), (BBUF[2 * b + 1] = Bh);
     (BBUF[2 * c] = Cl), (BBUF[2 * c + 1] = Ch);
     (BBUF[2 * d] = Dl), (BBUF[2 * d + 1] = Dh);
 }
-class BLAKE2b extends _blake_js_1.BLAKE {
+function checkBlake2Opts(outputLen, opts = {}, keyLen, saltLen, persLen) {
+    (0, utils_ts_1.anumber)(keyLen);
+    if (outputLen < 0 || outputLen > keyLen)
+        throw new Error('outputLen bigger than keyLen');
+    const { key, salt, personalization } = opts;
+    if (key !== undefined && (key.length < 1 || key.length > keyLen))
+        throw new Error('key length must be undefined or 1..' + keyLen);
+    if (salt !== undefined && salt.length !== saltLen)
+        throw new Error('salt must be undefined or ' + saltLen);
+    if (personalization !== undefined && personalization.length !== persLen)
+        throw new Error('personalization must be undefined or ' + persLen);
+}
+/** Class, from which others are subclassed. */
+class BLAKE2 extends utils_ts_1.Hash {
+    constructor(blockLen, outputLen) {
+        super();
+        this.finished = false;
+        this.destroyed = false;
+        this.length = 0;
+        this.pos = 0;
+        (0, utils_ts_1.anumber)(blockLen);
+        (0, utils_ts_1.anumber)(outputLen);
+        this.blockLen = blockLen;
+        this.outputLen = outputLen;
+        this.buffer = new Uint8Array(blockLen);
+        this.buffer32 = (0, utils_ts_1.u32)(this.buffer);
+    }
+    update(data) {
+        (0, utils_ts_1.aexists)(this);
+        data = (0, utils_ts_1.toBytes)(data);
+        (0, utils_ts_1.abytes)(data);
+        // Main difference with other hashes: there is flag for last block,
+        // so we cannot process current block before we know that there
+        // is the next one. This significantly complicates logic and reduces ability
+        // to do zero-copy processing
+        const { blockLen, buffer, buffer32 } = this;
+        const len = data.length;
+        const offset = data.byteOffset;
+        const buf = data.buffer;
+        for (let pos = 0; pos < len;) {
+            // If buffer is full and we still have input (don't process last block, same as blake2s)
+            if (this.pos === blockLen) {
+                (0, utils_ts_1.swap32IfBE)(buffer32);
+                this.compress(buffer32, 0, false);
+                (0, utils_ts_1.swap32IfBE)(buffer32);
+                this.pos = 0;
+            }
+            const take = Math.min(blockLen - this.pos, len - pos);
+            const dataOffset = offset + pos;
+            // full block && aligned to 4 bytes && not last in input
+            if (take === blockLen && !(dataOffset % 4) && pos + take < len) {
+                const data32 = new Uint32Array(buf, dataOffset, Math.floor((len - pos) / 4));
+                (0, utils_ts_1.swap32IfBE)(data32);
+                for (let pos32 = 0; pos + blockLen < len; pos32 += buffer32.length, pos += blockLen) {
+                    this.length += blockLen;
+                    this.compress(data32, pos32, false);
+                }
+                (0, utils_ts_1.swap32IfBE)(data32);
+                continue;
+            }
+            buffer.set(data.subarray(pos, pos + take), this.pos);
+            this.pos += take;
+            this.length += take;
+            pos += take;
+        }
+        return this;
+    }
+    digestInto(out) {
+        (0, utils_ts_1.aexists)(this);
+        (0, utils_ts_1.aoutput)(out, this);
+        const { pos, buffer32 } = this;
+        this.finished = true;
+        // Padding
+        (0, utils_ts_1.clean)(this.buffer.subarray(pos));
+        (0, utils_ts_1.swap32IfBE)(buffer32);
+        this.compress(buffer32, 0, true);
+        (0, utils_ts_1.swap32IfBE)(buffer32);
+        const out32 = (0, utils_ts_1.u32)(out);
+        this.get().forEach((v, i) => (out32[i] = (0, utils_ts_1.swap8IfBE)(v)));
+    }
+    digest() {
+        const { buffer, outputLen } = this;
+        this.digestInto(buffer);
+        const res = buffer.slice(0, outputLen);
+        this.destroy();
+        return res;
+    }
+    _cloneInto(to) {
+        const { buffer, length, finished, destroyed, outputLen, pos } = this;
+        to || (to = new this.constructor({ dkLen: outputLen }));
+        to.set(...this.get());
+        to.buffer.set(buffer);
+        to.destroyed = destroyed;
+        to.finished = finished;
+        to.length = length;
+        to.pos = pos;
+        // @ts-ignore
+        to.outputLen = outputLen;
+        return to;
+    }
+    clone() {
+        return this._cloneInto();
+    }
+}
+exports.BLAKE2 = BLAKE2;
+class BLAKE2b extends BLAKE2 {
     constructor(opts = {}) {
-        super(128, opts.dkLen === undefined ? 64 : opts.dkLen, opts, 64, 16, 16);
+        const olen = opts.dkLen === undefined ? 64 : opts.dkLen;
+        super(128, olen);
         // Same as SHA-512, but LE
         this.v0l = B2B_IV[0] | 0;
         this.v0h = B2B_IV[1] | 0;
@@ -8469,26 +9019,34 @@ class BLAKE2b extends _blake_js_1.BLAKE {
         this.v6h = B2B_IV[13] | 0;
         this.v7l = B2B_IV[14] | 0;
         this.v7h = B2B_IV[15] | 0;
-        const keyLength = opts.key ? opts.key.length : 0;
+        checkBlake2Opts(olen, opts, 64, 16, 16);
+        let { key, personalization, salt } = opts;
+        let keyLength = 0;
+        if (key !== undefined) {
+            key = (0, utils_ts_1.toBytes)(key);
+            keyLength = key.length;
+        }
         this.v0l ^= this.outputLen | (keyLength << 8) | (0x01 << 16) | (0x01 << 24);
-        if (opts.salt) {
-            const salt = (0, utils_js_1.u32)((0, utils_js_1.toBytes)(opts.salt));
-            this.v4l ^= (0, utils_js_1.byteSwapIfBE)(salt[0]);
-            this.v4h ^= (0, utils_js_1.byteSwapIfBE)(salt[1]);
-            this.v5l ^= (0, utils_js_1.byteSwapIfBE)(salt[2]);
-            this.v5h ^= (0, utils_js_1.byteSwapIfBE)(salt[3]);
+        if (salt !== undefined) {
+            salt = (0, utils_ts_1.toBytes)(salt);
+            const slt = (0, utils_ts_1.u32)(salt);
+            this.v4l ^= (0, utils_ts_1.swap8IfBE)(slt[0]);
+            this.v4h ^= (0, utils_ts_1.swap8IfBE)(slt[1]);
+            this.v5l ^= (0, utils_ts_1.swap8IfBE)(slt[2]);
+            this.v5h ^= (0, utils_ts_1.swap8IfBE)(slt[3]);
         }
-        if (opts.personalization) {
-            const pers = (0, utils_js_1.u32)((0, utils_js_1.toBytes)(opts.personalization));
-            this.v6l ^= (0, utils_js_1.byteSwapIfBE)(pers[0]);
-            this.v6h ^= (0, utils_js_1.byteSwapIfBE)(pers[1]);
-            this.v7l ^= (0, utils_js_1.byteSwapIfBE)(pers[2]);
-            this.v7h ^= (0, utils_js_1.byteSwapIfBE)(pers[3]);
+        if (personalization !== undefined) {
+            personalization = (0, utils_ts_1.toBytes)(personalization);
+            const pers = (0, utils_ts_1.u32)(personalization);
+            this.v6l ^= (0, utils_ts_1.swap8IfBE)(pers[0]);
+            this.v6h ^= (0, utils_ts_1.swap8IfBE)(pers[1]);
+            this.v7l ^= (0, utils_ts_1.swap8IfBE)(pers[2]);
+            this.v7h ^= (0, utils_ts_1.swap8IfBE)(pers[3]);
         }
-        if (opts.key) {
+        if (key !== undefined) {
             // Pad to blockLen and update
             const tmp = new Uint8Array(this.blockLen);
-            tmp.set((0, utils_js_1.toBytes)(opts.key));
+            tmp.set(key);
             this.update(tmp);
         }
     }
@@ -8519,7 +9077,7 @@ class BLAKE2b extends _blake_js_1.BLAKE {
     compress(msg, offset, isLast) {
         this.get().forEach((v, i) => (BBUF[i] = v)); // First half from state.
         BBUF.set(B2B_IV, 16); // Second half from IV.
-        let { h, l } = _u64_js_1.default.fromBig(BigInt(this.length));
+        let { h, l } = u64.fromBig(BigInt(this.length));
         BBUF[24] = B2B_IV[8] ^ l; // Low word of the offset.
         BBUF[25] = B2B_IV[9] ^ h; // High word.
         // Invert all bits for last block
@@ -8528,7 +9086,7 @@ class BLAKE2b extends _blake_js_1.BLAKE {
             BBUF[29] = ~BBUF[29];
         }
         let j = 0;
-        const s = _blake_js_1.SIGMA;
+        const s = _blake_ts_1.BSIGMA;
         for (let i = 0; i < 12; i++) {
             G1b(0, 4, 8, 12, msg, offset + 2 * s[j++]);
             G2b(0, 4, 8, 12, msg, offset + 2 * s[j++]);
@@ -8563,21 +9121,148 @@ class BLAKE2b extends _blake_js_1.BLAKE {
         this.v6h ^= BBUF[13] ^ BBUF[29];
         this.v7l ^= BBUF[14] ^ BBUF[30];
         this.v7h ^= BBUF[15] ^ BBUF[31];
-        BBUF.fill(0);
+        (0, utils_ts_1.clean)(BBUF);
     }
     destroy() {
         this.destroyed = true;
-        this.buffer32.fill(0);
+        (0, utils_ts_1.clean)(this.buffer32);
         this.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 }
 exports.BLAKE2b = BLAKE2b;
 /**
- * Blake2b hash function. Focuses on 64-bit platforms, but in JS speed different from Blake2s is negligible.
+ * Blake2b hash function. 64-bit. 1.5x slower than blake2s in JS.
  * @param msg - message that would be hashed
  * @param opts - dkLen output length, key for MAC mode, salt, personalization
  */
-exports.blake2b = (0, utils_js_1.wrapConstructorWithOpts)((opts) => new BLAKE2b(opts));
+exports.blake2b = (0, utils_ts_1.createOptHasher)((opts) => new BLAKE2b(opts));
+// prettier-ignore
+function compress(s, offset, msg, rounds, v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15) {
+    let j = 0;
+    for (let i = 0; i < rounds; i++) {
+        ({ a: v0, b: v4, c: v8, d: v12 } = (0, _blake_ts_1.G1s)(v0, v4, v8, v12, msg[offset + s[j++]]));
+        ({ a: v0, b: v4, c: v8, d: v12 } = (0, _blake_ts_1.G2s)(v0, v4, v8, v12, msg[offset + s[j++]]));
+        ({ a: v1, b: v5, c: v9, d: v13 } = (0, _blake_ts_1.G1s)(v1, v5, v9, v13, msg[offset + s[j++]]));
+        ({ a: v1, b: v5, c: v9, d: v13 } = (0, _blake_ts_1.G2s)(v1, v5, v9, v13, msg[offset + s[j++]]));
+        ({ a: v2, b: v6, c: v10, d: v14 } = (0, _blake_ts_1.G1s)(v2, v6, v10, v14, msg[offset + s[j++]]));
+        ({ a: v2, b: v6, c: v10, d: v14 } = (0, _blake_ts_1.G2s)(v2, v6, v10, v14, msg[offset + s[j++]]));
+        ({ a: v3, b: v7, c: v11, d: v15 } = (0, _blake_ts_1.G1s)(v3, v7, v11, v15, msg[offset + s[j++]]));
+        ({ a: v3, b: v7, c: v11, d: v15 } = (0, _blake_ts_1.G2s)(v3, v7, v11, v15, msg[offset + s[j++]]));
+        ({ a: v0, b: v5, c: v10, d: v15 } = (0, _blake_ts_1.G1s)(v0, v5, v10, v15, msg[offset + s[j++]]));
+        ({ a: v0, b: v5, c: v10, d: v15 } = (0, _blake_ts_1.G2s)(v0, v5, v10, v15, msg[offset + s[j++]]));
+        ({ a: v1, b: v6, c: v11, d: v12 } = (0, _blake_ts_1.G1s)(v1, v6, v11, v12, msg[offset + s[j++]]));
+        ({ a: v1, b: v6, c: v11, d: v12 } = (0, _blake_ts_1.G2s)(v1, v6, v11, v12, msg[offset + s[j++]]));
+        ({ a: v2, b: v7, c: v8, d: v13 } = (0, _blake_ts_1.G1s)(v2, v7, v8, v13, msg[offset + s[j++]]));
+        ({ a: v2, b: v7, c: v8, d: v13 } = (0, _blake_ts_1.G2s)(v2, v7, v8, v13, msg[offset + s[j++]]));
+        ({ a: v3, b: v4, c: v9, d: v14 } = (0, _blake_ts_1.G1s)(v3, v4, v9, v14, msg[offset + s[j++]]));
+        ({ a: v3, b: v4, c: v9, d: v14 } = (0, _blake_ts_1.G2s)(v3, v4, v9, v14, msg[offset + s[j++]]));
+    }
+    return { v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15 };
+}
+const B2S_IV = _md_ts_1.SHA256_IV;
+class BLAKE2s extends BLAKE2 {
+    constructor(opts = {}) {
+        const olen = opts.dkLen === undefined ? 32 : opts.dkLen;
+        super(64, olen);
+        // Internal state, same as SHA-256
+        this.v0 = B2S_IV[0] | 0;
+        this.v1 = B2S_IV[1] | 0;
+        this.v2 = B2S_IV[2] | 0;
+        this.v3 = B2S_IV[3] | 0;
+        this.v4 = B2S_IV[4] | 0;
+        this.v5 = B2S_IV[5] | 0;
+        this.v6 = B2S_IV[6] | 0;
+        this.v7 = B2S_IV[7] | 0;
+        checkBlake2Opts(olen, opts, 32, 8, 8);
+        let { key, personalization, salt } = opts;
+        let keyLength = 0;
+        if (key !== undefined) {
+            key = (0, utils_ts_1.toBytes)(key);
+            keyLength = key.length;
+        }
+        this.v0 ^= this.outputLen | (keyLength << 8) | (0x01 << 16) | (0x01 << 24);
+        if (salt !== undefined) {
+            salt = (0, utils_ts_1.toBytes)(salt);
+            const slt = (0, utils_ts_1.u32)(salt);
+            this.v4 ^= (0, utils_ts_1.swap8IfBE)(slt[0]);
+            this.v5 ^= (0, utils_ts_1.swap8IfBE)(slt[1]);
+        }
+        if (personalization !== undefined) {
+            personalization = (0, utils_ts_1.toBytes)(personalization);
+            const pers = (0, utils_ts_1.u32)(personalization);
+            this.v6 ^= (0, utils_ts_1.swap8IfBE)(pers[0]);
+            this.v7 ^= (0, utils_ts_1.swap8IfBE)(pers[1]);
+        }
+        if (key !== undefined) {
+            // Pad to blockLen and update
+            (0, utils_ts_1.abytes)(key);
+            const tmp = new Uint8Array(this.blockLen);
+            tmp.set(key);
+            this.update(tmp);
+        }
+    }
+    get() {
+        const { v0, v1, v2, v3, v4, v5, v6, v7 } = this;
+        return [v0, v1, v2, v3, v4, v5, v6, v7];
+    }
+    // prettier-ignore
+    set(v0, v1, v2, v3, v4, v5, v6, v7) {
+        this.v0 = v0 | 0;
+        this.v1 = v1 | 0;
+        this.v2 = v2 | 0;
+        this.v3 = v3 | 0;
+        this.v4 = v4 | 0;
+        this.v5 = v5 | 0;
+        this.v6 = v6 | 0;
+        this.v7 = v7 | 0;
+    }
+    compress(msg, offset, isLast) {
+        const { h, l } = u64.fromBig(BigInt(this.length));
+        // prettier-ignore
+        const { v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15 } = compress(_blake_ts_1.BSIGMA, offset, msg, 10, this.v0, this.v1, this.v2, this.v3, this.v4, this.v5, this.v6, this.v7, B2S_IV[0], B2S_IV[1], B2S_IV[2], B2S_IV[3], l ^ B2S_IV[4], h ^ B2S_IV[5], isLast ? ~B2S_IV[6] : B2S_IV[6], B2S_IV[7]);
+        this.v0 ^= v0 ^ v8;
+        this.v1 ^= v1 ^ v9;
+        this.v2 ^= v2 ^ v10;
+        this.v3 ^= v3 ^ v11;
+        this.v4 ^= v4 ^ v12;
+        this.v5 ^= v5 ^ v13;
+        this.v6 ^= v6 ^ v14;
+        this.v7 ^= v7 ^ v15;
+    }
+    destroy() {
+        this.destroyed = true;
+        (0, utils_ts_1.clean)(this.buffer32);
+        this.set(0, 0, 0, 0, 0, 0, 0, 0);
+    }
+}
+exports.BLAKE2s = BLAKE2s;
+/**
+ * Blake2s hash function. Focuses on 8-bit to 32-bit platforms. 1.5x faster than blake2b in JS.
+ * @param msg - message that would be hashed
+ * @param opts - dkLen output length, key for MAC mode, salt, personalization
+ */
+exports.blake2s = (0, utils_ts_1.createOptHasher)((opts) => new BLAKE2s(opts));
+//# sourceMappingURL=blake2.js.map
+
+/***/ }),
+
+/***/ 15596:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.blake2b = exports.BLAKE2b = void 0;
+/**
+ * Blake2b hash function. Focuses on 64-bit platforms, but in JS speed different from Blake2s is negligible.
+ * @module
+ * @deprecated
+ */
+const blake2_ts_1 = __nccwpck_require__(58412);
+/** @deprecated Use import from `noble/hashes/blake2` module */
+exports.BLAKE2b = blake2_ts_1.BLAKE2b;
+/** @deprecated Use import from `noble/hashes/blake2` module */
+exports.blake2b = blake2_ts_1.blake2b;
 //# sourceMappingURL=blake2b.js.map
 
 /***/ }),
@@ -8618,15 +9303,14 @@ exports.hmac = exports.HMAC = void 0;
  * HMAC: RFC2104 message authentication code.
  * @module
  */
-const _assert_js_1 = __nccwpck_require__(44894);
-const utils_js_1 = __nccwpck_require__(4248);
-class HMAC extends utils_js_1.Hash {
+const utils_ts_1 = __nccwpck_require__(4248);
+class HMAC extends utils_ts_1.Hash {
     constructor(hash, _key) {
         super();
         this.finished = false;
         this.destroyed = false;
-        (0, _assert_js_1.ahash)(hash);
-        const key = (0, utils_js_1.toBytes)(_key);
+        (0, utils_ts_1.ahash)(hash);
+        const key = (0, utils_ts_1.toBytes)(_key);
         this.iHash = hash.create();
         if (typeof this.iHash.update !== 'function')
             throw new Error('Expected instance of class which extends utils.Hash');
@@ -8645,16 +9329,16 @@ class HMAC extends utils_js_1.Hash {
         for (let i = 0; i < pad.length; i++)
             pad[i] ^= 0x36 ^ 0x5c;
         this.oHash.update(pad);
-        pad.fill(0);
+        (0, utils_ts_1.clean)(pad);
     }
     update(buf) {
-        (0, _assert_js_1.aexists)(this);
+        (0, utils_ts_1.aexists)(this);
         this.iHash.update(buf);
         return this;
     }
     digestInto(out) {
-        (0, _assert_js_1.aexists)(this);
-        (0, _assert_js_1.abytes)(out, this.outputLen);
+        (0, utils_ts_1.aexists)(this);
+        (0, utils_ts_1.abytes)(out, this.outputLen);
         this.finished = true;
         this.iHash.digestInto(out);
         this.oHash.update(out);
@@ -8678,6 +9362,9 @@ class HMAC extends utils_js_1.Hash {
         to.oHash = oHash._cloneInto(to.oHash);
         to.iHash = iHash._cloneInto(to.iHash);
         return to;
+    }
+    clone() {
+        return this._cloneInto();
     }
     destroy() {
         this.destroyed = true;
@@ -8715,25 +9402,25 @@ exports.pbkdf2Async = pbkdf2Async;
  * PBKDF (RFC 2898). Can be used to create a key from password and salt.
  * @module
  */
-const _assert_js_1 = __nccwpck_require__(44894);
-const hmac_js_1 = __nccwpck_require__(11494);
-const utils_js_1 = __nccwpck_require__(4248);
+const hmac_ts_1 = __nccwpck_require__(11494);
+// prettier-ignore
+const utils_ts_1 = __nccwpck_require__(4248);
 // Common prologue and epilogue for sync/async functions
 function pbkdf2Init(hash, _password, _salt, _opts) {
-    (0, _assert_js_1.ahash)(hash);
-    const opts = (0, utils_js_1.checkOpts)({ dkLen: 32, asyncTick: 10 }, _opts);
+    (0, utils_ts_1.ahash)(hash);
+    const opts = (0, utils_ts_1.checkOpts)({ dkLen: 32, asyncTick: 10 }, _opts);
     const { c, dkLen, asyncTick } = opts;
-    (0, _assert_js_1.anumber)(c);
-    (0, _assert_js_1.anumber)(dkLen);
-    (0, _assert_js_1.anumber)(asyncTick);
+    (0, utils_ts_1.anumber)(c);
+    (0, utils_ts_1.anumber)(dkLen);
+    (0, utils_ts_1.anumber)(asyncTick);
     if (c < 1)
-        throw new Error('PBKDF2: iterations (c) should be >= 1');
-    const password = (0, utils_js_1.toBytes)(_password);
-    const salt = (0, utils_js_1.toBytes)(_salt);
+        throw new Error('iterations (c) should be >= 1');
+    const password = (0, utils_ts_1.kdfInputToBytes)(_password);
+    const salt = (0, utils_ts_1.kdfInputToBytes)(_salt);
     // DK = PBKDF2(PRF, Password, Salt, c, dkLen);
     const DK = new Uint8Array(dkLen);
     // U1 = PRF(Password, Salt + INT_32_BE(i))
-    const PRF = hmac_js_1.hmac.create(hash, password);
+    const PRF = hmac_ts_1.hmac.create(hash, password);
     const PRFSalt = PRF._cloneInto().update(salt);
     return { c, dkLen, asyncTick, DK, PRF, PRFSalt };
 }
@@ -8742,7 +9429,7 @@ function pbkdf2Output(PRF, PRFSalt, DK, prfW, u) {
     PRFSalt.destroy();
     if (prfW)
         prfW.destroy();
-    u.fill(0);
+    (0, utils_ts_1.clean)(u);
     return DK;
 }
 /**
@@ -8752,13 +9439,13 @@ function pbkdf2Output(PRF, PRFSalt, DK, prfW, u) {
  * @param salt - cryptographic salt
  * @param opts - {c, dkLen} where c is work factor and dkLen is output message size
  * @example
- * const key = pbkdf2(sha256, 'password', 'salt', { dkLen: 32, c: 2 ** 18 });
+ * const key = pbkdf2(sha256, 'password', 'salt', { dkLen: 32, c: Math.pow(2, 18) });
  */
 function pbkdf2(hash, password, salt, opts) {
     const { c, dkLen, DK, PRF, PRFSalt } = pbkdf2Init(hash, password, salt, opts);
     let prfW; // Working copy
     const arr = new Uint8Array(4);
-    const view = (0, utils_js_1.createView)(arr);
+    const view = (0, utils_ts_1.createView)(arr);
     const u = new Uint8Array(PRF.outputLen);
     // DK = T1 + T2 + ⋯ + Tdklen/hlen
     for (let ti = 1, pos = 0; pos < dkLen; ti++, pos += PRF.outputLen) {
@@ -8787,7 +9474,7 @@ async function pbkdf2Async(hash, password, salt, opts) {
     const { c, dkLen, asyncTick, DK, PRF, PRFSalt } = pbkdf2Init(hash, password, salt, opts);
     let prfW; // Working copy
     const arr = new Uint8Array(4);
-    const view = (0, utils_js_1.createView)(arr);
+    const view = (0, utils_ts_1.createView)(arr);
     const u = new Uint8Array(PRF.outputLen);
     // DK = T1 + T2 + ⋯ + Tdklen/hlen
     for (let ti = 1, pos = 0; pos < dkLen; ti++, pos += PRF.outputLen) {
@@ -8798,7 +9485,7 @@ async function pbkdf2Async(hash, password, salt, opts) {
         // U1 = PRF(Password, Salt + INT_32_BE(i))
         (prfW = PRFSalt._cloneInto(prfW)).update(arr).digestInto(u);
         Ti.set(u.subarray(0, Ti.length));
-        await (0, utils_js_1.asyncLoop)(c - 1, asyncTick, () => {
+        await (0, utils_ts_1.asyncLoop)(c - 1, asyncTick, () => {
             // Uc = PRF(Password, Uc−1)
             PRF._cloneInto(prfW).update(u).digestInto(u);
             for (let i = 0; i < Ti.length; i++)
@@ -8811,27 +9498,29 @@ async function pbkdf2Async(hash, password, salt, opts) {
 
 /***/ }),
 
-/***/ 77178:
+/***/ 7645:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.sha224 = exports.sha256 = exports.SHA256 = void 0;
+exports.sha512_224 = exports.sha512_256 = exports.sha384 = exports.sha512 = exports.sha224 = exports.sha256 = exports.SHA512_256 = exports.SHA512_224 = exports.SHA384 = exports.SHA512 = exports.SHA224 = exports.SHA256 = void 0;
 /**
- * SHA2-256 a.k.a. sha256. In JS, it is the fastest hash, even faster than Blake3.
- *
- * To break sha256 using birthday attack, attackers need to try 2^128 hashes.
- * BTC network is doing 2^70 hashes/sec (2^95 hashes/year) as per 2025.
- *
- * Check out [FIPS 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
+ * SHA2 hash function. A.k.a. sha256, sha384, sha512, sha512_224, sha512_256.
+ * SHA256 is the fastest hash implementable in JS, even faster than Blake3.
+ * Check out [RFC 4634](https://datatracker.ietf.org/doc/html/rfc4634) and
+ * [FIPS 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
  * @module
  */
-const _md_js_1 = __nccwpck_require__(24901);
-const utils_js_1 = __nccwpck_require__(4248);
-/** Round constants: first 32 bits of fractional parts of the cube roots of the first 64 primes 2..311). */
+const _md_ts_1 = __nccwpck_require__(24901);
+const u64 = __nccwpck_require__(26255);
+const utils_ts_1 = __nccwpck_require__(4248);
+/**
+ * Round constants:
+ * First 32 bits of fractional parts of the cube roots of the first 64 primes 2..311)
+ */
 // prettier-ignore
-const SHA256_K = /* @__PURE__ */ new Uint32Array([
+const SHA256_K = /* @__PURE__ */ Uint32Array.from([
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
     0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -8841,29 +9530,21 @@ const SHA256_K = /* @__PURE__ */ new Uint32Array([
     0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 ]);
-/** Initial state: first 32 bits of fractional parts of the square roots of the first 8 primes 2..19. */
-// prettier-ignore
-const SHA256_IV = /* @__PURE__ */ new Uint32Array([
-    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-]);
-/**
- * Temporary buffer, not used to store anything between runs.
- * Named this way because it matches specification.
- */
+/** Reusable temporary buffer. "W" comes straight from spec. */
 const SHA256_W = /* @__PURE__ */ new Uint32Array(64);
-class SHA256 extends _md_js_1.HashMD {
-    constructor() {
-        super(64, 32, 8, false);
+class SHA256 extends _md_ts_1.HashMD {
+    constructor(outputLen = 32) {
+        super(64, outputLen, 8, false);
         // We cannot use array here since array allows indexing by variable
         // which means optimizer/compiler cannot use registers.
-        this.A = SHA256_IV[0] | 0;
-        this.B = SHA256_IV[1] | 0;
-        this.C = SHA256_IV[2] | 0;
-        this.D = SHA256_IV[3] | 0;
-        this.E = SHA256_IV[4] | 0;
-        this.F = SHA256_IV[5] | 0;
-        this.G = SHA256_IV[6] | 0;
-        this.H = SHA256_IV[7] | 0;
+        this.A = _md_ts_1.SHA256_IV[0] | 0;
+        this.B = _md_ts_1.SHA256_IV[1] | 0;
+        this.C = _md_ts_1.SHA256_IV[2] | 0;
+        this.D = _md_ts_1.SHA256_IV[3] | 0;
+        this.E = _md_ts_1.SHA256_IV[4] | 0;
+        this.F = _md_ts_1.SHA256_IV[5] | 0;
+        this.G = _md_ts_1.SHA256_IV[6] | 0;
+        this.H = _md_ts_1.SHA256_IV[7] | 0;
     }
     get() {
         const { A, B, C, D, E, F, G, H } = this;
@@ -8887,17 +9568,17 @@ class SHA256 extends _md_js_1.HashMD {
         for (let i = 16; i < 64; i++) {
             const W15 = SHA256_W[i - 15];
             const W2 = SHA256_W[i - 2];
-            const s0 = (0, utils_js_1.rotr)(W15, 7) ^ (0, utils_js_1.rotr)(W15, 18) ^ (W15 >>> 3);
-            const s1 = (0, utils_js_1.rotr)(W2, 17) ^ (0, utils_js_1.rotr)(W2, 19) ^ (W2 >>> 10);
+            const s0 = (0, utils_ts_1.rotr)(W15, 7) ^ (0, utils_ts_1.rotr)(W15, 18) ^ (W15 >>> 3);
+            const s1 = (0, utils_ts_1.rotr)(W2, 17) ^ (0, utils_ts_1.rotr)(W2, 19) ^ (W2 >>> 10);
             SHA256_W[i] = (s1 + SHA256_W[i - 7] + s0 + SHA256_W[i - 16]) | 0;
         }
         // Compression function main loop, 64 rounds
         let { A, B, C, D, E, F, G, H } = this;
         for (let i = 0; i < 64; i++) {
-            const sigma1 = (0, utils_js_1.rotr)(E, 6) ^ (0, utils_js_1.rotr)(E, 11) ^ (0, utils_js_1.rotr)(E, 25);
-            const T1 = (H + sigma1 + (0, _md_js_1.Chi)(E, F, G) + SHA256_K[i] + SHA256_W[i]) | 0;
-            const sigma0 = (0, utils_js_1.rotr)(A, 2) ^ (0, utils_js_1.rotr)(A, 13) ^ (0, utils_js_1.rotr)(A, 22);
-            const T2 = (sigma0 + (0, _md_js_1.Maj)(A, B, C)) | 0;
+            const sigma1 = (0, utils_ts_1.rotr)(E, 6) ^ (0, utils_ts_1.rotr)(E, 11) ^ (0, utils_ts_1.rotr)(E, 25);
+            const T1 = (H + sigma1 + (0, _md_ts_1.Chi)(E, F, G) + SHA256_K[i] + SHA256_W[i]) | 0;
+            const sigma0 = (0, utils_ts_1.rotr)(A, 2) ^ (0, utils_ts_1.rotr)(A, 13) ^ (0, utils_ts_1.rotr)(A, 22);
+            const T2 = (sigma0 + (0, _md_ts_1.Maj)(A, B, C)) | 0;
             H = G;
             G = F;
             F = E;
@@ -8919,59 +9600,33 @@ class SHA256 extends _md_js_1.HashMD {
         this.set(A, B, C, D, E, F, G, H);
     }
     roundClean() {
-        SHA256_W.fill(0);
+        (0, utils_ts_1.clean)(SHA256_W);
     }
     destroy() {
         this.set(0, 0, 0, 0, 0, 0, 0, 0);
-        this.buffer.fill(0);
+        (0, utils_ts_1.clean)(this.buffer);
     }
 }
 exports.SHA256 = SHA256;
-/**
- * Constants taken from https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf.
- */
 class SHA224 extends SHA256 {
     constructor() {
-        super();
-        this.A = 0xc1059ed8 | 0;
-        this.B = 0x367cd507 | 0;
-        this.C = 0x3070dd17 | 0;
-        this.D = 0xf70e5939 | 0;
-        this.E = 0xffc00b31 | 0;
-        this.F = 0x68581511 | 0;
-        this.G = 0x64f98fa7 | 0;
-        this.H = 0xbefa4fa4 | 0;
-        this.outputLen = 28;
+        super(28);
+        this.A = _md_ts_1.SHA224_IV[0] | 0;
+        this.B = _md_ts_1.SHA224_IV[1] | 0;
+        this.C = _md_ts_1.SHA224_IV[2] | 0;
+        this.D = _md_ts_1.SHA224_IV[3] | 0;
+        this.E = _md_ts_1.SHA224_IV[4] | 0;
+        this.F = _md_ts_1.SHA224_IV[5] | 0;
+        this.G = _md_ts_1.SHA224_IV[6] | 0;
+        this.H = _md_ts_1.SHA224_IV[7] | 0;
     }
 }
-/** SHA2-256 hash function */
-exports.sha256 = (0, utils_js_1.wrapConstructor)(() => new SHA256());
-/** SHA2-224 hash function */
-exports.sha224 = (0, utils_js_1.wrapConstructor)(() => new SHA224());
-//# sourceMappingURL=sha256.js.map
-
-/***/ }),
-
-/***/ 57507:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.sha384 = exports.sha512_256 = exports.sha512_224 = exports.sha512 = exports.SHA384 = exports.SHA512_256 = exports.SHA512_224 = exports.SHA512 = void 0;
-/**
- * SHA2-512 a.k.a. sha512 and sha384. It is slower than sha256 in js because u64 operations are slow.
- *
- * Check out [RFC 4634](https://datatracker.ietf.org/doc/html/rfc4634) and
- * [the paper on truncated SHA512/256](https://eprint.iacr.org/2010/548.pdf).
- * @module
- */
-const _md_js_1 = __nccwpck_require__(24901);
-const _u64_js_1 = __nccwpck_require__(26255);
-const utils_js_1 = __nccwpck_require__(4248);
-// Round contants (first 32 bits of the fractional parts of the cube roots of the first 80 primes 2..409):
+exports.SHA224 = SHA224;
+// SHA2-512 is slower than sha256 in js because u64 operations are slow.
+// Round contants
+// First 32 bits of the fractional parts of the cube roots of the first 80 primes 2..409
 // prettier-ignore
-const [SHA512_Kh, SHA512_Kl] = /* @__PURE__ */ (() => _u64_js_1.default.split([
+const K512 = /* @__PURE__ */ (() => u64.split([
     '0x428a2f98d728ae22', '0x7137449123ef65cd', '0xb5c0fbcfec4d3b2f', '0xe9b5dba58189dbbc',
     '0x3956c25bf348b538', '0x59f111f1b605d019', '0x923f82a4af194f9b', '0xab1c5ed5da6d8118',
     '0xd807aa98a3030242', '0x12835b0145706fbe', '0x243185be4ee4b28c', '0x550c7dc3d5ffb4e2',
@@ -8993,32 +9648,33 @@ const [SHA512_Kh, SHA512_Kl] = /* @__PURE__ */ (() => _u64_js_1.default.split([
     '0x28db77f523047d84', '0x32caab7b40c72493', '0x3c9ebe0a15c9bebc', '0x431d67c49c100d4c',
     '0x4cc5d4becb3e42b6', '0x597f299cfc657e2a', '0x5fcb6fab3ad6faec', '0x6c44198c4a475817'
 ].map(n => BigInt(n))))();
-// Temporary buffer, not used to store anything between runs
+const SHA512_Kh = /* @__PURE__ */ (() => K512[0])();
+const SHA512_Kl = /* @__PURE__ */ (() => K512[1])();
+// Reusable temporary buffers
 const SHA512_W_H = /* @__PURE__ */ new Uint32Array(80);
 const SHA512_W_L = /* @__PURE__ */ new Uint32Array(80);
-class SHA512 extends _md_js_1.HashMD {
-    constructor() {
-        super(128, 64, 16, false);
-        // We cannot use array here since array allows indexing by variable which means optimizer/compiler cannot use registers.
-        // Also looks cleaner and easier to verify with spec.
-        // Initial state (first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19):
+class SHA512 extends _md_ts_1.HashMD {
+    constructor(outputLen = 64) {
+        super(128, outputLen, 16, false);
+        // We cannot use array here since array allows indexing by variable
+        // which means optimizer/compiler cannot use registers.
         // h -- high 32 bits, l -- low 32 bits
-        this.Ah = 0x6a09e667 | 0;
-        this.Al = 0xf3bcc908 | 0;
-        this.Bh = 0xbb67ae85 | 0;
-        this.Bl = 0x84caa73b | 0;
-        this.Ch = 0x3c6ef372 | 0;
-        this.Cl = 0xfe94f82b | 0;
-        this.Dh = 0xa54ff53a | 0;
-        this.Dl = 0x5f1d36f1 | 0;
-        this.Eh = 0x510e527f | 0;
-        this.El = 0xade682d1 | 0;
-        this.Fh = 0x9b05688c | 0;
-        this.Fl = 0x2b3e6c1f | 0;
-        this.Gh = 0x1f83d9ab | 0;
-        this.Gl = 0xfb41bd6b | 0;
-        this.Hh = 0x5be0cd19 | 0;
-        this.Hl = 0x137e2179 | 0;
+        this.Ah = _md_ts_1.SHA512_IV[0] | 0;
+        this.Al = _md_ts_1.SHA512_IV[1] | 0;
+        this.Bh = _md_ts_1.SHA512_IV[2] | 0;
+        this.Bl = _md_ts_1.SHA512_IV[3] | 0;
+        this.Ch = _md_ts_1.SHA512_IV[4] | 0;
+        this.Cl = _md_ts_1.SHA512_IV[5] | 0;
+        this.Dh = _md_ts_1.SHA512_IV[6] | 0;
+        this.Dl = _md_ts_1.SHA512_IV[7] | 0;
+        this.Eh = _md_ts_1.SHA512_IV[8] | 0;
+        this.El = _md_ts_1.SHA512_IV[9] | 0;
+        this.Fh = _md_ts_1.SHA512_IV[10] | 0;
+        this.Fl = _md_ts_1.SHA512_IV[11] | 0;
+        this.Gh = _md_ts_1.SHA512_IV[12] | 0;
+        this.Gl = _md_ts_1.SHA512_IV[13] | 0;
+        this.Hh = _md_ts_1.SHA512_IV[14] | 0;
+        this.Hl = _md_ts_1.SHA512_IV[15] | 0;
     }
     // prettier-ignore
     get() {
@@ -9054,16 +9710,16 @@ class SHA512 extends _md_js_1.HashMD {
             // s0 := (w[i-15] rightrotate 1) xor (w[i-15] rightrotate 8) xor (w[i-15] rightshift 7)
             const W15h = SHA512_W_H[i - 15] | 0;
             const W15l = SHA512_W_L[i - 15] | 0;
-            const s0h = _u64_js_1.default.rotrSH(W15h, W15l, 1) ^ _u64_js_1.default.rotrSH(W15h, W15l, 8) ^ _u64_js_1.default.shrSH(W15h, W15l, 7);
-            const s0l = _u64_js_1.default.rotrSL(W15h, W15l, 1) ^ _u64_js_1.default.rotrSL(W15h, W15l, 8) ^ _u64_js_1.default.shrSL(W15h, W15l, 7);
+            const s0h = u64.rotrSH(W15h, W15l, 1) ^ u64.rotrSH(W15h, W15l, 8) ^ u64.shrSH(W15h, W15l, 7);
+            const s0l = u64.rotrSL(W15h, W15l, 1) ^ u64.rotrSL(W15h, W15l, 8) ^ u64.shrSL(W15h, W15l, 7);
             // s1 := (w[i-2] rightrotate 19) xor (w[i-2] rightrotate 61) xor (w[i-2] rightshift 6)
             const W2h = SHA512_W_H[i - 2] | 0;
             const W2l = SHA512_W_L[i - 2] | 0;
-            const s1h = _u64_js_1.default.rotrSH(W2h, W2l, 19) ^ _u64_js_1.default.rotrBH(W2h, W2l, 61) ^ _u64_js_1.default.shrSH(W2h, W2l, 6);
-            const s1l = _u64_js_1.default.rotrSL(W2h, W2l, 19) ^ _u64_js_1.default.rotrBL(W2h, W2l, 61) ^ _u64_js_1.default.shrSL(W2h, W2l, 6);
+            const s1h = u64.rotrSH(W2h, W2l, 19) ^ u64.rotrBH(W2h, W2l, 61) ^ u64.shrSH(W2h, W2l, 6);
+            const s1l = u64.rotrSL(W2h, W2l, 19) ^ u64.rotrBL(W2h, W2l, 61) ^ u64.shrSL(W2h, W2l, 6);
             // SHA256_W[i] = s0 + s1 + SHA256_W[i - 7] + SHA256_W[i - 16];
-            const SUMl = _u64_js_1.default.add4L(s0l, s1l, SHA512_W_L[i - 7], SHA512_W_L[i - 16]);
-            const SUMh = _u64_js_1.default.add4H(SUMl, s0h, s1h, SHA512_W_H[i - 7], SHA512_W_H[i - 16]);
+            const SUMl = u64.add4L(s0l, s1l, SHA512_W_L[i - 7], SHA512_W_L[i - 16]);
+            const SUMh = u64.add4H(SUMl, s0h, s1h, SHA512_W_H[i - 7], SHA512_W_H[i - 16]);
             SHA512_W_H[i] = SUMh | 0;
             SHA512_W_L[i] = SUMl | 0;
         }
@@ -9071,19 +9727,19 @@ class SHA512 extends _md_js_1.HashMD {
         // Compression function main loop, 80 rounds
         for (let i = 0; i < 80; i++) {
             // S1 := (e rightrotate 14) xor (e rightrotate 18) xor (e rightrotate 41)
-            const sigma1h = _u64_js_1.default.rotrSH(Eh, El, 14) ^ _u64_js_1.default.rotrSH(Eh, El, 18) ^ _u64_js_1.default.rotrBH(Eh, El, 41);
-            const sigma1l = _u64_js_1.default.rotrSL(Eh, El, 14) ^ _u64_js_1.default.rotrSL(Eh, El, 18) ^ _u64_js_1.default.rotrBL(Eh, El, 41);
+            const sigma1h = u64.rotrSH(Eh, El, 14) ^ u64.rotrSH(Eh, El, 18) ^ u64.rotrBH(Eh, El, 41);
+            const sigma1l = u64.rotrSL(Eh, El, 14) ^ u64.rotrSL(Eh, El, 18) ^ u64.rotrBL(Eh, El, 41);
             //const T1 = (H + sigma1 + Chi(E, F, G) + SHA256_K[i] + SHA256_W[i]) | 0;
             const CHIh = (Eh & Fh) ^ (~Eh & Gh);
             const CHIl = (El & Fl) ^ (~El & Gl);
             // T1 = H + sigma1 + Chi(E, F, G) + SHA512_K[i] + SHA512_W[i]
             // prettier-ignore
-            const T1ll = _u64_js_1.default.add5L(Hl, sigma1l, CHIl, SHA512_Kl[i], SHA512_W_L[i]);
-            const T1h = _u64_js_1.default.add5H(T1ll, Hh, sigma1h, CHIh, SHA512_Kh[i], SHA512_W_H[i]);
+            const T1ll = u64.add5L(Hl, sigma1l, CHIl, SHA512_Kl[i], SHA512_W_L[i]);
+            const T1h = u64.add5H(T1ll, Hh, sigma1h, CHIh, SHA512_Kh[i], SHA512_W_H[i]);
             const T1l = T1ll | 0;
             // S0 := (a rightrotate 28) xor (a rightrotate 34) xor (a rightrotate 39)
-            const sigma0h = _u64_js_1.default.rotrSH(Ah, Al, 28) ^ _u64_js_1.default.rotrBH(Ah, Al, 34) ^ _u64_js_1.default.rotrBH(Ah, Al, 39);
-            const sigma0l = _u64_js_1.default.rotrSL(Ah, Al, 28) ^ _u64_js_1.default.rotrBL(Ah, Al, 34) ^ _u64_js_1.default.rotrBL(Ah, Al, 39);
+            const sigma0h = u64.rotrSH(Ah, Al, 28) ^ u64.rotrBH(Ah, Al, 34) ^ u64.rotrBH(Ah, Al, 39);
+            const sigma0l = u64.rotrSL(Ah, Al, 28) ^ u64.rotrBL(Ah, Al, 34) ^ u64.rotrBL(Ah, Al, 39);
             const MAJh = (Ah & Bh) ^ (Ah & Ch) ^ (Bh & Ch);
             const MAJl = (Al & Bl) ^ (Al & Cl) ^ (Bl & Cl);
             Hh = Gh | 0;
@@ -9092,118 +9748,209 @@ class SHA512 extends _md_js_1.HashMD {
             Gl = Fl | 0;
             Fh = Eh | 0;
             Fl = El | 0;
-            ({ h: Eh, l: El } = _u64_js_1.default.add(Dh | 0, Dl | 0, T1h | 0, T1l | 0));
+            ({ h: Eh, l: El } = u64.add(Dh | 0, Dl | 0, T1h | 0, T1l | 0));
             Dh = Ch | 0;
             Dl = Cl | 0;
             Ch = Bh | 0;
             Cl = Bl | 0;
             Bh = Ah | 0;
             Bl = Al | 0;
-            const All = _u64_js_1.default.add3L(T1l, sigma0l, MAJl);
-            Ah = _u64_js_1.default.add3H(All, T1h, sigma0h, MAJh);
+            const All = u64.add3L(T1l, sigma0l, MAJl);
+            Ah = u64.add3H(All, T1h, sigma0h, MAJh);
             Al = All | 0;
         }
         // Add the compressed chunk to the current hash value
-        ({ h: Ah, l: Al } = _u64_js_1.default.add(this.Ah | 0, this.Al | 0, Ah | 0, Al | 0));
-        ({ h: Bh, l: Bl } = _u64_js_1.default.add(this.Bh | 0, this.Bl | 0, Bh | 0, Bl | 0));
-        ({ h: Ch, l: Cl } = _u64_js_1.default.add(this.Ch | 0, this.Cl | 0, Ch | 0, Cl | 0));
-        ({ h: Dh, l: Dl } = _u64_js_1.default.add(this.Dh | 0, this.Dl | 0, Dh | 0, Dl | 0));
-        ({ h: Eh, l: El } = _u64_js_1.default.add(this.Eh | 0, this.El | 0, Eh | 0, El | 0));
-        ({ h: Fh, l: Fl } = _u64_js_1.default.add(this.Fh | 0, this.Fl | 0, Fh | 0, Fl | 0));
-        ({ h: Gh, l: Gl } = _u64_js_1.default.add(this.Gh | 0, this.Gl | 0, Gh | 0, Gl | 0));
-        ({ h: Hh, l: Hl } = _u64_js_1.default.add(this.Hh | 0, this.Hl | 0, Hh | 0, Hl | 0));
+        ({ h: Ah, l: Al } = u64.add(this.Ah | 0, this.Al | 0, Ah | 0, Al | 0));
+        ({ h: Bh, l: Bl } = u64.add(this.Bh | 0, this.Bl | 0, Bh | 0, Bl | 0));
+        ({ h: Ch, l: Cl } = u64.add(this.Ch | 0, this.Cl | 0, Ch | 0, Cl | 0));
+        ({ h: Dh, l: Dl } = u64.add(this.Dh | 0, this.Dl | 0, Dh | 0, Dl | 0));
+        ({ h: Eh, l: El } = u64.add(this.Eh | 0, this.El | 0, Eh | 0, El | 0));
+        ({ h: Fh, l: Fl } = u64.add(this.Fh | 0, this.Fl | 0, Fh | 0, Fl | 0));
+        ({ h: Gh, l: Gl } = u64.add(this.Gh | 0, this.Gl | 0, Gh | 0, Gl | 0));
+        ({ h: Hh, l: Hl } = u64.add(this.Hh | 0, this.Hl | 0, Hh | 0, Hl | 0));
         this.set(Ah, Al, Bh, Bl, Ch, Cl, Dh, Dl, Eh, El, Fh, Fl, Gh, Gl, Hh, Hl);
     }
     roundClean() {
-        SHA512_W_H.fill(0);
-        SHA512_W_L.fill(0);
+        (0, utils_ts_1.clean)(SHA512_W_H, SHA512_W_L);
     }
     destroy() {
-        this.buffer.fill(0);
+        (0, utils_ts_1.clean)(this.buffer);
         this.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 }
 exports.SHA512 = SHA512;
+class SHA384 extends SHA512 {
+    constructor() {
+        super(48);
+        this.Ah = _md_ts_1.SHA384_IV[0] | 0;
+        this.Al = _md_ts_1.SHA384_IV[1] | 0;
+        this.Bh = _md_ts_1.SHA384_IV[2] | 0;
+        this.Bl = _md_ts_1.SHA384_IV[3] | 0;
+        this.Ch = _md_ts_1.SHA384_IV[4] | 0;
+        this.Cl = _md_ts_1.SHA384_IV[5] | 0;
+        this.Dh = _md_ts_1.SHA384_IV[6] | 0;
+        this.Dl = _md_ts_1.SHA384_IV[7] | 0;
+        this.Eh = _md_ts_1.SHA384_IV[8] | 0;
+        this.El = _md_ts_1.SHA384_IV[9] | 0;
+        this.Fh = _md_ts_1.SHA384_IV[10] | 0;
+        this.Fl = _md_ts_1.SHA384_IV[11] | 0;
+        this.Gh = _md_ts_1.SHA384_IV[12] | 0;
+        this.Gl = _md_ts_1.SHA384_IV[13] | 0;
+        this.Hh = _md_ts_1.SHA384_IV[14] | 0;
+        this.Hl = _md_ts_1.SHA384_IV[15] | 0;
+    }
+}
+exports.SHA384 = SHA384;
+/**
+ * Truncated SHA512/256 and SHA512/224.
+ * SHA512_IV is XORed with 0xa5a5a5a5a5a5a5a5, then used as "intermediary" IV of SHA512/t.
+ * Then t hashes string to produce result IV.
+ * See `test/misc/sha2-gen-iv.js`.
+ */
+/** SHA512/224 IV */
+const T224_IV = /* @__PURE__ */ Uint32Array.from([
+    0x8c3d37c8, 0x19544da2, 0x73e19966, 0x89dcd4d6, 0x1dfab7ae, 0x32ff9c82, 0x679dd514, 0x582f9fcf,
+    0x0f6d2b69, 0x7bd44da8, 0x77e36f73, 0x04c48942, 0x3f9d85a8, 0x6a1d36c8, 0x1112e6ad, 0x91d692a1,
+]);
+/** SHA512/256 IV */
+const T256_IV = /* @__PURE__ */ Uint32Array.from([
+    0x22312194, 0xfc2bf72c, 0x9f555fa3, 0xc84c64c2, 0x2393b86b, 0x6f53b151, 0x96387719, 0x5940eabd,
+    0x96283ee2, 0xa88effe3, 0xbe5e1e25, 0x53863992, 0x2b0199fc, 0x2c85b8aa, 0x0eb72ddc, 0x81c52ca2,
+]);
 class SHA512_224 extends SHA512 {
     constructor() {
-        super();
-        // h -- high 32 bits, l -- low 32 bits
-        this.Ah = 0x8c3d37c8 | 0;
-        this.Al = 0x19544da2 | 0;
-        this.Bh = 0x73e19966 | 0;
-        this.Bl = 0x89dcd4d6 | 0;
-        this.Ch = 0x1dfab7ae | 0;
-        this.Cl = 0x32ff9c82 | 0;
-        this.Dh = 0x679dd514 | 0;
-        this.Dl = 0x582f9fcf | 0;
-        this.Eh = 0x0f6d2b69 | 0;
-        this.El = 0x7bd44da8 | 0;
-        this.Fh = 0x77e36f73 | 0;
-        this.Fl = 0x04c48942 | 0;
-        this.Gh = 0x3f9d85a8 | 0;
-        this.Gl = 0x6a1d36c8 | 0;
-        this.Hh = 0x1112e6ad | 0;
-        this.Hl = 0x91d692a1 | 0;
-        this.outputLen = 28;
+        super(28);
+        this.Ah = T224_IV[0] | 0;
+        this.Al = T224_IV[1] | 0;
+        this.Bh = T224_IV[2] | 0;
+        this.Bl = T224_IV[3] | 0;
+        this.Ch = T224_IV[4] | 0;
+        this.Cl = T224_IV[5] | 0;
+        this.Dh = T224_IV[6] | 0;
+        this.Dl = T224_IV[7] | 0;
+        this.Eh = T224_IV[8] | 0;
+        this.El = T224_IV[9] | 0;
+        this.Fh = T224_IV[10] | 0;
+        this.Fl = T224_IV[11] | 0;
+        this.Gh = T224_IV[12] | 0;
+        this.Gl = T224_IV[13] | 0;
+        this.Hh = T224_IV[14] | 0;
+        this.Hl = T224_IV[15] | 0;
     }
 }
 exports.SHA512_224 = SHA512_224;
 class SHA512_256 extends SHA512 {
     constructor() {
-        super();
-        // h -- high 32 bits, l -- low 32 bits
-        this.Ah = 0x22312194 | 0;
-        this.Al = 0xfc2bf72c | 0;
-        this.Bh = 0x9f555fa3 | 0;
-        this.Bl = 0xc84c64c2 | 0;
-        this.Ch = 0x2393b86b | 0;
-        this.Cl = 0x6f53b151 | 0;
-        this.Dh = 0x96387719 | 0;
-        this.Dl = 0x5940eabd | 0;
-        this.Eh = 0x96283ee2 | 0;
-        this.El = 0xa88effe3 | 0;
-        this.Fh = 0xbe5e1e25 | 0;
-        this.Fl = 0x53863992 | 0;
-        this.Gh = 0x2b0199fc | 0;
-        this.Gl = 0x2c85b8aa | 0;
-        this.Hh = 0x0eb72ddc | 0;
-        this.Hl = 0x81c52ca2 | 0;
-        this.outputLen = 32;
+        super(32);
+        this.Ah = T256_IV[0] | 0;
+        this.Al = T256_IV[1] | 0;
+        this.Bh = T256_IV[2] | 0;
+        this.Bl = T256_IV[3] | 0;
+        this.Ch = T256_IV[4] | 0;
+        this.Cl = T256_IV[5] | 0;
+        this.Dh = T256_IV[6] | 0;
+        this.Dl = T256_IV[7] | 0;
+        this.Eh = T256_IV[8] | 0;
+        this.El = T256_IV[9] | 0;
+        this.Fh = T256_IV[10] | 0;
+        this.Fl = T256_IV[11] | 0;
+        this.Gh = T256_IV[12] | 0;
+        this.Gl = T256_IV[13] | 0;
+        this.Hh = T256_IV[14] | 0;
+        this.Hl = T256_IV[15] | 0;
     }
 }
 exports.SHA512_256 = SHA512_256;
-class SHA384 extends SHA512 {
-    constructor() {
-        super();
-        // h -- high 32 bits, l -- low 32 bits
-        this.Ah = 0xcbbb9d5d | 0;
-        this.Al = 0xc1059ed8 | 0;
-        this.Bh = 0x629a292a | 0;
-        this.Bl = 0x367cd507 | 0;
-        this.Ch = 0x9159015a | 0;
-        this.Cl = 0x3070dd17 | 0;
-        this.Dh = 0x152fecd8 | 0;
-        this.Dl = 0xf70e5939 | 0;
-        this.Eh = 0x67332667 | 0;
-        this.El = 0xffc00b31 | 0;
-        this.Fh = 0x8eb44a87 | 0;
-        this.Fl = 0x68581511 | 0;
-        this.Gh = 0xdb0c2e0d | 0;
-        this.Gl = 0x64f98fa7 | 0;
-        this.Hh = 0x47b5481d | 0;
-        this.Hl = 0xbefa4fa4 | 0;
-        this.outputLen = 48;
-    }
-}
-exports.SHA384 = SHA384;
-/** SHA2-512 hash function. */
-exports.sha512 = (0, utils_js_1.wrapConstructor)(() => new SHA512());
-/** SHA2-512/224 "truncated" hash function, with improved resistance to length extension attacks. */
-exports.sha512_224 = (0, utils_js_1.wrapConstructor)(() => new SHA512_224());
-/** SHA2-512/256 "truncated" hash function, with improved resistance to length extension attacks. */
-exports.sha512_256 = (0, utils_js_1.wrapConstructor)(() => new SHA512_256());
-/** SHA2-384 hash function. */
-exports.sha384 = (0, utils_js_1.wrapConstructor)(() => new SHA384());
+/**
+ * SHA2-256 hash function from RFC 4634.
+ *
+ * It is the fastest JS hash, even faster than Blake3.
+ * To break sha256 using birthday attack, attackers need to try 2^128 hashes.
+ * BTC network is doing 2^70 hashes/sec (2^95 hashes/year) as per 2025.
+ */
+exports.sha256 = (0, utils_ts_1.createHasher)(() => new SHA256());
+/** SHA2-224 hash function from RFC 4634 */
+exports.sha224 = (0, utils_ts_1.createHasher)(() => new SHA224());
+/** SHA2-512 hash function from RFC 4634. */
+exports.sha512 = (0, utils_ts_1.createHasher)(() => new SHA512());
+/** SHA2-384 hash function from RFC 4634. */
+exports.sha384 = (0, utils_ts_1.createHasher)(() => new SHA384());
+/**
+ * SHA2-512/256 "truncated" hash function, with improved resistance to length extension attacks.
+ * See the paper on [truncated SHA512](https://eprint.iacr.org/2010/548.pdf).
+ */
+exports.sha512_256 = (0, utils_ts_1.createHasher)(() => new SHA512_256());
+/**
+ * SHA2-512/224 "truncated" hash function, with improved resistance to length extension attacks.
+ * See the paper on [truncated SHA512](https://eprint.iacr.org/2010/548.pdf).
+ */
+exports.sha512_224 = (0, utils_ts_1.createHasher)(() => new SHA512_224());
+//# sourceMappingURL=sha2.js.map
+
+/***/ }),
+
+/***/ 77178:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sha224 = exports.SHA224 = exports.sha256 = exports.SHA256 = void 0;
+/**
+ * SHA2-256 a.k.a. sha256. In JS, it is the fastest hash, even faster than Blake3.
+ *
+ * To break sha256 using birthday attack, attackers need to try 2^128 hashes.
+ * BTC network is doing 2^70 hashes/sec (2^95 hashes/year) as per 2025.
+ *
+ * Check out [FIPS 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
+ * @module
+ * @deprecated
+ */
+const sha2_ts_1 = __nccwpck_require__(7645);
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.SHA256 = sha2_ts_1.SHA256;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.sha256 = sha2_ts_1.sha256;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.SHA224 = sha2_ts_1.SHA224;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.sha224 = sha2_ts_1.sha224;
+//# sourceMappingURL=sha256.js.map
+
+/***/ }),
+
+/***/ 57507:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sha512_256 = exports.SHA512_256 = exports.sha512_224 = exports.SHA512_224 = exports.sha384 = exports.SHA384 = exports.sha512 = exports.SHA512 = void 0;
+/**
+ * SHA2-512 a.k.a. sha512 and sha384. It is slower than sha256 in js because u64 operations are slow.
+ *
+ * Check out [RFC 4634](https://datatracker.ietf.org/doc/html/rfc4634) and
+ * [the paper on truncated SHA512/256](https://eprint.iacr.org/2010/548.pdf).
+ * @module
+ * @deprecated
+ */
+const sha2_ts_1 = __nccwpck_require__(7645);
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.SHA512 = sha2_ts_1.SHA512;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.sha512 = sha2_ts_1.sha512;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.SHA384 = sha2_ts_1.SHA384;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.sha384 = sha2_ts_1.sha384;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.SHA512_224 = sha2_ts_1.SHA512_224;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.sha512_224 = sha2_ts_1.sha512_224;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.SHA512_256 = sha2_ts_1.SHA512_256;
+/** @deprecated Use import from `noble/hashes/sha2` module */
+exports.sha512_256 = sha2_ts_1.sha512_256;
 //# sourceMappingURL=sha512.js.map
 
 /***/ }),
@@ -9219,10 +9966,16 @@ exports.sha384 = (0, utils_js_1.wrapConstructor)(() => new SHA384());
  */
 /*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Hash = exports.nextTick = exports.byteSwapIfBE = exports.isLE = void 0;
+exports.wrapXOFConstructorWithOpts = exports.wrapConstructorWithOpts = exports.wrapConstructor = exports.Hash = exports.nextTick = exports.swap32IfBE = exports.byteSwapIfBE = exports.swap8IfBE = exports.isLE = void 0;
 exports.isBytes = isBytes;
+exports.anumber = anumber;
+exports.abytes = abytes;
+exports.ahash = ahash;
+exports.aexists = aexists;
+exports.aoutput = aoutput;
 exports.u8 = u8;
 exports.u32 = u32;
+exports.clean = clean;
 exports.createView = createView;
 exports.rotr = rotr;
 exports.rotl = rotl;
@@ -9232,12 +9985,14 @@ exports.bytesToHex = bytesToHex;
 exports.hexToBytes = hexToBytes;
 exports.asyncLoop = asyncLoop;
 exports.utf8ToBytes = utf8ToBytes;
+exports.bytesToUtf8 = bytesToUtf8;
 exports.toBytes = toBytes;
+exports.kdfInputToBytes = kdfInputToBytes;
 exports.concatBytes = concatBytes;
 exports.checkOpts = checkOpts;
-exports.wrapConstructor = wrapConstructor;
-exports.wrapConstructorWithOpts = wrapConstructorWithOpts;
-exports.wrapXOFConstructorWithOpts = wrapXOFConstructorWithOpts;
+exports.createHasher = createHasher;
+exports.createOptHasher = createOptHasher;
+exports.createXOFer = createXOFer;
 exports.randomBytes = randomBytes;
 // We use WebCrypto aka globalThis.crypto, which exists in browsers and node.js 16+.
 // node.js versions earlier than v19 don't declare it in global scope.
@@ -9246,20 +10001,59 @@ exports.randomBytes = randomBytes;
 // Makes the utils un-importable in browsers without a bundler.
 // Once node.js 18 is deprecated (2025-04-30), we can just drop the import.
 const crypto_1 = __nccwpck_require__(5048);
-const _assert_js_1 = __nccwpck_require__(44894);
-// export { isBytes } from './_assert.js';
-// We can't reuse isBytes from _assert, because somehow this causes huge perf issues
+/** Checks if something is Uint8Array. Be careful: nodejs Buffer will return true. */
 function isBytes(a) {
     return a instanceof Uint8Array || (ArrayBuffer.isView(a) && a.constructor.name === 'Uint8Array');
 }
-// Cast array to different type
+/** Asserts something is positive integer. */
+function anumber(n) {
+    if (!Number.isSafeInteger(n) || n < 0)
+        throw new Error('positive integer expected, got ' + n);
+}
+/** Asserts something is Uint8Array. */
+function abytes(b, ...lengths) {
+    if (!isBytes(b))
+        throw new Error('Uint8Array expected');
+    if (lengths.length > 0 && !lengths.includes(b.length))
+        throw new Error('Uint8Array expected of length ' + lengths + ', got length=' + b.length);
+}
+/** Asserts something is hash */
+function ahash(h) {
+    if (typeof h !== 'function' || typeof h.create !== 'function')
+        throw new Error('Hash should be wrapped by utils.createHasher');
+    anumber(h.outputLen);
+    anumber(h.blockLen);
+}
+/** Asserts a hash instance has not been destroyed / finished */
+function aexists(instance, checkFinished = true) {
+    if (instance.destroyed)
+        throw new Error('Hash instance has been destroyed');
+    if (checkFinished && instance.finished)
+        throw new Error('Hash#digest() has already been called');
+}
+/** Asserts output is properly-sized byte array */
+function aoutput(out, instance) {
+    abytes(out);
+    const min = instance.outputLen;
+    if (out.length < min) {
+        throw new Error('digestInto() expects output buffer of length at least ' + min);
+    }
+}
+/** Cast u8 / u16 / u32 to u8. */
 function u8(arr) {
     return new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
 }
+/** Cast u8 / u16 / u32 to u32. */
 function u32(arr) {
     return new Uint32Array(arr.buffer, arr.byteOffset, Math.floor(arr.byteLength / 4));
 }
-// Cast array to view
+/** Zeroize a byte array. Warning: JS provides no guarantees. */
+function clean(...arrays) {
+    for (let i = 0; i < arrays.length; i++) {
+        arrays[i].fill(0);
+    }
+}
+/** Create DataView of an array for easy byte-level manipulation. */
 function createView(arr) {
     return new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
 }
@@ -9273,7 +10067,7 @@ function rotl(word, shift) {
 }
 /** Is current platform little-endian? Most are. Big-Endian platform: IBM */
 exports.isLE = (() => new Uint8Array(new Uint32Array([0x11223344]).buffer)[0] === 0x44)();
-// The byte swap operation for uint32
+/** The byte swap operation for uint32 */
 function byteSwap(word) {
     return (((word << 24) & 0xff000000) |
         ((word << 8) & 0xff0000) |
@@ -9281,23 +10075,36 @@ function byteSwap(word) {
         ((word >>> 24) & 0xff));
 }
 /** Conditionally byte swap if on a big-endian platform */
-exports.byteSwapIfBE = exports.isLE
+exports.swap8IfBE = exports.isLE
     ? (n) => n
     : (n) => byteSwap(n);
+/** @deprecated */
+exports.byteSwapIfBE = exports.swap8IfBE;
 /** In place byte swap for Uint32Array */
 function byteSwap32(arr) {
     for (let i = 0; i < arr.length; i++) {
         arr[i] = byteSwap(arr[i]);
     }
+    return arr;
 }
+exports.swap32IfBE = exports.isLE
+    ? (u) => u
+    : byteSwap32;
+// Built-in hex conversion https://caniuse.com/mdn-javascript_builtins_uint8array_fromhex
+const hasHexBuiltin = /* @__PURE__ */ (() => 
+// @ts-ignore
+typeof Uint8Array.from([]).toHex === 'function' && typeof Uint8Array.fromHex === 'function')();
 // Array where index 0xf0 (240) is mapped to string 'f0'
 const hexes = /* @__PURE__ */ Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, '0'));
 /**
- * Convert byte array to hex string.
+ * Convert byte array to hex string. Uses built-in function, when available.
  * @example bytesToHex(Uint8Array.from([0xca, 0xfe, 0x01, 0x23])) // 'cafe0123'
  */
 function bytesToHex(bytes) {
-    (0, _assert_js_1.abytes)(bytes);
+    abytes(bytes);
+    // @ts-ignore
+    if (hasHexBuiltin)
+        return bytes.toHex();
     // pre-caching improves the speed 6x
     let hex = '';
     for (let i = 0; i < bytes.length; i++) {
@@ -9317,12 +10124,15 @@ function asciiToBase16(ch) {
     return;
 }
 /**
- * Convert hex string to byte array.
+ * Convert hex string to byte array. Uses built-in function, when available.
  * @example hexToBytes('cafe0123') // Uint8Array.from([0xca, 0xfe, 0x01, 0x23])
  */
 function hexToBytes(hex) {
     if (typeof hex !== 'string')
         throw new Error('hex string expected, got ' + typeof hex);
+    // @ts-ignore
+    if (hasHexBuiltin)
+        return Uint8Array.fromHex(hex);
     const hl = hex.length;
     const al = hl / 2;
     if (hl % 2)
@@ -9360,13 +10170,20 @@ async function asyncLoop(iters, tick, cb) {
     }
 }
 /**
- * Convert JS string to byte array.
- * @example utf8ToBytes('abc') // new Uint8Array([97, 98, 99])
+ * Converts string to bytes using UTF8 encoding.
+ * @example utf8ToBytes('abc') // Uint8Array.from([97, 98, 99])
  */
 function utf8ToBytes(str) {
     if (typeof str !== 'string')
-        throw new Error('utf8ToBytes expected string, got ' + typeof str);
+        throw new Error('string expected');
     return new Uint8Array(new TextEncoder().encode(str)); // https://bugzil.la/1681809
+}
+/**
+ * Converts bytes to string using UTF8 encoding.
+ * @example bytesToUtf8(Uint8Array.from([97, 98, 99])) // 'abc'
+ */
+function bytesToUtf8(bytes) {
+    return new TextDecoder().decode(bytes);
 }
 /**
  * Normalizes (non-hex) string or Uint8Array to Uint8Array.
@@ -9376,17 +10193,25 @@ function utf8ToBytes(str) {
 function toBytes(data) {
     if (typeof data === 'string')
         data = utf8ToBytes(data);
-    (0, _assert_js_1.abytes)(data);
+    abytes(data);
     return data;
 }
 /**
- * Copies several Uint8Arrays into one.
+ * Helper for KDFs: consumes uint8array or string.
+ * When string is passed, does utf8 decoding, using TextDecoder.
  */
+function kdfInputToBytes(data) {
+    if (typeof data === 'string')
+        data = utf8ToBytes(data);
+    abytes(data);
+    return data;
+}
+/** Copies several Uint8Arrays into one. */
 function concatBytes(...arrays) {
     let sum = 0;
     for (let i = 0; i < arrays.length; i++) {
         const a = arrays[i];
-        (0, _assert_js_1.abytes)(a);
+        abytes(a);
         sum += a.length;
     }
     const res = new Uint8Array(sum);
@@ -9397,22 +10222,18 @@ function concatBytes(...arrays) {
     }
     return res;
 }
-/** For runtime check if class implements interface */
-class Hash {
-    // Safe version that clones internal state
-    clone() {
-        return this._cloneInto();
-    }
-}
-exports.Hash = Hash;
 function checkOpts(defaults, opts) {
     if (opts !== undefined && {}.toString.call(opts) !== '[object Object]')
-        throw new Error('Options should be object or undefined');
+        throw new Error('options should be object or undefined');
     const merged = Object.assign(defaults, opts);
     return merged;
 }
+/** For runtime check if class implements interface */
+class Hash {
+}
+exports.Hash = Hash;
 /** Wraps hash function, creating an interface on top of it */
-function wrapConstructor(hashCons) {
+function createHasher(hashCons) {
     const hashC = (msg) => hashCons().update(toBytes(msg)).digest();
     const tmp = hashCons();
     hashC.outputLen = tmp.outputLen;
@@ -9420,7 +10241,7 @@ function wrapConstructor(hashCons) {
     hashC.create = () => hashCons();
     return hashC;
 }
-function wrapConstructorWithOpts(hashCons) {
+function createOptHasher(hashCons) {
     const hashC = (msg, opts) => hashCons(opts).update(toBytes(msg)).digest();
     const tmp = hashCons({});
     hashC.outputLen = tmp.outputLen;
@@ -9428,7 +10249,7 @@ function wrapConstructorWithOpts(hashCons) {
     hashC.create = (opts) => hashCons(opts);
     return hashC;
 }
-function wrapXOFConstructorWithOpts(hashCons) {
+function createXOFer(hashCons) {
     const hashC = (msg, opts) => hashCons(opts).update(toBytes(msg)).digest();
     const tmp = hashCons({});
     hashC.outputLen = tmp.outputLen;
@@ -9436,6 +10257,9 @@ function wrapXOFConstructorWithOpts(hashCons) {
     hashC.create = (opts) => hashCons(opts);
     return hashC;
 }
+exports.wrapConstructor = createHasher;
+exports.wrapConstructorWithOpts = createOptHasher;
+exports.wrapXOFConstructorWithOpts = createXOFer;
 /** Cryptographically secure PRNG. Uses internal OS-level `crypto.getRandomValues`. */
 function randomBytes(bytesLength = 32) {
     if (crypto_1.crypto && typeof crypto_1.crypto.getRandomValues === 'function') {
@@ -9443,7 +10267,7 @@ function randomBytes(bytesLength = 32) {
     }
     // Legacy Node.js compatibility
     if (crypto_1.crypto && typeof crypto_1.crypto.randomBytes === 'function') {
-        return crypto_1.crypto.randomBytes(bytesLength);
+        return Uint8Array.from(crypto_1.crypto.randomBytes(bytesLength));
     }
     throw new Error('crypto.getRandomValues must be defined');
 }
@@ -9458,9 +10282,16 @@ function randomBytes(bytesLength = 32) {
 
 /*! scure-base - MIT License (c) 2022 Paul Miller (paulmillr.com) */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.bytes = exports.stringToBytes = exports.str = exports.bytesToString = exports.hex = exports.utf8 = exports.bech32m = exports.bech32 = exports.base58check = exports.createBase58check = exports.base58xmr = exports.base58xrp = exports.base58flickr = exports.base58 = exports.base64urlnopad = exports.base64url = exports.base64nopad = exports.base64 = exports.base32crockford = exports.base32hexnopad = exports.base32hex = exports.base32nopad = exports.base32 = exports.base16 = exports.utils = exports.assertNumber = void 0;
+exports.bytes = exports.stringToBytes = exports.str = exports.bytesToString = exports.hex = exports.utf8 = exports.bech32m = exports.bech32 = exports.base58check = exports.createBase58check = exports.base58xmr = exports.base58xrp = exports.base58flickr = exports.base58 = exports.base64urlnopad = exports.base64url = exports.base64nopad = exports.base64 = exports.base32crockford = exports.base32hexnopad = exports.base32hex = exports.base32nopad = exports.base32 = exports.base16 = exports.utils = void 0;
 function isBytes(a) {
     return a instanceof Uint8Array || (ArrayBuffer.isView(a) && a.constructor.name === 'Uint8Array');
+}
+/** Asserts something is Uint8Array. */
+function abytes(b, ...lengths) {
+    if (!isBytes(b))
+        throw new Error('Uint8Array expected');
+    if (lengths.length > 0 && !lengths.includes(b.length))
+        throw new Error('Uint8Array expected of length ' + lengths + ', got length=' + b.length);
 }
 function isArrayOf(isString, arr) {
     if (!Array.isArray(arr))
@@ -9489,7 +10320,6 @@ function anumber(n) {
     if (!Number.isSafeInteger(n))
         throw new Error(`invalid integer: ${n}`);
 }
-exports.assertNumber = anumber;
 function aArr(input) {
     if (!Array.isArray(input))
         throw new Error('array expected');
@@ -9786,41 +10616,172 @@ exports.utils = {
 // RFC 4648 aka RFC 3548
 // ---------------------
 /**
- * base16 encoding.
+ * base16 encoding from RFC 4648.
+ * @example
+ * ```js
+ * base16.encode(Uint8Array.from([0x12, 0xab]));
+ * // => '12AB'
+ * ```
  */
 exports.base16 = chain(radix2(4), alphabet('0123456789ABCDEF'), join(''));
-exports.base32 = chain(radix2(5), alphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'), padding(5), join(''));
-exports.base32nopad = chain(radix2(5), alphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'), join(''));
-exports.base32hex = chain(radix2(5), alphabet('0123456789ABCDEFGHIJKLMNOPQRSTUV'), padding(5), join(''));
-exports.base32hexnopad = chain(radix2(5), alphabet('0123456789ABCDEFGHIJKLMNOPQRSTUV'), join(''));
-exports.base32crockford = chain(radix2(5), alphabet('0123456789ABCDEFGHJKMNPQRSTVWXYZ'), join(''), normalize((s) => s.toUpperCase().replace(/O/g, '0').replace(/[IL]/g, '1')));
 /**
- * base64 with padding. For no padding, use `base64nopad`.
+ * base32 encoding from RFC 4648. Has padding.
+ * Use `base32nopad` for unpadded version.
+ * Also check out `base32hex`, `base32hexnopad`, `base32crockford`.
  * @example
- * const b = base64.decode('A951'); // Uint8Array.from([ 3, 222, 117 ])
- * base64.encode(b); // 'A951'
+ * ```js
+ * base32.encode(Uint8Array.from([0x12, 0xab]));
+ * // => 'CKVQ===='
+ * base32.decode('CKVQ====');
+ * // => Uint8Array.from([0x12, 0xab])
+ * ```
  */
-exports.base64 = chain(radix2(6), alphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'), padding(6), join(''));
+exports.base32 = chain(radix2(5), alphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'), padding(5), join(''));
 /**
- * base64 without padding.
+ * base32 encoding from RFC 4648. No padding.
+ * Use `base32` for padded version.
+ * Also check out `base32hex`, `base32hexnopad`, `base32crockford`.
+ * @example
+ * ```js
+ * base32nopad.encode(Uint8Array.from([0x12, 0xab]));
+ * // => 'CKVQ'
+ * base32nopad.decode('CKVQ');
+ * // => Uint8Array.from([0x12, 0xab])
+ * ```
+ */
+exports.base32nopad = chain(radix2(5), alphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'), join(''));
+/**
+ * base32 encoding from RFC 4648. Padded. Compared to ordinary `base32`, slightly different alphabet.
+ * Use `base32hexnopad` for unpadded version.
+ * @example
+ * ```js
+ * base32hex.encode(Uint8Array.from([0x12, 0xab]));
+ * // => '2ALG===='
+ * base32hex.decode('2ALG====');
+ * // => Uint8Array.from([0x12, 0xab])
+ * ```
+ */
+exports.base32hex = chain(radix2(5), alphabet('0123456789ABCDEFGHIJKLMNOPQRSTUV'), padding(5), join(''));
+/**
+ * base32 encoding from RFC 4648. No padding. Compared to ordinary `base32`, slightly different alphabet.
+ * Use `base32hex` for padded version.
+ * @example
+ * ```js
+ * base32hexnopad.encode(Uint8Array.from([0x12, 0xab]));
+ * // => '2ALG'
+ * base32hexnopad.decode('2ALG');
+ * // => Uint8Array.from([0x12, 0xab])
+ * ```
+ */
+exports.base32hexnopad = chain(radix2(5), alphabet('0123456789ABCDEFGHIJKLMNOPQRSTUV'), join(''));
+/**
+ * base32 encoding from RFC 4648. Doug Crockford's version.
+ * https://www.crockford.com/base32.html
+ * @example
+ * ```js
+ * base32crockford.encode(Uint8Array.from([0x12, 0xab]));
+ * // => '2ANG'
+ * base32crockford.decode('2ANG');
+ * // => Uint8Array.from([0x12, 0xab])
+ * ```
+ */
+exports.base32crockford = chain(radix2(5), alphabet('0123456789ABCDEFGHJKMNPQRSTVWXYZ'), join(''), normalize((s) => s.toUpperCase().replace(/O/g, '0').replace(/[IL]/g, '1')));
+// Built-in base64 conversion https://caniuse.com/mdn-javascript_builtins_uint8array_frombase64
+// prettier-ignore
+const hasBase64Builtin = /* @__PURE__ */ (() => typeof Uint8Array.from([]).toBase64 === 'function' &&
+    typeof Uint8Array.fromBase64 === 'function')();
+const decodeBase64Builtin = (s, isUrl) => {
+    astr('base64', s);
+    const re = isUrl ? /^[A-Za-z0-9=_-]+$/ : /^[A-Za-z0-9=+/]+$/;
+    const alphabet = isUrl ? 'base64url' : 'base64';
+    if (s.length > 0 && !re.test(s))
+        throw new Error('invalid base64');
+    return Uint8Array.fromBase64(s, { alphabet, lastChunkHandling: 'strict' });
+};
+/**
+ * base64 from RFC 4648. Padded.
+ * Use `base64nopad` for unpadded version.
+ * Also check out `base64url`, `base64urlnopad`.
+ * Falls back to built-in function, when available.
+ * @example
+ * ```js
+ * base64.encode(Uint8Array.from([0x12, 0xab]));
+ * // => 'Eqs='
+ * base64.decode('Eqs=');
+ * // => Uint8Array.from([0x12, 0xab])
+ * ```
+ */
+// prettier-ignore
+exports.base64 = hasBase64Builtin ? {
+    encode(b) { abytes(b); return b.toBase64(); },
+    decode(s) { return decodeBase64Builtin(s, false); },
+} : chain(radix2(6), alphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'), padding(6), join(''));
+/**
+ * base64 from RFC 4648. No padding.
+ * Use `base64` for padded version.
+ * @example
+ * ```js
+ * base64nopad.encode(Uint8Array.from([0x12, 0xab]));
+ * // => 'Eqs'
+ * base64nopad.decode('Eqs');
+ * // => Uint8Array.from([0x12, 0xab])
+ * ```
  */
 exports.base64nopad = chain(radix2(6), alphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'), join(''));
-exports.base64url = chain(radix2(6), alphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'), padding(6), join(''));
+/**
+ * base64 from RFC 4648, using URL-safe alphabet. Padded.
+ * Use `base64urlnopad` for unpadded version.
+ * Falls back to built-in function, when available.
+ * @example
+ * ```js
+ * base64url.encode(Uint8Array.from([0x12, 0xab]));
+ * // => 'Eqs='
+ * base64url.decode('Eqs=');
+ * // => Uint8Array.from([0x12, 0xab])
+ * ```
+ */
+// prettier-ignore
+exports.base64url = hasBase64Builtin ? {
+    encode(b) { abytes(b); return b.toBase64({ alphabet: 'base64url' }); },
+    decode(s) { return decodeBase64Builtin(s, true); },
+} : chain(radix2(6), alphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'), padding(6), join(''));
+/**
+ * base64 from RFC 4648, using URL-safe alphabet. No padding.
+ * Use `base64url` for padded version.
+ * @example
+ * ```js
+ * base64urlnopad.encode(Uint8Array.from([0x12, 0xab]));
+ * // => 'Eqs'
+ * base64urlnopad.decode('Eqs');
+ * // => Uint8Array.from([0x12, 0xab])
+ * ```
+ */
 exports.base64urlnopad = chain(radix2(6), alphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'), join(''));
 // base58 code
 // -----------
 const genBase58 = /* @__NO_SIDE_EFFECTS__ */ (abc) => chain(radix(58), alphabet(abc), join(''));
 /**
- * Base58: base64 without characters +, /, 0, O, I, l.
+ * base58: base64 without ambigous characters +, /, 0, O, I, l.
  * Quadratic (O(n^2)) - so, can't be used on large inputs.
+ * @example
+ * ```js
+ * base58.decode('01abcdef');
+ * // => '3UhJW'
+ * ```
  */
 exports.base58 = genBase58('123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz');
+/**
+ * base58: flickr version. Check out `base58`.
+ */
 exports.base58flickr = genBase58('123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ');
+/**
+ * base58: XRP version. Check out `base58`.
+ */
 exports.base58xrp = genBase58('rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz');
 // Data len (index) -> encoded block len
 const XMR_BLOCK_LEN = [0, 2, 3, 5, 6, 7, 9, 10, 11];
 /**
- * XMR version of base58.
+ * base58: XMR version. Check out `base58`.
  * Done in 8-byte blocks (which equals 11 chars in decoding). Last (non-full) block padded with '1' to size in XMR_BLOCK_LEN.
  * Block encoding significantly reduces quadratic complexity of base58.
  */
@@ -9848,6 +10809,10 @@ exports.base58xmr = {
         return Uint8Array.from(res);
     },
 };
+/**
+ * Method, which creates base58check encoder.
+ * Requires function, calculating sha256.
+ */
 const createBase58check = (sha256) => chain(checksum(4, (data) => sha256(sha256(data))), exports.base58);
 exports.createBase58check = createBase58check;
 /**
@@ -9951,36 +10916,60 @@ function genBech32(encoding) {
     };
 }
 /**
- * Low-level bech32 operations. Operates on words.
+ * bech32 from BIP 173. Operates on words.
+ * For high-level, check out scure-btc-signer:
+ * https://github.com/paulmillr/scure-btc-signer.
  */
 exports.bech32 = genBech32('bech32');
+/**
+ * bech32m from BIP 350. Operates on words.
+ * It was to mitigate `bech32` weaknesses.
+ * For high-level, check out scure-btc-signer:
+ * https://github.com/paulmillr/scure-btc-signer.
+ */
 exports.bech32m = genBech32('bech32m');
 /**
  * UTF-8-to-byte decoder. Uses built-in TextDecoder / TextEncoder.
  * @example
+ * ```js
  * const b = utf8.decode("hey"); // => new Uint8Array([ 104, 101, 121 ])
  * const str = utf8.encode(b); // "hey"
+ * ```
  */
 exports.utf8 = {
     encode: (data) => new TextDecoder().decode(data),
     decode: (str) => new TextEncoder().encode(str),
 };
+// Built-in hex conversion https://caniuse.com/mdn-javascript_builtins_uint8array_fromhex
+// prettier-ignore
+const hasHexBuiltin = /* @__PURE__ */ (() => typeof Uint8Array.from([]).toHex === 'function' &&
+    typeof Uint8Array.fromHex === 'function')();
+// prettier-ignore
+const hexBuiltin = {
+    encode(data) { abytes(data); return data.toHex(); },
+    decode(s) { astr('hex', s); return Uint8Array.fromHex(s); },
+};
 /**
- * hex string decoder.
+ * hex string decoder. Uses built-in function, when available.
  * @example
+ * ```js
  * const b = hex.decode("0102ff"); // => new Uint8Array([ 1, 2, 255 ])
  * const str = hex.encode(b); // "0102ff"
+ * ```
  */
-exports.hex = chain(radix2(4), alphabet('0123456789abcdef'), join(''), normalize((s) => {
-    if (typeof s !== 'string' || s.length % 2 !== 0)
-        throw new TypeError(`hex.decode: expected string, got ${typeof s} with length ${s.length}`);
-    return s.toLowerCase();
-}));
+exports.hex = hasHexBuiltin
+    ? hexBuiltin
+    : chain(radix2(4), alphabet('0123456789abcdef'), join(''), normalize((s) => {
+        if (typeof s !== 'string' || s.length % 2 !== 0)
+            throw new TypeError(`hex.decode: expected string, got ${typeof s} with length ${s.length}`);
+        return s.toLowerCase();
+    }));
 // prettier-ignore
 const CODERS = {
     utf8: exports.utf8, hex: exports.hex, base16: exports.base16, base32: exports.base32, base64: exports.base64, base64url: exports.base64url, base58: exports.base58, base58xmr: exports.base58xmr
 };
 const coderTypeError = 'Invalid encoding type. Available types: utf8, hex, base16, base32, base64, base64url, base58, base58xmr';
+/** @deprecated */
 const bytesToString = (type, bytes) => {
     if (typeof type !== 'string' || !CODERS.hasOwnProperty(type))
         throw new TypeError(coderTypeError);
@@ -9989,7 +10978,9 @@ const bytesToString = (type, bytes) => {
     return CODERS[type].encode(bytes);
 };
 exports.bytesToString = bytesToString;
+/** @deprecated */
 exports.str = exports.bytesToString; // as in python, but for bytes only
+/** @deprecated */
 const stringToBytes = (type, str) => {
     if (!CODERS.hasOwnProperty(type))
         throw new TypeError(coderTypeError);
@@ -9998,6 +10989,7 @@ const stringToBytes = (type, str) => {
     return CODERS[type].decode(str);
 };
 exports.stringToBytes = stringToBytes;
+/** @deprecated */
 exports.bytes = exports.stringToBytes;
 //# sourceMappingURL=index.js.map
 
@@ -10045,10 +11037,8 @@ exports.validateMnemonic = validateMnemonic;
 exports.mnemonicToSeed = mnemonicToSeed;
 exports.mnemonicToSeedSync = mnemonicToSeedSync;
 /*! scure-bip39 - MIT License (c) 2022 Patricio Palladino, Paul Miller (paulmillr.com) */
-const _assert_1 = __nccwpck_require__(44894);
 const pbkdf2_1 = __nccwpck_require__(95200);
-const sha256_1 = __nccwpck_require__(77178);
-const sha512_1 = __nccwpck_require__(57507);
+const sha2_1 = __nccwpck_require__(7645);
 const utils_1 = __nccwpck_require__(4248);
 const base_1 = __nccwpck_require__(80628);
 // Japanese wordlist
@@ -10070,7 +11060,7 @@ function normalize(str) {
     return { nfkd: norm, words };
 }
 function aentropy(ent) {
-    (0, _assert_1.abytes)(ent, 16, 20, 24, 28, 32);
+    (0, utils_1.abytes)(ent, 16, 20, 24, 28, 32);
 }
 /**
  * Generate x random words. Uses Cryptographically-Secure Random Number Generator.
@@ -10081,7 +11071,7 @@ function aentropy(ent) {
  * // 'legal winner thank year wave sausage worth useful legal winner thank yellow'
  */
 function generateMnemonic(wordlist, strength = 128) {
-    (0, _assert_1.anumber)(strength);
+    (0, utils_1.anumber)(strength);
     if (strength % 32 !== 0 || strength > 256)
         throw new TypeError('Invalid entropy');
     return entropyToMnemonic((0, utils_1.randomBytes)(strength / 8), wordlist);
@@ -10091,7 +11081,7 @@ const calcChecksum = (entropy) => {
     const bitsLeft = 8 - entropy.length / 4;
     // Zero rightmost "bitsLeft" bits in byte
     // For example: bitsLeft=4 val=10111101 -> 10110000
-    return new Uint8Array([((0, sha256_1.sha256)(entropy)[0] >> bitsLeft) << bitsLeft]);
+    return new Uint8Array([((0, sha2_1.sha256)(entropy)[0] >> bitsLeft) << bitsLeft]);
 };
 function getCoder(wordlist) {
     if (!Array.isArray(wordlist) || wordlist.length !== 2048 || typeof wordlist[0] !== 'string')
@@ -10163,7 +11153,7 @@ const psalt = (passphrase) => nfkd('mnemonic' + passphrase);
  * // new Uint8Array([...64 bytes])
  */
 function mnemonicToSeed(mnemonic, passphrase = '') {
-    return (0, pbkdf2_1.pbkdf2Async)(sha512_1.sha512, normalize(mnemonic).nfkd, psalt(passphrase), { c: 2048, dkLen: 64 });
+    return (0, pbkdf2_1.pbkdf2Async)(sha2_1.sha512, normalize(mnemonic).nfkd, psalt(passphrase), { c: 2048, dkLen: 64 });
 }
 /**
  * Irreversible: Uses KDF to derive 64 bytes of key data from mnemonic + optional password.
@@ -10176,7 +11166,7 @@ function mnemonicToSeed(mnemonic, passphrase = '') {
  * // new Uint8Array([...64 bytes])
  */
 function mnemonicToSeedSync(mnemonic, passphrase = '') {
-    return (0, pbkdf2_1.pbkdf2)(sha512_1.sha512, normalize(mnemonic).nfkd, psalt(passphrase), { c: 2048, dkLen: 64 });
+    return (0, pbkdf2_1.pbkdf2)(sha2_1.sha512, normalize(mnemonic).nfkd, psalt(passphrase), { c: 2048, dkLen: 64 });
 }
 
 
@@ -11762,7 +12752,7 @@ function assertValidExecutionArguments(schema, document, rawVariableValues) {
  */
 
 function buildExecutionContext(args) {
-  var _definition$name, _operation$variableDe;
+  var _definition$name, _operation$variableDe, _options$maxCoercionE;
 
   const {
     schema,
@@ -11774,6 +12764,7 @@ function buildExecutionContext(args) {
     fieldResolver,
     typeResolver,
     subscribeFieldResolver,
+    options,
   } = args;
   let operation;
   const fragments = Object.create(null);
@@ -11836,7 +12827,14 @@ function buildExecutionContext(args) {
       ? rawVariableValues
       : {},
     {
-      maxErrors: 50,
+      maxErrors:
+        (_options$maxCoercionE =
+          options === null || options === void 0
+            ? void 0
+            : options.maxCoercionErrors) !== null &&
+        _options$maxCoercionE !== void 0
+          ? _options$maxCoercionE
+          : 50,
     },
   );
 
@@ -20288,10 +21286,7 @@ function visit(root, visitor, visitorKeys = _ast.QueryDocumentKeys) {
             }
           }
         } else {
-          node = Object.defineProperties(
-            {},
-            Object.getOwnPropertyDescriptors(node),
-          );
+          node = { ...node };
 
           for (const [editKey, editValue] of edits) {
             node[editKey] = editValue;
@@ -26187,7 +27182,10 @@ function coerceInputValueImpl(inputValue, type, onError, path) {
   }
 
   if ((0, _definition.isInputObjectType)(type)) {
-    if (!(0, _isObjectLike.isObjectLike)(inputValue)) {
+    if (
+      !(0, _isObjectLike.isObjectLike)(inputValue) ||
+      Array.isArray(inputValue)
+    ) {
       onError(
         (0, _Path.pathToArray)(path),
         inputValue,
@@ -29717,6 +30715,7 @@ class ValidationContext extends ASTValidationContext {
               node: variable,
               type: typeInfo.getInputType(),
               defaultValue: typeInfo.getDefaultValue(),
+              parentType: typeInfo.getParentInputType(),
             });
           },
         }),
@@ -34111,7 +35110,7 @@ function VariablesInAllowedPositionRule(context) {
       leave(operation) {
         const usages = context.getRecursiveVariableUsages(operation);
 
-        for (const { node, type, defaultValue } of usages) {
+        for (const { node, type, defaultValue, parentType } of usages) {
           const varName = node.name.value;
           const varDef = varDefMap[varName];
 
@@ -34139,6 +35138,21 @@ function VariablesInAllowedPositionRule(context) {
               context.reportError(
                 new _GraphQLError.GraphQLError(
                   `Variable "$${varName}" of type "${varTypeStr}" used in position expecting type "${typeStr}".`,
+                  {
+                    nodes: [varDef, node],
+                  },
+                ),
+              );
+            }
+
+            if (
+              (0, _definition.isInputObjectType)(parentType) &&
+              parentType.isOneOf &&
+              (0, _definition.isNullableType)(varType)
+            ) {
+              context.reportError(
+                new _GraphQLError.GraphQLError(
+                  `Variable "$${varName}" is of type "${varType}" but must be non-nullable to be used for OneOf Input Object "${parentType}".`,
                   {
                     nodes: [varDef, node],
                   },
@@ -34741,7 +35755,7 @@ exports.versionInfo = exports.version = void 0;
 /**
  * A string containing the version of the GraphQL.js library
  */
-const version = '16.10.0';
+const version = '16.11.0';
 /**
  * An object containing the components of the GraphQL.js version string
  */
@@ -34749,7 +35763,7 @@ const version = '16.10.0';
 exports.version = version;
 const versionInfo = Object.freeze({
   major: 16,
-  minor: 10,
+  minor: 11,
   patch: 0,
   preReleaseTag: null,
 });
@@ -58605,15 +59619,15 @@ const VotingParams = () => {
         node_capacity: bcs_1.bcs.u64(),
     });
 };
-const VecMap = (...typeParameters) => {
-    return bcs_1.bcs.struct('VecMap', {
-        contents: bcs_1.bcs.vector(Entry(typeParameters[0], typeParameters[1])),
-    });
-};
 const Entry = (...typeParameters) => {
     return bcs_1.bcs.struct('Entry', {
         key: typeParameters[0],
         value: typeParameters[1],
+    });
+};
+const VecMap = (...typeParameters) => {
+    return bcs_1.bcs.struct('VecMap', {
+        contents: bcs_1.bcs.vector(Entry(typeParameters[0], typeParameters[1])),
     });
 };
 const Field = (...typeParameters) => {
@@ -58649,9 +59663,7 @@ const StakingPool = () => {
 };
 exports.StakingPool = StakingPool;
 const Committee = () => {
-    return bcs_1.bcs.struct('Committee', {
-        pos0: VecMap(bcs_1.bcs.Address, bcs_1.bcs.vector(bcs_1.bcs.u16())),
-    });
+    return bcs_1.bcs.tuple([VecMap(bcs_1.bcs.Address, bcs_1.bcs.vector(bcs_1.bcs.u16()))], { name: 'Committee' });
 };
 exports.Committee = Committee;
 
@@ -58694,7 +59706,7 @@ const getAllObjects_1 = __nccwpck_require__(20108);
 const contracts_1 = __nccwpck_require__(33196);
 const getShardIndicesByNodeId = (committee) => {
     const shardIndicesByNodeId = new Map();
-    for (const node of committee.pos0.contents) {
+    for (const node of committee[0].contents) {
         if (!shardIndicesByNodeId.has(node.key)) {
             shardIndicesByNodeId.set(node.key, []);
         }
@@ -58728,7 +59740,7 @@ const loadManyOrThrow = async (suiClient, ids, schema) => {
     return parsed;
 };
 const getStakingPool = async (SuiClient, committee) => {
-    const nodeIds = committee.pos0.contents.map((node) => node.key);
+    const nodeIds = committee[0].contents.map((node) => node.key);
     return await loadManyOrThrow(SuiClient, nodeIds, (0, contracts_1.StakingPool)());
 };
 const getCommittee = async (SuiClient, committee) => {
@@ -62652,98 +63664,6 @@ module.exports = parseParams
 
 /***/ }),
 
-/***/ 80789:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var b58_exports = {};
-__export(b58_exports, {
-  fromB58: () => fromB58,
-  fromBase58: () => fromBase58,
-  toB58: () => toB58,
-  toBase58: () => toBase58
-});
-module.exports = __toCommonJS(b58_exports);
-var import_base = __nccwpck_require__(80628);
-const toBase58 = (buffer) => import_base.base58.encode(buffer);
-const fromBase58 = (str) => import_base.base58.decode(str);
-const toB58 = toBase58;
-const fromB58 = fromBase58;
-//# sourceMappingURL=b58.js.map
-
-
-/***/ }),
-
-/***/ 60918:
-/***/ ((module) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var b64_exports = {};
-__export(b64_exports, {
-  fromB64: () => fromB64,
-  fromBase64: () => fromBase64,
-  toB64: () => toB64,
-  toBase64: () => toBase64
-});
-module.exports = __toCommonJS(b64_exports);
-function fromBase64(base64String) {
-  return Uint8Array.from(atob(base64String), (char) => char.charCodeAt(0));
-}
-const CHUNK_SIZE = 8192;
-function toBase64(bytes) {
-  if (bytes.length < CHUNK_SIZE) {
-    return btoa(String.fromCharCode(...bytes));
-  }
-  let output = "";
-  for (var i = 0; i < bytes.length; i += CHUNK_SIZE) {
-    const chunk = bytes.slice(i, i + CHUNK_SIZE);
-    output += String.fromCharCode(...chunk);
-  }
-  return btoa(output);
-}
-const toB64 = toBase64;
-const fromB64 = fromBase64;
-//# sourceMappingURL=b64.js.map
-
-
-/***/ }),
-
 /***/ 51239:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -62786,9 +63706,7 @@ __export(bcs_type_exports, {
   uIntBcsType: () => uIntBcsType
 });
 module.exports = __toCommonJS(bcs_type_exports);
-var import_b58 = __nccwpck_require__(80789);
-var import_b64 = __nccwpck_require__(60918);
-var import_hex = __nccwpck_require__(95647);
+var import_utils = __nccwpck_require__(5041);
 var import_reader = __nccwpck_require__(15967);
 var import_uleb = __nccwpck_require__(4314);
 var import_writer = __nccwpck_require__(41023);
@@ -62825,13 +63743,13 @@ const _BcsType = class _BcsType {
     return this.read(reader);
   }
   fromHex(hex) {
-    return this.parse((0, import_hex.fromHex)(hex));
+    return this.parse((0, import_utils.fromHex)(hex));
   }
   fromBase58(b64) {
-    return this.parse((0, import_b58.fromBase58)(b64));
+    return this.parse((0, import_utils.fromBase58)(b64));
   }
   fromBase64(b64) {
-    return this.parse((0, import_b64.fromBase64)(b64));
+    return this.parse((0, import_utils.fromBase64)(b64));
   }
   transform({
     name,
@@ -62875,13 +63793,13 @@ class SerializedBcs {
     return __privateGet(this, _bytes);
   }
   toHex() {
-    return (0, import_hex.toHex)(__privateGet(this, _bytes));
+    return (0, import_utils.toHex)(__privateGet(this, _bytes));
   }
   toBase64() {
-    return (0, import_b64.toBase64)(__privateGet(this, _bytes));
+    return (0, import_utils.toBase64)(__privateGet(this, _bytes));
   }
   toBase58() {
-    return (0, import_b58.toBase58)(__privateGet(this, _bytes));
+    return (0, import_utils.toBase58)(__privateGet(this, _bytes));
   }
   parse() {
     return __privateGet(this, _schema).parse(__privateGet(this, _bytes));
@@ -63527,55 +64445,6 @@ const bcs = {
 
 /***/ }),
 
-/***/ 95647:
-/***/ ((module) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var hex_exports = {};
-__export(hex_exports, {
-  fromHEX: () => fromHEX,
-  fromHex: () => fromHex,
-  toHEX: () => toHEX,
-  toHex: () => toHex
-});
-module.exports = __toCommonJS(hex_exports);
-function fromHex(hexStr) {
-  const normalized = hexStr.startsWith("0x") ? hexStr.slice(2) : hexStr;
-  const padded = normalized.length % 2 === 0 ? normalized : `0${normalized}`;
-  const intArr = padded.match(/[0-9a-fA-F]{2}/g)?.map((byte) => parseInt(byte, 16)) ?? [];
-  if (intArr.length !== padded.length / 2) {
-    throw new Error(`Invalid hex string ${hexStr}`);
-  }
-  return Uint8Array.from(intArr);
-}
-function toHex(bytes) {
-  return bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, "0"), "");
-}
-const toHEX = toHex;
-const fromHEX = fromHex;
-//# sourceMappingURL=hex.js.map
-
-
-/***/ }),
-
 /***/ 88830:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -63605,32 +64474,36 @@ __export(index_exports, {
   BcsWriter: () => import_writer.BcsWriter,
   SerializedBcs: () => import_bcs_type.SerializedBcs,
   bcs: () => import_bcs.bcs,
-  decodeStr: () => import_utils.decodeStr,
-  encodeStr: () => import_utils.encodeStr,
-  fromB58: () => import_b58.fromB58,
-  fromB64: () => import_b64.fromB64,
-  fromBase58: () => import_b58.fromBase58,
-  fromBase64: () => import_b64.fromBase64,
-  fromHEX: () => import_hex.fromHEX,
-  fromHex: () => import_hex.fromHex,
+  decodeStr: () => import_utils2.decodeStr,
+  encodeStr: () => import_utils2.encodeStr,
+  fromB58: () => fromB58,
+  fromB64: () => fromB64,
+  fromBase58: () => import_utils.fromBase58,
+  fromBase64: () => import_utils.fromBase64,
+  fromHEX: () => fromHEX,
+  fromHex: () => import_utils.fromHex,
   isSerializedBcs: () => import_bcs_type.isSerializedBcs,
-  splitGenericParameters: () => import_utils.splitGenericParameters,
-  toB58: () => import_b58.toB58,
-  toB64: () => import_b64.toB64,
-  toBase58: () => import_b58.toBase58,
-  toBase64: () => import_b64.toBase64,
-  toHEX: () => import_hex.toHEX,
-  toHex: () => import_hex.toHex
+  splitGenericParameters: () => import_utils2.splitGenericParameters,
+  toB58: () => toB58,
+  toB64: () => toB64,
+  toBase58: () => import_utils.toBase58,
+  toBase64: () => import_utils.toBase64,
+  toHEX: () => toHEX,
+  toHex: () => import_utils.toHex
 });
 module.exports = __toCommonJS(index_exports);
-var import_b58 = __nccwpck_require__(80789);
-var import_b64 = __nccwpck_require__(60918);
+var import_utils = __nccwpck_require__(5041);
 var import_bcs_type = __nccwpck_require__(51239);
 var import_bcs = __nccwpck_require__(83358);
-var import_hex = __nccwpck_require__(95647);
 var import_reader = __nccwpck_require__(15967);
-var import_utils = __nccwpck_require__(48751);
+var import_utils2 = __nccwpck_require__(48751);
 var import_writer = __nccwpck_require__(41023);
+const toB58 = import_utils.toBase58;
+const fromB58 = import_utils.fromBase58;
+const toB64 = import_utils.toBase64;
+const fromB64 = import_utils.fromBase64;
+const toHEX = import_utils.toHex;
+const fromHEX = import_utils.fromHex;
 //# sourceMappingURL=index.js.map
 
 
@@ -63670,7 +64543,7 @@ class BcsReader {
    */
   constructor(data) {
     this.bytePosition = 0;
-    this.dataView = new DataView(data.buffer);
+    this.dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
   }
   /**
    * Shift current cursor position by `bytes`.
@@ -63687,7 +64560,7 @@ class BcsReader {
    * @returns
    */
   read8() {
-    let value = this.dataView.getUint8(this.bytePosition);
+    const value = this.dataView.getUint8(this.bytePosition);
     this.shift(1);
     return value;
   }
@@ -63696,7 +64569,7 @@ class BcsReader {
    * @returns
    */
   read16() {
-    let value = this.dataView.getUint16(this.bytePosition, true);
+    const value = this.dataView.getUint16(this.bytePosition, true);
     this.shift(2);
     return value;
   }
@@ -63705,7 +64578,7 @@ class BcsReader {
    * @returns
    */
   read32() {
-    let value = this.dataView.getUint32(this.bytePosition, true);
+    const value = this.dataView.getUint32(this.bytePosition, true);
     this.shift(4);
     return value;
   }
@@ -63714,18 +64587,18 @@ class BcsReader {
    * @returns
    */
   read64() {
-    let value1 = this.read32();
-    let value2 = this.read32();
-    let result = value2.toString(16) + value1.toString(16).padStart(8, "0");
+    const value1 = this.read32();
+    const value2 = this.read32();
+    const result = value2.toString(16) + value1.toString(16).padStart(8, "0");
     return BigInt("0x" + result).toString(10);
   }
   /**
    * Read U128 value from the buffer and shift cursor by 16.
    */
   read128() {
-    let value1 = BigInt(this.read64());
-    let value2 = BigInt(this.read64());
-    let result = value2.toString(16) + value1.toString(16).padStart(16, "0");
+    const value1 = BigInt(this.read64());
+    const value2 = BigInt(this.read64());
+    const result = value2.toString(16) + value1.toString(16).padStart(16, "0");
     return BigInt("0x" + result).toString(10);
   }
   /**
@@ -63733,9 +64606,9 @@ class BcsReader {
    * @returns
    */
   read256() {
-    let value1 = BigInt(this.read128());
-    let value2 = BigInt(this.read128());
-    let result = value2.toString(16) + value1.toString(16).padStart(32, "0");
+    const value1 = BigInt(this.read128());
+    const value2 = BigInt(this.read128());
+    const result = value2.toString(16) + value1.toString(16).padStart(32, "0");
     return BigInt("0x" + result).toString(10);
   }
   /**
@@ -63743,8 +64616,8 @@ class BcsReader {
    * @param num Number of bytes to read.
    */
   readBytes(num) {
-    let start = this.bytePosition + this.dataView.byteOffset;
-    let value = new Uint8Array(this.dataView.buffer, start, num);
+    const start = this.bytePosition + this.dataView.byteOffset;
+    const value = new Uint8Array(this.dataView.buffer, start, num);
     this.shift(num);
     return value;
   }
@@ -63754,9 +64627,9 @@ class BcsReader {
    * @returns {Number} The ULEB value.
    */
   readULEB() {
-    let start = this.bytePosition + this.dataView.byteOffset;
-    let buffer = new Uint8Array(this.dataView.buffer, start);
-    let { value, length } = (0, import_uleb.ulebDecode)(buffer);
+    const start = this.bytePosition + this.dataView.byteOffset;
+    const buffer = new Uint8Array(this.dataView.buffer, start);
+    const { value, length } = (0, import_uleb.ulebDecode)(buffer);
     this.shift(length);
     return value;
   }
@@ -63767,8 +64640,8 @@ class BcsReader {
    * @returns {Array<Any>} Array of the resulting values, returned by callback.
    */
   readVec(cb) {
-    let length = this.readULEB();
-    let result = [];
+    const length = this.readULEB();
+    const result = [];
     for (let i = 0; i < length; i++) {
       result.push(cb(this, i, length));
     }
@@ -63809,7 +64682,7 @@ __export(uleb_exports, {
 });
 module.exports = __toCommonJS(uleb_exports);
 function ulebEncode(num) {
-  let arr = [];
+  const arr = [];
   let len = 0;
   if (num === 0) {
     return [0];
@@ -63828,7 +64701,7 @@ function ulebDecode(arr) {
   let shift = 0;
   let len = 0;
   while (true) {
-    let byte = arr[len];
+    const byte = arr[len];
     len += 1;
     total |= (byte & 127) << shift;
     if ((byte & 128) === 0) {
@@ -63875,17 +64748,15 @@ __export(utils_exports, {
   splitGenericParameters: () => splitGenericParameters
 });
 module.exports = __toCommonJS(utils_exports);
-var import_b58 = __nccwpck_require__(80789);
-var import_b64 = __nccwpck_require__(60918);
-var import_hex = __nccwpck_require__(95647);
+var import_utils = __nccwpck_require__(5041);
 function encodeStr(data, encoding) {
   switch (encoding) {
     case "base58":
-      return (0, import_b58.toBase58)(data);
+      return (0, import_utils.toBase58)(data);
     case "base64":
-      return (0, import_b64.toBase64)(data);
+      return (0, import_utils.toBase64)(data);
     case "hex":
-      return (0, import_hex.toHex)(data);
+      return (0, import_utils.toHex)(data);
     default:
       throw new Error("Unsupported encoding, supported values are: base64, hex");
   }
@@ -63893,11 +64764,11 @@ function encodeStr(data, encoding) {
 function decodeStr(data, encoding) {
   switch (encoding) {
     case "base58":
-      return (0, import_b58.fromBase58)(data);
+      return (0, import_utils.fromBase58)(data);
     case "base64":
-      return (0, import_b64.fromBase64)(data);
+      return (0, import_utils.fromBase64)(data);
     case "hex":
-      return (0, import_hex.fromHex)(data);
+      return (0, import_utils.fromHex)(data);
     default:
       throw new Error("Unsupported encoding, supported values are: base64, hex");
   }
@@ -64104,7 +64975,7 @@ class BcsWriter {
   }
 }
 function toLittleEndian(bigint, size) {
-  let result = new Uint8Array(size);
+  const result = new Uint8Array(size);
   let i = 0;
   while (bigint > 0) {
     result[i] = Number(bigint % BigInt(256));
@@ -64236,10 +65107,8 @@ const Owner = import_bcs.bcs.enum("Owner", {
     initialSharedVersion: import_bcs.bcs.u64()
   }),
   Immutable: null,
-  ConsensusV2: import_bcs.bcs.struct("ConsensusV2", {
-    authenticator: import_bcs.bcs.enum("Authenticator", {
-      SingleOwner: Address
-    }),
+  ConsensusAddressOwner: import_bcs.bcs.struct("ConsensusAddressOwner", {
+    owner: Address,
     startVersion: import_bcs.bcs.u64()
   })
 });
@@ -64412,13 +65281,15 @@ const CompressedSignature = import_bcs.bcs.enum("CompressedSignature", {
   ED25519: import_bcs.bcs.fixedArray(64, import_bcs.bcs.u8()),
   Secp256k1: import_bcs.bcs.fixedArray(64, import_bcs.bcs.u8()),
   Secp256r1: import_bcs.bcs.fixedArray(64, import_bcs.bcs.u8()),
-  ZkLogin: import_bcs.bcs.vector(import_bcs.bcs.u8())
+  ZkLogin: import_bcs.bcs.vector(import_bcs.bcs.u8()),
+  Passkey: import_bcs.bcs.vector(import_bcs.bcs.u8())
 });
 const PublicKey = import_bcs.bcs.enum("PublicKey", {
   ED25519: import_bcs.bcs.fixedArray(32, import_bcs.bcs.u8()),
   Secp256k1: import_bcs.bcs.fixedArray(33, import_bcs.bcs.u8()),
   Secp256r1: import_bcs.bcs.fixedArray(33, import_bcs.bcs.u8()),
-  ZkLogin: import_bcs.bcs.vector(import_bcs.bcs.u8())
+  ZkLogin: import_bcs.bcs.vector(import_bcs.bcs.u8()),
+  Passkey: import_bcs.bcs.fixedArray(33, import_bcs.bcs.u8())
 });
 const MultiSigPkMap = import_bcs.bcs.struct("MultiSigPkMap", {
   pubKey: PublicKey,
@@ -64975,10 +65846,12 @@ module.exports = __toCommonJS(client_exports);
 var import_bcs = __nccwpck_require__(88830);
 var import_client = __nccwpck_require__(51795);
 var import_jsonRPC = __nccwpck_require__(87420);
-var import_transactions = __nccwpck_require__(59417);
+var import_Transaction = __nccwpck_require__(22545);
 var import_sui_types = __nccwpck_require__(24818);
 var import_suins = __nccwpck_require__(38593);
 var import_http_transport = __nccwpck_require__(82027);
+var import_move_registry = __nccwpck_require__(77514);
+var import_mvr = __nccwpck_require__(13893);
 const SUI_CLIENT_BRAND = Symbol.for("@mysten/SuiClient");
 function isSuiClient(client) {
   return typeof client === "object" && client !== null && client[SUI_CLIENT_BRAND] === true;
@@ -64991,9 +65864,12 @@ class SuiClient extends import_client.Experimental_BaseClient {
    */
   constructor(options) {
     super({ network: options.network ?? "unknown" });
-    this.core = new import_jsonRPC.JSONRpcTransport(this);
     this.jsonRpc = this;
     this.transport = options.transport ?? new import_http_transport.SuiHTTPTransport({ url: options.url });
+    this.core = new import_jsonRPC.JSONRpcTransport({
+      jsonRpcClient: this,
+      mvr: options.mvr
+    });
   }
   get [SUI_CLIENT_BRAND]() {
     return true;
@@ -65009,14 +65885,25 @@ class SuiClient extends import_client.Experimental_BaseClient {
   /**
    * Get all Coin<`coin_type`> objects owned by an address.
    */
-  async getCoins(input) {
-    if (!input.owner || !(0, import_sui_types.isValidSuiAddress)((0, import_sui_types.normalizeSuiAddress)(input.owner))) {
+  async getCoins({
+    coinType,
+    owner,
+    cursor,
+    limit,
+    signal
+  }) {
+    if (!owner || !(0, import_sui_types.isValidSuiAddress)((0, import_sui_types.normalizeSuiAddress)(owner))) {
       throw new Error("Invalid Sui address");
+    }
+    if (coinType && (0, import_mvr.hasMvrName)(coinType)) {
+      coinType = (await this.core.mvr.resolveType({
+        type: coinType
+      })).type;
     }
     return await this.transport.request({
       method: "suix_getCoins",
-      params: [input.owner, input.coinType, input.cursor, input.limit],
-      signal: input.signal
+      params: [owner, coinType, cursor, limit],
+      signal
     });
   }
   /**
@@ -65035,14 +65922,19 @@ class SuiClient extends import_client.Experimental_BaseClient {
   /**
    * Get the total coin balance for one coin type, owned by the address owner.
    */
-  async getBalance(input) {
-    if (!input.owner || !(0, import_sui_types.isValidSuiAddress)((0, import_sui_types.normalizeSuiAddress)(input.owner))) {
+  async getBalance({ owner, coinType, signal }) {
+    if (!owner || !(0, import_sui_types.isValidSuiAddress)((0, import_sui_types.normalizeSuiAddress)(owner))) {
       throw new Error("Invalid Sui address");
+    }
+    if (coinType && (0, import_mvr.hasMvrName)(coinType)) {
+      coinType = (await this.core.mvr.resolveType({
+        type: coinType
+      })).type;
     }
     return await this.transport.request({
       method: "suix_getBalance",
-      params: [input.owner, input.coinType],
-      signal: input.signal
+      params: [owner, coinType],
+      signal
     });
   }
   /**
@@ -65061,21 +65953,31 @@ class SuiClient extends import_client.Experimental_BaseClient {
   /**
    * Fetch CoinMetadata for a given coin type
    */
-  async getCoinMetadata(input) {
+  async getCoinMetadata({ coinType, signal }) {
+    if (coinType && (0, import_mvr.hasMvrName)(coinType)) {
+      coinType = (await this.core.mvr.resolveType({
+        type: coinType
+      })).type;
+    }
     return await this.transport.request({
       method: "suix_getCoinMetadata",
-      params: [input.coinType],
-      signal: input.signal
+      params: [coinType],
+      signal
     });
   }
   /**
    *  Fetch total supply for a coin
    */
-  async getTotalSupply(input) {
+  async getTotalSupply({ coinType, signal }) {
+    if (coinType && (0, import_mvr.hasMvrName)(coinType)) {
+      coinType = (await this.core.mvr.resolveType({
+        type: coinType
+      })).type;
+    }
     return await this.transport.request({
       method: "suix_getTotalSupply",
-      params: [input.coinType],
-      signal: input.signal
+      params: [coinType],
+      signal
     });
   }
   /**
@@ -65089,52 +65991,99 @@ class SuiClient extends import_client.Experimental_BaseClient {
   /**
    * Get Move function argument types like read, write and full access
    */
-  async getMoveFunctionArgTypes(input) {
+  async getMoveFunctionArgTypes({
+    package: pkg,
+    module: module2,
+    function: fn,
+    signal
+  }) {
+    if (pkg && (0, import_move_registry.isValidNamedPackage)(pkg)) {
+      pkg = (await this.core.mvr.resolvePackage({
+        package: pkg
+      })).package;
+    }
     return await this.transport.request({
       method: "sui_getMoveFunctionArgTypes",
-      params: [input.package, input.module, input.function],
-      signal: input.signal
+      params: [pkg, module2, fn],
+      signal
     });
   }
   /**
    * Get a map from module name to
    * structured representations of Move modules
    */
-  async getNormalizedMoveModulesByPackage(input) {
+  async getNormalizedMoveModulesByPackage({
+    package: pkg,
+    signal
+  }) {
+    if (pkg && (0, import_move_registry.isValidNamedPackage)(pkg)) {
+      pkg = (await this.core.mvr.resolvePackage({
+        package: pkg
+      })).package;
+    }
     return await this.transport.request({
       method: "sui_getNormalizedMoveModulesByPackage",
-      params: [input.package],
-      signal: input.signal
+      params: [pkg],
+      signal
     });
   }
   /**
    * Get a structured representation of Move module
    */
-  async getNormalizedMoveModule(input) {
+  async getNormalizedMoveModule({
+    package: pkg,
+    module: module2,
+    signal
+  }) {
+    if (pkg && (0, import_move_registry.isValidNamedPackage)(pkg)) {
+      pkg = (await this.core.mvr.resolvePackage({
+        package: pkg
+      })).package;
+    }
     return await this.transport.request({
       method: "sui_getNormalizedMoveModule",
-      params: [input.package, input.module],
-      signal: input.signal
+      params: [pkg, module2],
+      signal
     });
   }
   /**
    * Get a structured representation of Move function
    */
-  async getNormalizedMoveFunction(input) {
+  async getNormalizedMoveFunction({
+    package: pkg,
+    module: module2,
+    function: fn,
+    signal
+  }) {
+    if (pkg && (0, import_move_registry.isValidNamedPackage)(pkg)) {
+      pkg = (await this.core.mvr.resolvePackage({
+        package: pkg
+      })).package;
+    }
     return await this.transport.request({
       method: "sui_getNormalizedMoveFunction",
-      params: [input.package, input.module, input.function],
-      signal: input.signal
+      params: [pkg, module2, fn],
+      signal
     });
   }
   /**
    * Get a structured representation of Move struct
    */
-  async getNormalizedMoveStruct(input) {
+  async getNormalizedMoveStruct({
+    package: pkg,
+    module: module2,
+    struct,
+    signal
+  }) {
+    if (pkg && (0, import_move_registry.isValidNamedPackage)(pkg)) {
+      pkg = (await this.core.mvr.resolvePackage({
+        package: pkg
+      })).package;
+    }
     return await this.transport.request({
       method: "sui_getNormalizedMoveStruct",
-      params: [input.package, input.module, input.struct],
-      signal: input.signal
+      params: [pkg, module2, struct],
+      signal
     });
   }
   /**
@@ -65144,12 +66093,27 @@ class SuiClient extends import_client.Experimental_BaseClient {
     if (!input.owner || !(0, import_sui_types.isValidSuiAddress)((0, import_sui_types.normalizeSuiAddress)(input.owner))) {
       throw new Error("Invalid Sui address");
     }
+    const filter = input.filter ? {
+      ...input.filter
+    } : void 0;
+    if (filter && "MoveModule" in filter && (0, import_move_registry.isValidNamedPackage)(filter.MoveModule.package)) {
+      filter.MoveModule = {
+        module: filter.MoveModule.module,
+        package: (await this.core.mvr.resolvePackage({
+          package: filter.MoveModule.package
+        })).package
+      };
+    } else if (filter && "StructType" in filter && (0, import_mvr.hasMvrName)(filter.StructType)) {
+      filter.StructType = (await this.core.mvr.resolveType({
+        type: filter.StructType
+      })).type;
+    }
     return await this.transport.request({
       method: "suix_getOwnedObjects",
       params: [
         input.owner,
         {
-          filter: input.filter,
+          filter,
           options: input.options
         },
         input.cursor,
@@ -65200,19 +66164,36 @@ class SuiClient extends import_client.Experimental_BaseClient {
   /**
    * Get transaction blocks for a given query criteria
    */
-  async queryTransactionBlocks(input) {
+  async queryTransactionBlocks({
+    filter,
+    options,
+    cursor,
+    limit,
+    order,
+    signal
+  }) {
+    if (filter && "MoveFunction" in filter && (0, import_move_registry.isValidNamedPackage)(filter.MoveFunction.package)) {
+      filter = {
+        ...filter,
+        MoveFunction: {
+          package: (await this.core.mvr.resolvePackage({
+            package: filter.MoveFunction.package
+          })).package
+        }
+      };
+    }
     return await this.transport.request({
       method: "suix_queryTransactionBlocks",
       params: [
         {
-          filter: input.filter,
-          options: input.options
+          filter,
+          options
         },
-        input.cursor,
-        input.limit,
-        (input.order || "descending") === "descending"
+        cursor,
+        limit,
+        (order || "descending") === "descending"
       ],
-      signal: input.signal
+      signal
     });
   }
   async getTransactionBlock(input) {
@@ -65351,16 +66332,47 @@ class SuiClient extends import_client.Experimental_BaseClient {
   /**
    * Get events for a given query criteria
    */
-  async queryEvents(input) {
+  async queryEvents({
+    query,
+    cursor,
+    limit,
+    order,
+    signal
+  }) {
+    if (query && "MoveEventType" in query && (0, import_mvr.hasMvrName)(query.MoveEventType)) {
+      query = {
+        ...query,
+        MoveEventType: (await this.core.mvr.resolveType({
+          type: query.MoveEventType
+        })).type
+      };
+    }
+    if (query && "MoveEventModule" in query && (0, import_move_registry.isValidNamedPackage)(query.MoveEventModule.package)) {
+      query = {
+        ...query,
+        MoveEventModule: {
+          module: query.MoveEventModule.module,
+          package: (await this.core.mvr.resolvePackage({
+            package: query.MoveEventModule.package
+          })).package
+        }
+      };
+    }
+    if ("MoveModule" in query && (0, import_move_registry.isValidNamedPackage)(query.MoveModule.package)) {
+      query = {
+        ...query,
+        MoveModule: {
+          module: query.MoveModule.module,
+          package: (await this.core.mvr.resolvePackage({
+            package: query.MoveModule.package
+          })).package
+        }
+      };
+    }
     return await this.transport.request({
       method: "suix_queryEvents",
-      params: [
-        input.query,
-        input.cursor,
-        input.limit,
-        (input.order || "descending") === "descending"
-      ],
-      signal: input.signal
+      params: [query, cursor, limit, (order || "descending") === "descending"],
+      signal
     });
   }
   /**
@@ -65396,7 +66408,7 @@ class SuiClient extends import_client.Experimental_BaseClient {
    */
   async devInspectTransactionBlock(input) {
     let devInspectTxBytes;
-    if ((0, import_transactions.isTransaction)(input.transactionBlock)) {
+    if ((0, import_Transaction.isTransaction)(input.transactionBlock)) {
       input.transactionBlock.setSenderIfNotSet(input.sender);
       devInspectTxBytes = (0, import_bcs.toBase64)(
         await input.transactionBlock.build({
@@ -66497,6 +67509,18 @@ class Signer {
       signature
     };
   }
+  async signAndExecuteTransaction({
+    transaction,
+    client
+  }) {
+    const bytes = await transaction.build({ client });
+    const { signature } = await this.signTransaction(bytes);
+    const response = await client.core.executeTransaction({
+      transaction: bytes,
+      signatures: [signature]
+    });
+    return response.transaction;
+  }
   toSuiAddress() {
     return this.getPublicKey().toSuiAddress();
   }
@@ -66512,6 +67536,7 @@ function decodeSuiPrivateKey(value) {
   const secretKey = extendedSecretKey.slice(1);
   const signatureScheme = import_signature_scheme.SIGNATURE_FLAG_TO_SCHEME[extendedSecretKey[0]];
   return {
+    scheme: signatureScheme,
     schema: signatureScheme,
     secretKey
   };
@@ -66774,7 +67799,8 @@ const SIGNATURE_SCHEME_TO_FLAG = {
 const SIGNATURE_SCHEME_TO_SIZE = {
   ED25519: 32,
   Secp256k1: 33,
-  Secp256r1: 33
+  Secp256r1: 33,
+  Passkey: 33
 };
 const SIGNATURE_FLAG_TO_SCHEME = {
   0: "ED25519",
@@ -66928,6 +67954,15 @@ const _ClientCache = class _ClientCache {
     }
     return result;
   }
+  readSync(key, load) {
+    const cacheKey = [__privateGet(this, _prefix), ...key].join(":");
+    if (__privateGet(this, _cache).has(cacheKey)) {
+      return __privateGet(this, _cache).get(cacheKey);
+    }
+    const result = load();
+    __privateGet(this, _cache).set(cacheKey, result);
+    return result;
+  }
   clear(prefix) {
     const prefixKey = [...__privateGet(this, _prefix), ...prefix ?? []].join(":");
     if (!prefixKey) {
@@ -66984,9 +68019,14 @@ __export(client_exports, {
 module.exports = __toCommonJS(client_exports);
 var import_cache = __nccwpck_require__(9420);
 class Experimental_BaseClient {
-  constructor({ network }) {
-    this.cache = new import_cache.ClientCache();
+  constructor({
+    network,
+    base,
+    cache = base?.cache ?? new import_cache.ClientCache()
+  }) {
     this.network = network;
+    this.base = base ?? this;
+    this.cache = cache;
   }
   $extend(...registrations) {
     return Object.create(
@@ -67039,10 +68079,21 @@ var import_type_tag_serializer = __nccwpck_require__(41020);
 var import_dynamic_fields = __nccwpck_require__(33100);
 var import_sui_types = __nccwpck_require__(24818);
 var import_client = __nccwpck_require__(51795);
+var import_mvr = __nccwpck_require__(13893);
+const DEFAULT_MVR_URLS = {
+  mainnet: "https://mainnet.mvr.mystenlabs.com",
+  testnet: "https://testnet.mvr.mystenlabs.com"
+};
 class Experimental_CoreClient extends import_client.Experimental_BaseClient {
-  constructor() {
-    super(...arguments);
+  constructor(options) {
+    super(options);
     this.core = this;
+    this.mvr = new import_mvr.MvrClient({
+      cache: this.cache.scope("core.mvr"),
+      url: options.mvr?.url ?? DEFAULT_MVR_URLS[this.network],
+      pageSize: options.mvr?.pageSize,
+      overrides: options.mvr?.overrides
+    });
   }
   async getObject(options) {
     const { objectId } = options;
@@ -67070,6 +68121,7 @@ class Experimental_CoreClient extends import_client.Experimental_BaseClient {
       throw fieldObject;
     }
     const fieldType = (0, import_sui_types.parseStructTag)(fieldObject.type);
+    const content = await fieldObject.content;
     return {
       dynamicField: {
         id: fieldObject.id,
@@ -67082,7 +68134,7 @@ class Experimental_CoreClient extends import_client.Experimental_BaseClient {
         },
         value: {
           type: typeof fieldType.typeParams[1] === "string" ? fieldType.typeParams[1] : (0, import_sui_types.normalizeStructTag)(fieldType.typeParams[1]),
-          bcs: fieldObject.content.slice(import_sui_types.SUI_ADDRESS_LENGTH + options.name.bcs.length)
+          bcs: content.slice(import_sui_types.SUI_ADDRESS_LENGTH + options.name.bcs.length)
         }
       }
     };
@@ -67204,13 +68256,379 @@ var experimental_exports = {};
 __export(experimental_exports, {
   ClientCache: () => import_cache.ClientCache,
   Experimental_BaseClient: () => import_client.Experimental_BaseClient,
-  Experimental_CoreClient: () => import_core.Experimental_CoreClient
+  Experimental_CoreClient: () => import_core.Experimental_CoreClient,
+  parseTransactionBcs: () => import_utils.parseTransactionBcs,
+  parseTransactionEffectsBcs: () => import_utils.parseTransactionEffectsBcs
 });
 module.exports = __toCommonJS(experimental_exports);
 var import_client = __nccwpck_require__(51795);
 var import_core = __nccwpck_require__(57151);
+var import_utils = __nccwpck_require__(36540);
 var import_cache = __nccwpck_require__(9420);
 //# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 13893:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
+var mvr_exports = {};
+__export(mvr_exports, {
+  MvrClient: () => MvrClient,
+  extractMvrTypes: () => extractMvrTypes,
+  findNamesInTransaction: () => findNamesInTransaction,
+  hasMvrName: () => hasMvrName,
+  replaceNames: () => replaceNames
+});
+module.exports = __toCommonJS(mvr_exports);
+var import_utils = __nccwpck_require__(5041);
+var import_move_registry = __nccwpck_require__(77514);
+var import_sui_types = __nccwpck_require__(24818);
+var import_version = __nccwpck_require__(44531);
+var _cache, _url, _pageSize, _overrides, _MvrClient_instances, mvrPackageDataLoader_get, mvrTypeDataLoader_get, resolvePackages_fn, resolveTypes_fn, fetch_fn;
+const NAME_SEPARATOR = "/";
+const MVR_API_HEADER = {
+  "Mvr-Source": `@mysten/sui@${import_version.PACKAGE_VERSION}`
+};
+class MvrClient {
+  constructor({ cache, url, pageSize = 50, overrides }) {
+    __privateAdd(this, _MvrClient_instances);
+    __privateAdd(this, _cache);
+    __privateAdd(this, _url);
+    __privateAdd(this, _pageSize);
+    __privateAdd(this, _overrides);
+    __privateSet(this, _cache, cache);
+    __privateSet(this, _url, url);
+    __privateSet(this, _pageSize, pageSize);
+    __privateSet(this, _overrides, {
+      packages: overrides?.packages,
+      types: overrides?.types
+    });
+    validateOverrides(__privateGet(this, _overrides));
+  }
+  async resolvePackage({
+    package: name
+  }) {
+    const resolved = await __privateGet(this, _MvrClient_instances, mvrPackageDataLoader_get).load(name);
+    return {
+      package: resolved
+    };
+  }
+  async resolveType({
+    type
+  }) {
+    const mvrTypes = [...extractMvrTypes(type)];
+    const resolvedTypes = await __privateGet(this, _MvrClient_instances, mvrTypeDataLoader_get).loadMany(mvrTypes);
+    const typeMap = {};
+    for (let i = 0; i < mvrTypes.length; i++) {
+      const resolvedType = resolvedTypes[i];
+      if (resolvedType instanceof Error) {
+        throw resolvedType;
+      }
+      typeMap[mvrTypes[i]] = resolvedType;
+    }
+    return {
+      type: replaceMvrNames(type, typeMap)
+    };
+  }
+  async resolve({
+    types = [],
+    packages = []
+  }) {
+    const mvrTypes = /* @__PURE__ */ new Set();
+    for (const type of types ?? []) {
+      extractMvrTypes(type, mvrTypes);
+    }
+    const typesArray = [...mvrTypes];
+    const [resolvedTypes, resolvedPackages] = await Promise.all([
+      typesArray.length > 0 ? __privateGet(this, _MvrClient_instances, mvrTypeDataLoader_get).loadMany(typesArray) : [],
+      packages.length > 0 ? __privateGet(this, _MvrClient_instances, mvrPackageDataLoader_get).loadMany(packages) : []
+    ]);
+    const typeMap = {
+      ...__privateGet(this, _overrides)?.types
+    };
+    for (const [i, type] of typesArray.entries()) {
+      const resolvedType = resolvedTypes[i];
+      if (resolvedType instanceof Error) {
+        throw resolvedType;
+      }
+      typeMap[type] = resolvedType;
+    }
+    const replacedTypes = {};
+    for (const type of types ?? []) {
+      const resolvedType = replaceMvrNames(type, typeMap);
+      replacedTypes[type] = {
+        type: resolvedType
+      };
+    }
+    const replacedPackages = {};
+    for (const [i, pkg] of (packages ?? []).entries()) {
+      const resolvedPkg = __privateGet(this, _overrides)?.packages?.[pkg] ?? resolvedPackages[i];
+      if (resolvedPkg instanceof Error) {
+        throw resolvedPkg;
+      }
+      replacedPackages[pkg] = {
+        package: resolvedPkg
+      };
+    }
+    return {
+      types: replacedTypes,
+      packages: replacedPackages
+    };
+  }
+}
+_cache = new WeakMap();
+_url = new WeakMap();
+_pageSize = new WeakMap();
+_overrides = new WeakMap();
+_MvrClient_instances = new WeakSet();
+mvrPackageDataLoader_get = function() {
+  return __privateGet(this, _cache).readSync(["#mvrPackageDataLoader", __privateGet(this, _url) ?? ""], () => {
+    const loader = new import_utils.DataLoader(async (packages) => {
+      if (!__privateGet(this, _url)) {
+        throw new Error(
+          `MVR Api URL is not set for the current client (resolving ${packages.join(", ")})`
+        );
+      }
+      const resolved = await __privateMethod(this, _MvrClient_instances, resolvePackages_fn).call(this, packages);
+      return packages.map(
+        (pkg) => resolved[pkg] ?? new Error(`Failed to resolve package: ${pkg}`)
+      );
+    });
+    const overrides = __privateGet(this, _overrides)?.packages;
+    if (overrides) {
+      for (const [pkg, id] of Object.entries(overrides)) {
+        loader.prime(pkg, id);
+      }
+    }
+    return loader;
+  });
+};
+mvrTypeDataLoader_get = function() {
+  return __privateGet(this, _cache).readSync(["#mvrTypeDataLoader", __privateGet(this, _url) ?? ""], () => {
+    const loader = new import_utils.DataLoader(async (types) => {
+      if (!__privateGet(this, _url)) {
+        throw new Error(
+          `MVR Api URL is not set for the current client (resolving ${types.join(", ")})`
+        );
+      }
+      const resolved = await __privateMethod(this, _MvrClient_instances, resolveTypes_fn).call(this, types);
+      return types.map((type) => resolved[type] ?? new Error(`Failed to resolve type: ${type}`));
+    });
+    const overrides = __privateGet(this, _overrides)?.types;
+    if (overrides) {
+      for (const [type, id] of Object.entries(overrides)) {
+        loader.prime(type, id);
+      }
+    }
+    return loader;
+  });
+};
+resolvePackages_fn = async function(packages) {
+  if (packages.length === 0) return {};
+  const batches = (0, import_utils.chunk)(packages, __privateGet(this, _pageSize));
+  const results = {};
+  await Promise.all(
+    batches.map(async (batch) => {
+      const data = await __privateMethod(this, _MvrClient_instances, fetch_fn).call(this, "/v1/resolution/bulk", {
+        names: batch
+      });
+      if (!data?.resolution) return;
+      for (const pkg of Object.keys(data?.resolution)) {
+        const pkgData = data.resolution[pkg]?.package_id;
+        if (!pkgData) continue;
+        results[pkg] = pkgData;
+      }
+    })
+  );
+  return results;
+};
+resolveTypes_fn = async function(types) {
+  if (types.length === 0) return {};
+  const batches = (0, import_utils.chunk)(types, __privateGet(this, _pageSize));
+  const results = {};
+  await Promise.all(
+    batches.map(async (batch) => {
+      const data = await __privateMethod(this, _MvrClient_instances, fetch_fn).call(this, "/v1/struct-definition/bulk", {
+        types: batch
+      });
+      if (!data?.resolution) return;
+      for (const type of Object.keys(data?.resolution)) {
+        const typeData = data.resolution[type]?.type_tag;
+        if (!typeData) continue;
+        results[type] = typeData;
+      }
+    })
+  );
+  return results;
+};
+fetch_fn = async function(url, body) {
+  if (!__privateGet(this, _url)) {
+    throw new Error("MVR Api URL is not set for the current client");
+  }
+  const response = await fetch(`${__privateGet(this, _url)}${url}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...MVR_API_HEADER
+    },
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(`Failed to resolve types: ${errorBody?.message}`);
+  }
+  return response.json();
+};
+function validateOverrides(overrides) {
+  if (overrides?.packages) {
+    for (const [pkg, id] of Object.entries(overrides.packages)) {
+      if (!(0, import_move_registry.isValidNamedPackage)(pkg)) {
+        throw new Error(`Invalid package name: ${pkg}`);
+      }
+      if (!(0, import_sui_types.isValidSuiAddress)((0, import_sui_types.normalizeSuiAddress)(id))) {
+        throw new Error(`Invalid package ID: ${id}`);
+      }
+    }
+  }
+  if (overrides?.types) {
+    for (const [type, val] of Object.entries(overrides.types)) {
+      if ((0, import_sui_types.parseStructTag)(type).typeParams.length > 0) {
+        throw new Error(
+          "Type overrides must be first-level only. If you want to supply generic types, just pass each type individually."
+        );
+      }
+      const parsedValue = (0, import_sui_types.parseStructTag)(val);
+      if (!(0, import_sui_types.isValidSuiAddress)(parsedValue.address)) {
+        throw new Error(`Invalid type: ${val}`);
+      }
+    }
+  }
+}
+function extractMvrTypes(type, types = /* @__PURE__ */ new Set()) {
+  if (typeof type === "string" && !hasMvrName(type)) return types;
+  const tag = isStructTag(type) ? type : (0, import_sui_types.parseStructTag)(type);
+  if (hasMvrName(tag.address)) types.add(`${tag.address}::${tag.module}::${tag.name}`);
+  for (const param of tag.typeParams) {
+    extractMvrTypes(param, types);
+  }
+  return types;
+}
+function replaceMvrNames(tag, typeCache) {
+  const type = isStructTag(tag) ? tag : (0, import_sui_types.parseStructTag)(tag);
+  const typeTag = `${type.address}::${type.module}::${type.name}`;
+  const cacheHit = typeCache[typeTag];
+  return (0, import_sui_types.normalizeStructTag)({
+    ...type,
+    address: cacheHit ? cacheHit.split("::")[0] : type.address,
+    typeParams: type.typeParams.map((param) => replaceMvrNames(param, typeCache))
+  });
+}
+function hasMvrName(nameOrType) {
+  return nameOrType.includes(NAME_SEPARATOR) || nameOrType.includes("@") || nameOrType.includes(".sui");
+}
+function isStructTag(type) {
+  return typeof type === "object" && "address" in type && "module" in type && "name" in type && "typeParams" in type;
+}
+function findNamesInTransaction(builder) {
+  const packages = /* @__PURE__ */ new Set();
+  const types = /* @__PURE__ */ new Set();
+  for (const command of builder.commands) {
+    switch (command.$kind) {
+      case "MakeMoveVec":
+        if (command.MakeMoveVec.type) {
+          getNamesFromTypeList([command.MakeMoveVec.type]).forEach((type) => {
+            types.add(type);
+          });
+        }
+        break;
+      case "MoveCall":
+        const moveCall = command.MoveCall;
+        const pkg = moveCall.package.split("::")[0];
+        if (hasMvrName(pkg)) {
+          if (!(0, import_move_registry.isValidNamedPackage)(pkg)) throw new Error(`Invalid package name: ${pkg}`);
+          packages.add(pkg);
+        }
+        getNamesFromTypeList(moveCall.typeArguments ?? []).forEach((type) => {
+          types.add(type);
+        });
+        break;
+      default:
+        break;
+    }
+  }
+  return {
+    packages: [...packages],
+    types: [...types]
+  };
+}
+function replaceNames(builder, resolved) {
+  for (const command of builder.commands) {
+    if (command.MakeMoveVec?.type) {
+      if (!hasMvrName(command.MakeMoveVec.type)) continue;
+      if (!resolved.types[command.MakeMoveVec.type])
+        throw new Error(`No resolution found for type: ${command.MakeMoveVec.type}`);
+      command.MakeMoveVec.type = resolved.types[command.MakeMoveVec.type].type;
+    }
+    const tx = command.MoveCall;
+    if (!tx) continue;
+    const nameParts = tx.package.split("::");
+    const name = nameParts[0];
+    if (hasMvrName(name) && !resolved.packages[name])
+      throw new Error(`No address found for package: ${name}`);
+    if (hasMvrName(name)) {
+      nameParts[0] = resolved.packages[name].package;
+      tx.package = nameParts.join("::");
+    }
+    const types = tx.typeArguments;
+    if (!types) continue;
+    for (let i = 0; i < types.length; i++) {
+      if (!hasMvrName(types[i])) continue;
+      if (!resolved.types[types[i]]) throw new Error(`No resolution found for type: ${types[i]}`);
+      types[i] = resolved.types[types[i]].type;
+    }
+    tx.typeArguments = types;
+  }
+}
+function getNamesFromTypeList(types) {
+  const names = /* @__PURE__ */ new Set();
+  for (const type of types) {
+    if (hasMvrName(type)) {
+      if (!(0, import_move_registry.isValidNamedType)(type)) throw new Error(`Invalid type with names: ${type}`);
+      names.add(type);
+    }
+  }
+  return names;
+}
+//# sourceMappingURL=mvr.js.map
 
 
 /***/ }),
@@ -67259,8 +68677,11 @@ var import_dynamic_fields = __nccwpck_require__(33100);
 var import_utils2 = __nccwpck_require__(36540);
 var _graphqlClient, _GraphQLTransport_instances, graphqlQuery_fn;
 class GraphQLTransport extends import_core.Experimental_CoreClient {
-  constructor(graphqlClient) {
-    super({ network: graphqlClient.network });
+  constructor({
+    graphqlClient,
+    mvr
+  }) {
+    super({ network: graphqlClient.network, base: graphqlClient, mvr });
     __privateAdd(this, _GraphQLTransport_instances);
     __privateAdd(this, _graphqlClient);
     __privateSet(this, _graphqlClient, graphqlClient);
@@ -67290,11 +68711,13 @@ class GraphQLTransport extends import_core.Experimental_CoreClient {
         }
         return {
           id: obj.address,
-          version: obj.version,
+          version: obj.version.toString(),
           digest: obj.digest,
           owner: mapOwner(obj.owner),
           type: obj.asMoveObject?.contents?.type?.repr,
-          content: (0, import_utils.fromBase64)(obj.asMoveObject?.contents?.bcs)
+          content: Promise.resolve(
+            obj.asMoveObject?.contents?.bcs ? (0, import_utils.fromBase64)(obj.asMoveObject.contents.bcs) : new Uint8Array()
+          )
         };
       })
     };
@@ -67312,11 +68735,13 @@ class GraphQLTransport extends import_core.Experimental_CoreClient {
     return {
       objects: objects.nodes.map((obj) => ({
         id: obj.address,
-        version: obj.version,
+        version: obj.version.toString(),
         digest: obj.digest,
         owner: mapOwner(obj.owner),
         type: obj.contents?.type?.repr,
-        content: (0, import_utils.fromBase64)(obj.contents?.bcs)
+        content: Promise.resolve(
+          obj.contents?.bcs ? (0, import_utils.fromBase64)(obj.contents.bcs) : new Uint8Array()
+        )
       })),
       hasNextPage: objects.pageInfo.hasNextPage,
       cursor: objects.pageInfo.endCursor ?? null
@@ -67337,12 +68762,14 @@ class GraphQLTransport extends import_core.Experimental_CoreClient {
       hasNextPage: coins.pageInfo.hasNextPage,
       objects: coins.nodes.map((coin) => ({
         id: coin.address,
-        version: coin.version,
+        version: coin.version.toString(),
         digest: coin.digest,
         owner: mapOwner(coin.owner),
         type: coin.contents?.type?.repr,
         balance: coin.coinBalance,
-        content: (0, import_utils.fromBase64)(coin.contents?.bcs)
+        content: Promise.resolve(
+          coin.contents?.bcs ? (0, import_utils.fromBase64)(coin.contents.bcs) : new Uint8Array()
+        )
       }))
     };
   }
@@ -67460,6 +68887,25 @@ class GraphQLTransport extends import_core.Experimental_CoreClient {
       errors: result.errors
     };
   }
+  async resolveNameServiceNames(options) {
+    const suinsRegistrations = await __privateMethod(this, _GraphQLTransport_instances, graphqlQuery_fn).call(this, {
+      query: import_queries.ResolveNameServiceNamesDocument,
+      signal: options.signal,
+      variables: {
+        address: options.address,
+        cursor: options.cursor,
+        limit: options.limit
+      }
+    }, (result) => result.address?.suinsRegistrations);
+    return {
+      hasNextPage: suinsRegistrations.pageInfo.hasNextPage,
+      nextCursor: suinsRegistrations.pageInfo.endCursor ?? null,
+      data: suinsRegistrations.nodes.map((node) => node.domain) ?? []
+    };
+  }
+  resolveTransactionPlugin() {
+    throw new Error("GraphQL client does not support transaction resolution yet");
+  }
 }
 _graphqlClient = new WeakMap();
 _GraphQLTransport_instances = new WeakSet();
@@ -67490,8 +68936,14 @@ function mapOwner(owner) {
   switch (owner.__typename) {
     case "AddressOwner":
       return { $kind: "AddressOwner", AddressOwner: owner.owner?.asAddress?.address };
-    case "ConsensusV2":
-      return { $kind: "ConsensusV2", ConsensusV2: owner.authenticator.address };
+    case "ConsensusAddressOwner":
+      return {
+        $kind: "ConsensusAddressOwner",
+        ConsensusAddressOwner: {
+          owner: owner.owner?.address,
+          startVersion: owner.startVersion
+        }
+      };
     case "Immutable":
       return { $kind: "Immutable", Immutable: true };
     case "Parent":
@@ -67520,15 +68972,331 @@ function parseTransaction(transaction) {
   });
   return {
     digest: transaction.digest,
-    effects: (0, import_utils2.parseTransactionEffects)({
-      effects: new Uint8Array(transaction.effects?.bcs),
-      objectTypes
-    }),
-    bcs: transaction.bcs,
+    effects: (0, import_utils2.parseTransactionEffectsBcs)(new Uint8Array(transaction.effects?.bcs)),
+    epoch: transaction.effects?.epoch?.epochId ?? null,
+    objectTypes: Promise.resolve(objectTypes),
+    transaction: (0, import_utils2.parseTransactionBcs)(transaction.bcs),
     signatures: transaction.signatures
   };
 }
 //# sourceMappingURL=graphql.js.map
+
+
+/***/ }),
+
+/***/ 83788:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var json_rpc_resolver_exports = {};
+__export(json_rpc_resolver_exports, {
+  suiClientResolveTransactionPlugin: () => suiClientResolveTransactionPlugin
+});
+module.exports = __toCommonJS(json_rpc_resolver_exports);
+var import_valibot = __nccwpck_require__(48275);
+var import_utils = __nccwpck_require__(33973);
+var import_internal = __nccwpck_require__(86921);
+var import_Inputs = __nccwpck_require__(17484);
+var import_serializer = __nccwpck_require__(71649);
+var import_utils2 = __nccwpck_require__(5041);
+const MAX_OBJECTS_PER_FETCH = 50;
+const GAS_SAFE_OVERHEAD = 1000n;
+const MAX_GAS = 5e10;
+function suiClientResolveTransactionPlugin(client) {
+  return async function resolveTransactionData(transactionData, options, next) {
+    await normalizeInputs(transactionData, client);
+    await resolveObjectReferences(transactionData, client);
+    if (!options.onlyTransactionKind) {
+      await setGasPrice(transactionData, client);
+      await setGasBudget(transactionData, client);
+      await setGasPayment(transactionData, client);
+    }
+    return await next();
+  };
+}
+async function setGasPrice(transactionData, client) {
+  if (!transactionData.gasConfig.price) {
+    transactionData.gasConfig.price = String(await client.getReferenceGasPrice());
+  }
+}
+async function setGasBudget(transactionData, client) {
+  if (transactionData.gasConfig.budget) {
+    return;
+  }
+  const dryRunResult = await client.dryRunTransactionBlock({
+    transactionBlock: transactionData.build({
+      overrides: {
+        gasData: {
+          budget: String(MAX_GAS),
+          payment: []
+        }
+      }
+    })
+  });
+  if (dryRunResult.effects.status.status !== "success") {
+    throw new Error(
+      `Dry run failed, could not automatically determine a budget: ${dryRunResult.effects.status.error}`,
+      { cause: dryRunResult }
+    );
+  }
+  const safeOverhead = GAS_SAFE_OVERHEAD * BigInt(transactionData.gasConfig.price || 1n);
+  const baseComputationCostWithOverhead = BigInt(dryRunResult.effects.gasUsed.computationCost) + safeOverhead;
+  const gasBudget = baseComputationCostWithOverhead + BigInt(dryRunResult.effects.gasUsed.storageCost) - BigInt(dryRunResult.effects.gasUsed.storageRebate);
+  transactionData.gasConfig.budget = String(
+    gasBudget > baseComputationCostWithOverhead ? gasBudget : baseComputationCostWithOverhead
+  );
+}
+async function setGasPayment(transactionData, client) {
+  if (!transactionData.gasConfig.payment) {
+    const coins = await client.getCoins({
+      owner: transactionData.gasConfig.owner || transactionData.sender,
+      coinType: import_utils.SUI_TYPE_ARG
+    });
+    const paymentCoins = coins.data.filter((coin) => {
+      const matchingInput = transactionData.inputs.find((input) => {
+        if (input.Object?.ImmOrOwnedObject) {
+          return coin.coinObjectId === input.Object.ImmOrOwnedObject.objectId;
+        }
+        return false;
+      });
+      return !matchingInput;
+    }).map((coin) => ({
+      objectId: coin.coinObjectId,
+      digest: coin.digest,
+      version: coin.version
+    }));
+    if (!paymentCoins.length) {
+      throw new Error("No valid gas coins found for the transaction.");
+    }
+    transactionData.gasConfig.payment = paymentCoins.map((payment) => (0, import_valibot.parse)(import_internal.ObjectRef, payment));
+  }
+}
+async function resolveObjectReferences(transactionData, client) {
+  const objectsToResolve = transactionData.inputs.filter((input) => {
+    return input.UnresolvedObject && !(input.UnresolvedObject.version || input.UnresolvedObject?.initialSharedVersion);
+  });
+  const dedupedIds = [
+    ...new Set(
+      objectsToResolve.map((input) => (0, import_utils.normalizeSuiObjectId)(input.UnresolvedObject.objectId))
+    )
+  ];
+  const objectChunks = dedupedIds.length ? (0, import_utils2.chunk)(dedupedIds, MAX_OBJECTS_PER_FETCH) : [];
+  const resolved = (await Promise.all(
+    objectChunks.map(
+      (chunk2) => client.multiGetObjects({
+        ids: chunk2,
+        options: { showOwner: true }
+      })
+    )
+  )).flat();
+  const responsesById = new Map(
+    dedupedIds.map((id, index) => {
+      return [id, resolved[index]];
+    })
+  );
+  const invalidObjects = Array.from(responsesById).filter(([_, obj]) => obj.error).map(([_, obj]) => JSON.stringify(obj.error));
+  if (invalidObjects.length) {
+    throw new Error(`The following input objects are invalid: ${invalidObjects.join(", ")}`);
+  }
+  const objects = resolved.map((object) => {
+    if (object.error || !object.data) {
+      throw new Error(`Failed to fetch object: ${object.error}`);
+    }
+    const owner = object.data.owner;
+    const initialSharedVersion = owner && typeof owner === "object" ? "Shared" in owner ? owner.Shared.initial_shared_version : "ConsensusAddressOwner" in owner ? owner.ConsensusAddressOwner.start_version : null : null;
+    return {
+      objectId: object.data.objectId,
+      digest: object.data.digest,
+      version: object.data.version,
+      initialSharedVersion
+    };
+  });
+  const objectsById = new Map(
+    dedupedIds.map((id, index) => {
+      return [id, objects[index]];
+    })
+  );
+  for (const [index, input] of transactionData.inputs.entries()) {
+    if (!input.UnresolvedObject) {
+      continue;
+    }
+    let updated;
+    const id = (0, import_utils.normalizeSuiAddress)(input.UnresolvedObject.objectId);
+    const object = objectsById.get(id);
+    if (input.UnresolvedObject.initialSharedVersion ?? object?.initialSharedVersion) {
+      updated = import_Inputs.Inputs.SharedObjectRef({
+        objectId: id,
+        initialSharedVersion: input.UnresolvedObject.initialSharedVersion || object?.initialSharedVersion,
+        mutable: isUsedAsMutable(transactionData, index)
+      });
+    } else if (isUsedAsReceiving(transactionData, index)) {
+      updated = import_Inputs.Inputs.ReceivingRef(
+        {
+          objectId: id,
+          digest: input.UnresolvedObject.digest ?? object?.digest,
+          version: input.UnresolvedObject.version ?? object?.version
+        }
+      );
+    }
+    transactionData.inputs[transactionData.inputs.indexOf(input)] = updated ?? import_Inputs.Inputs.ObjectRef({
+      objectId: id,
+      digest: input.UnresolvedObject.digest ?? object?.digest,
+      version: input.UnresolvedObject.version ?? object?.version
+    });
+  }
+}
+async function normalizeInputs(transactionData, client) {
+  const { inputs, commands } = transactionData;
+  const moveCallsToResolve = [];
+  const moveFunctionsToResolve = /* @__PURE__ */ new Set();
+  commands.forEach((command) => {
+    if (command.MoveCall) {
+      if (command.MoveCall._argumentTypes) {
+        return;
+      }
+      const inputs2 = command.MoveCall.arguments.map((arg) => {
+        if (arg.$kind === "Input") {
+          return transactionData.inputs[arg.Input];
+        }
+        return null;
+      });
+      const needsResolution = inputs2.some(
+        (input) => input?.UnresolvedPure || input?.UnresolvedObject
+      );
+      if (needsResolution) {
+        const functionName = `${command.MoveCall.package}::${command.MoveCall.module}::${command.MoveCall.function}`;
+        moveFunctionsToResolve.add(functionName);
+        moveCallsToResolve.push(command.MoveCall);
+      }
+    }
+  });
+  const moveFunctionParameters = /* @__PURE__ */ new Map();
+  if (moveFunctionsToResolve.size > 0) {
+    await Promise.all(
+      [...moveFunctionsToResolve].map(async (functionName) => {
+        const [packageId, moduleId, functionId] = functionName.split("::");
+        const def = await client.getNormalizedMoveFunction({
+          package: packageId,
+          module: moduleId,
+          function: functionId
+        });
+        moveFunctionParameters.set(
+          functionName,
+          def.parameters.map((param) => (0, import_serializer.normalizedTypeToMoveTypeSignature)(param))
+        );
+      })
+    );
+  }
+  if (moveCallsToResolve.length) {
+    await Promise.all(
+      moveCallsToResolve.map(async (moveCall) => {
+        const parameters = moveFunctionParameters.get(
+          `${moveCall.package}::${moveCall.module}::${moveCall.function}`
+        );
+        if (!parameters) {
+          return;
+        }
+        const hasTxContext = parameters.length > 0 && (0, import_serializer.isTxContext)(parameters.at(-1));
+        const params = hasTxContext ? parameters.slice(0, parameters.length - 1) : parameters;
+        moveCall._argumentTypes = params;
+      })
+    );
+  }
+  commands.forEach((command) => {
+    if (!command.MoveCall) {
+      return;
+    }
+    const moveCall = command.MoveCall;
+    const fnName = `${moveCall.package}::${moveCall.module}::${moveCall.function}`;
+    const params = moveCall._argumentTypes;
+    if (!params) {
+      return;
+    }
+    if (params.length !== command.MoveCall.arguments.length) {
+      throw new Error(`Incorrect number of arguments for ${fnName}`);
+    }
+    params.forEach((param, i) => {
+      const arg = moveCall.arguments[i];
+      if (arg.$kind !== "Input") return;
+      const input = inputs[arg.Input];
+      if (!input.UnresolvedPure && !input.UnresolvedObject) {
+        return;
+      }
+      const inputValue = input.UnresolvedPure?.value ?? input.UnresolvedObject?.objectId;
+      const schema = (0, import_serializer.getPureBcsSchema)(param.body);
+      if (schema) {
+        arg.type = "pure";
+        inputs[inputs.indexOf(input)] = import_Inputs.Inputs.Pure(schema.serialize(inputValue));
+        return;
+      }
+      if (typeof inputValue !== "string") {
+        throw new Error(
+          `Expect the argument to be an object id string, got ${JSON.stringify(
+            inputValue,
+            null,
+            2
+          )}`
+        );
+      }
+      arg.type = "object";
+      const unresolvedObject = input.UnresolvedPure ? {
+        $kind: "UnresolvedObject",
+        UnresolvedObject: {
+          objectId: inputValue
+        }
+      } : input;
+      inputs[arg.Input] = unresolvedObject;
+    });
+  });
+}
+function isUsedAsMutable(transactionData, index) {
+  let usedAsMutable = false;
+  transactionData.getInputUses(index, (arg, tx) => {
+    if (tx.MoveCall && tx.MoveCall._argumentTypes) {
+      const argIndex = tx.MoveCall.arguments.indexOf(arg);
+      usedAsMutable = tx.MoveCall._argumentTypes[argIndex].ref !== "&" || usedAsMutable;
+    }
+    if (tx.$kind === "MakeMoveVec" || tx.$kind === "MergeCoins" || tx.$kind === "SplitCoins") {
+      usedAsMutable = true;
+    }
+  });
+  return usedAsMutable;
+}
+function isUsedAsReceiving(transactionData, index) {
+  let usedAsReceiving = false;
+  transactionData.getInputUses(index, (arg, tx) => {
+    if (tx.MoveCall && tx.MoveCall._argumentTypes) {
+      const argIndex = tx.MoveCall.arguments.indexOf(arg);
+      usedAsReceiving = isReceivingType(tx.MoveCall._argumentTypes[argIndex]) || usedAsReceiving;
+    }
+  });
+  return usedAsReceiving;
+}
+function isReceivingType(type) {
+  if (typeof type.body !== "object" || !("datatype" in type.body)) {
+    return false;
+  }
+  return type.body.datatype.package === "0x2" && type.body.datatype.module === "transfer" && type.body.datatype.type === "Receiving";
+}
+//# sourceMappingURL=json-rpc-resolver.js.map
 
 
 /***/ }),
@@ -67569,25 +69337,29 @@ __export(jsonRPC_exports, {
 module.exports = __toCommonJS(jsonRPC_exports);
 var import_bcs = __nccwpck_require__(88830);
 var import_bcs2 = __nccwpck_require__(56244);
-var import_utils = __nccwpck_require__(31767);
 var import_Transaction = __nccwpck_require__(22545);
-var import_sui_types = __nccwpck_require__(24818);
 var import_core = __nccwpck_require__(57151);
 var import_errors = __nccwpck_require__(4399);
-var import_utils2 = __nccwpck_require__(36540);
+var import_utils = __nccwpck_require__(36540);
+var import_json_rpc_resolver = __nccwpck_require__(83788);
+var import_TransactionData = __nccwpck_require__(31553);
+var import_utils2 = __nccwpck_require__(5041);
 var _jsonRpcClient;
 class JSONRpcTransport extends import_core.Experimental_CoreClient {
-  constructor(jsonRpcClient) {
-    super({ network: jsonRpcClient.network });
+  constructor({
+    jsonRpcClient,
+    mvr
+  }) {
+    super({ network: jsonRpcClient.network, base: jsonRpcClient, mvr });
     __privateAdd(this, _jsonRpcClient);
     __privateSet(this, _jsonRpcClient, jsonRpcClient);
   }
   async getObjects(options) {
-    const batches = (0, import_utils.batch)(options.objectIds, 50);
+    const batches = (0, import_utils2.chunk)(options.objectIds, 50);
     const results = [];
-    for (const batch2 of batches) {
+    for (const batch of batches) {
       const objects = await __privateGet(this, _jsonRpcClient).multiGetObjects({
-        ids: batch2,
+        ids: batch,
         options: {
           showOwner: true,
           showType: true,
@@ -67597,7 +69369,7 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
       });
       for (const [idx, object] of objects.entries()) {
         if (object.error) {
-          results.push(import_errors.ObjectError.fromResponse(object.error, batch2[idx]));
+          results.push(import_errors.ObjectError.fromResponse(object.error, batch[idx]));
         } else {
           results.push(parseObject(object.data));
         }
@@ -67617,6 +69389,7 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
         showType: true,
         showBcs: true
       },
+      filter: options.type ? { StructType: options.type } : null,
       signal: options.signal
     });
     return {
@@ -67646,12 +69419,14 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
           digest: coin.digest,
           balance: coin.balance,
           type: `0x2::coin::Coin<${coin.coinType}>`,
-          content: Coin.serialize({
-            id: coin.coinObjectId,
-            balance: {
-              value: coin.balance
-            }
-          }).toBytes(),
+          content: Promise.resolve(
+            Coin.serialize({
+              id: coin.coinObjectId,
+              balance: {
+                value: coin.balance
+              }
+            }).toBytes()
+          ),
           owner: {
             $kind: "ObjectOwner",
             ObjectOwner: options.address
@@ -67696,7 +69471,8 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
         showRawInput: true,
         showObjectChanges: true,
         showRawEffects: true,
-        showEvents: true
+        showEvents: true,
+        showEffects: true
       },
       signal: options.signal
     });
@@ -67712,7 +69488,8 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
         showRawEffects: true,
         showEvents: true,
         showObjectChanges: true,
-        showRawInput: true
+        showRawInput: true,
+        showEffects: true
       },
       signal: options.signal
     });
@@ -67726,15 +69503,18 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
       transactionBlock: options.transaction,
       signal: options.signal
     });
+    const { effects, objectTypes } = parseTransactionEffectsJson({
+      effects: result.effects,
+      objectChanges: result.objectChanges
+    });
     return {
       transaction: {
         digest: await tx.getDigest(),
-        effects: parseTransactionEffectsJson({
-          effects: result.effects,
-          objectChanges: result.objectChanges
-        }),
+        epoch: null,
+        effects,
+        objectTypes: Promise.resolve(objectTypes),
         signatures: [],
-        bcs: options.transaction
+        transaction: (0, import_utils.parseTransactionBcs)(options.transaction)
       }
     };
   }
@@ -67779,6 +69559,12 @@ class JSONRpcTransport extends import_core.Experimental_CoreClient {
       errors: result.errors
     };
   }
+  resolveNameServiceNames(options) {
+    return __privateGet(this, _jsonRpcClient).resolveNameServiceNames(options);
+  }
+  resolveTransactionPlugin() {
+    return (0, import_json_rpc_resolver.suiClientResolveTransactionPlugin)(__privateGet(this, _jsonRpcClient));
+  }
 }
 _jsonRpcClient = new WeakMap();
 function parseObject(object) {
@@ -67787,7 +69573,9 @@ function parseObject(object) {
     version: object.version,
     digest: object.digest,
     type: object.type,
-    content: object.bcs?.dataType === "moveObject" ? (0, import_bcs.fromBase64)(object.bcs.bcsBytes) : new Uint8Array(),
+    content: Promise.resolve(
+      object.bcs?.dataType === "moveObject" ? (0, import_bcs.fromBase64)(object.bcs.bcsBytes) : new Uint8Array()
+    ),
     owner: parseOwner(object.owner)
   };
 }
@@ -67798,15 +69586,12 @@ function parseOwner(owner) {
       Immutable: true
     };
   }
-  if ("ConsensusV2" in owner) {
+  if ("ConsensusAddressOwner" in owner) {
     return {
-      $kind: "ConsensusV2",
-      ConsensusV2: {
-        authenticator: {
-          $kind: "SingleOwner",
-          SingleOwner: owner.ConsensusV2.authenticator.SingleOwner
-        },
-        startVersion: owner.ConsensusV2.start_version
+      $kind: "ConsensusAddressOwner",
+      ConsensusAddressOwner: {
+        owner: owner.ConsensusAddressOwner.owner,
+        startVersion: owner.ConsensusAddressOwner.start_version
       }
     };
   }
@@ -67840,24 +69625,35 @@ function parseTransaction(transaction) {
       objectTypes[change.objectId] = change.objectType;
     }
   });
+  const bytes = import_bcs2.bcs.TransactionData.serialize(parsedTx.intentMessage.value).toBytes();
+  const data = import_TransactionData.TransactionDataBuilder.restore({
+    version: 2,
+    sender: parsedTx.intentMessage.value.V1.sender,
+    expiration: parsedTx.intentMessage.value.V1.expiration,
+    gasData: parsedTx.intentMessage.value.V1.gasData,
+    inputs: parsedTx.intentMessage.value.V1.kind.ProgrammableTransaction.inputs,
+    commands: parsedTx.intentMessage.value.V1.kind.ProgrammableTransaction.commands
+  });
   return {
     digest: transaction.digest,
-    effects: (0, import_utils2.parseTransactionEffects)({
-      effects: new Uint8Array(transaction.rawEffects),
-      objectTypes
-    }),
-    bcs: import_bcs2.bcs.TransactionData.serialize(parsedTx.intentMessage.value).toBytes(),
+    epoch: transaction.effects?.executedEpoch ?? null,
+    effects: (0, import_utils.parseTransactionEffectsBcs)(new Uint8Array(transaction.rawEffects)),
+    objectTypes: Promise.resolve(objectTypes),
+    transaction: {
+      ...data,
+      bcs: bytes
+    },
     signatures: parsedTx.txSignatures
   };
 }
 function parseTransactionEffectsJson({
   bytes,
   effects,
-  epoch,
   objectChanges
 }) {
   const changedObjects = [];
   const unchangedSharedObjects = [];
+  const objectTypes = {};
   objectChanges?.forEach((change) => {
     switch (change.type) {
       case "published":
@@ -67871,8 +69667,7 @@ function parseTransactionEffectsJson({
           outputVersion: change.version,
           outputDigest: change.digest,
           outputOwner: null,
-          idOperation: "Created",
-          objectType: null
+          idOperation: "Created"
         });
         break;
       case "transferred":
@@ -67889,9 +69684,9 @@ function parseTransactionEffectsJson({
           outputVersion: change.version,
           outputDigest: change.digest,
           outputOwner: parseOwner(change.recipient),
-          idOperation: "None",
-          objectType: change.objectType
+          idOperation: "None"
         });
+        objectTypes[change.objectId] = change.objectType;
         break;
       case "mutated":
         changedObjects.push({
@@ -67904,9 +69699,9 @@ function parseTransactionEffectsJson({
           outputVersion: change.version,
           outputDigest: change.digest,
           outputOwner: parseOwner(change.owner),
-          idOperation: "None",
-          objectType: change.objectType
+          idOperation: "None"
         });
+        objectTypes[change.objectId] = change.objectType;
         break;
       case "deleted":
         changedObjects.push({
@@ -67919,9 +69714,9 @@ function parseTransactionEffectsJson({
           outputVersion: null,
           outputDigest: null,
           outputOwner: null,
-          idOperation: "Deleted",
-          objectType: change.objectType
+          idOperation: "Deleted"
         });
+        objectTypes[change.objectId] = change.objectType;
         break;
       case "wrapped":
         changedObjects.push({
@@ -67940,9 +69735,9 @@ function parseTransactionEffectsJson({
             $kind: "ObjectOwner",
             ObjectOwner: change.sender
           },
-          idOperation: "None",
-          objectType: change.objectType
+          idOperation: "None"
         });
+        objectTypes[change.objectId] = change.objectType;
         break;
       case "created":
         changedObjects.push({
@@ -67955,39 +69750,40 @@ function parseTransactionEffectsJson({
           outputVersion: change.version,
           outputDigest: change.digest,
           outputOwner: parseOwner(change.owner),
-          idOperation: "Created",
-          objectType: change.objectType
+          idOperation: "Created"
         });
+        objectTypes[change.objectId] = change.objectType;
         break;
     }
   });
   return {
-    bcs: bytes ?? null,
-    digest: effects.transactionDigest,
-    version: 2,
-    status: effects.status.status === "success" ? { success: true, error: null } : { success: false, error: effects.status.error },
-    epoch: epoch ?? null,
-    gasUsed: effects.gasUsed,
-    transactionDigest: effects.transactionDigest,
-    gasObject: {
-      id: effects.gasObject?.reference.objectId,
-      inputState: "Exists",
-      inputVersion: null,
-      inputDigest: null,
-      inputOwner: null,
-      outputState: "ObjectWrite",
-      outputVersion: effects.gasObject.reference.version,
-      outputDigest: effects.gasObject.reference.digest,
-      outputOwner: parseOwner(effects.gasObject.owner),
-      idOperation: "None",
-      objectType: (0, import_sui_types.normalizeStructTag)("0x2::coin::Coin<0x2::sui::SUI>")
-    },
-    eventsDigest: effects.eventsDigest ?? null,
-    dependencies: effects.dependencies ?? [],
-    lamportVersion: effects.gasObject.reference.version,
-    changedObjects,
-    unchangedSharedObjects,
-    auxiliaryDataDigest: null
+    objectTypes,
+    effects: {
+      bcs: bytes ?? null,
+      digest: effects.transactionDigest,
+      version: 2,
+      status: effects.status.status === "success" ? { success: true, error: null } : { success: false, error: effects.status.error },
+      gasUsed: effects.gasUsed,
+      transactionDigest: effects.transactionDigest,
+      gasObject: {
+        id: effects.gasObject?.reference.objectId,
+        inputState: "Exists",
+        inputVersion: null,
+        inputDigest: null,
+        inputOwner: null,
+        outputState: "ObjectWrite",
+        outputVersion: effects.gasObject.reference.version,
+        outputDigest: effects.gasObject.reference.digest,
+        outputOwner: parseOwner(effects.gasObject.owner),
+        idOperation: "None"
+      },
+      eventsDigest: effects.eventsDigest ?? null,
+      dependencies: effects.dependencies ?? [],
+      lamportVersion: effects.gasObject.reference.version,
+      changedObjects,
+      unchangedSharedObjects,
+      auxiliaryDataDigest: null
+    }
   };
 }
 const Balance = import_bcs2.bcs.struct("Balance", {
@@ -68026,21 +69822,25 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var utils_exports = {};
 __export(utils_exports, {
-  parseTransactionEffects: () => parseTransactionEffects
+  parseTransactionBcs: () => parseTransactionBcs,
+  parseTransactionEffectsBcs: () => parseTransactionEffectsBcs
 });
 module.exports = __toCommonJS(utils_exports);
 var import_bcs = __nccwpck_require__(56244);
-function parseTransactionEffects({
-  effects,
-  epoch,
-  objectTypes
-}) {
+var import_TransactionData = __nccwpck_require__(31553);
+function parseTransactionBcs(bytes) {
+  return {
+    ...import_TransactionData.TransactionDataBuilder.fromBytes(bytes).snapshot(),
+    bcs: bytes
+  };
+}
+function parseTransactionEffectsBcs(effects) {
   const parsed = import_bcs.bcs.TransactionEffects.parse(effects);
   switch (parsed.$kind) {
     case "V1":
-      return parseTransactionEffectsV1({ bytes: effects, effects: parsed.V1, epoch, objectTypes });
+      return parseTransactionEffectsV1({ bytes: effects, effects: parsed.V1 });
     case "V2":
-      return parseTransactionEffectsV2({ bytes: effects, effects: parsed.V2, epoch, objectTypes });
+      return parseTransactionEffectsV2({ bytes: effects, effects: parsed.V2 });
     default:
       throw new Error(
         `Unknown transaction effects version: ${parsed.$kind}`
@@ -68052,9 +69852,7 @@ function parseTransactionEffectsV1(_) {
 }
 function parseTransactionEffectsV2({
   bytes,
-  effects,
-  epoch,
-  objectTypes
+  effects
 }) {
   const changedObjects = effects.changedObjects.map(
     ([id, change]) => {
@@ -68068,8 +69866,7 @@ function parseTransactionEffectsV2({
         outputVersion: change.outputState.$kind === "PackageWrite" ? change.outputState.PackageWrite?.[0] : change.outputState.ObjectWrite ? effects.lamportVersion : null,
         outputDigest: change.outputState.$kind === "PackageWrite" ? change.outputState.PackageWrite?.[1] : change.outputState.ObjectWrite?.[0] ?? null,
         outputOwner: change.outputState.ObjectWrite ? change.outputState.ObjectWrite[1] : null,
-        idOperation: change.idOperation.$kind,
-        objectType: objectTypes[id] ?? null
+        idOperation: change.idOperation.$kind
       };
     }
   );
@@ -68085,7 +69882,6 @@ function parseTransactionEffectsV2({
       // TODO: add command
       error: effects.status.Failed.error.$kind
     },
-    epoch: epoch ?? null,
     gasUsed: effects.gasUsed,
     transactionDigest: effects.transactionDigest,
     gasObject: effects.gasObjectIndex === null ? null : changedObjects[effects.gasObjectIndex] ?? null,
@@ -68099,8 +69895,7 @@ function parseTransactionEffectsV2({
           kind: object.$kind,
           objectId,
           version: object.$kind === "ReadOnlyRoot" ? object.ReadOnlyRoot[0] : object[object.$kind],
-          digest: object.$kind === "ReadOnlyRoot" ? object.ReadOnlyRoot[1] : null,
-          objectType: objectTypes[objectId] ?? null
+          digest: object.$kind === "ReadOnlyRoot" ? object.ReadOnlyRoot[1] : null
         };
       }
     ),
@@ -68335,7 +70130,8 @@ class SuiGraphQLClient extends import_experimental.Experimental_BaseClient {
     fetch: fetchFn = fetch,
     headers = {},
     queries = {},
-    network = "unknown"
+    network = "unknown",
+    mvr
   }) {
     super({
       network
@@ -68344,11 +70140,14 @@ class SuiGraphQLClient extends import_experimental.Experimental_BaseClient {
     __privateAdd(this, _queries);
     __privateAdd(this, _headers);
     __privateAdd(this, _fetch);
-    this.core = new import_graphql2.GraphQLTransport(this);
     __privateSet(this, _url, url);
     __privateSet(this, _queries, queries);
     __privateSet(this, _headers, headers);
     __privateSet(this, _fetch, (...args) => fetchFn(...args));
+    this.core = new import_graphql2.GraphQLTransport({
+      graphqlClient: this,
+      mvr
+    });
   }
   async query(options) {
     const res = await __privateGet(this, _fetch).call(this, __privateGet(this, _url), {
@@ -68430,6 +70229,7 @@ __export(queries_exports, {
   ObjectKind: () => ObjectKind,
   Object_FieldsFragmentDoc: () => Object_FieldsFragmentDoc,
   Object_Owner_FieldsFragmentDoc: () => Object_Owner_FieldsFragmentDoc,
+  ResolveNameServiceNamesDocument: () => ResolveNameServiceNamesDocument,
   StakeStatus: () => StakeStatus,
   TransactionBlockKindInput: () => TransactionBlockKindInput,
   Transaction_FieldsFragmentDoc: () => Transaction_FieldsFragmentDoc,
@@ -68528,11 +70328,10 @@ const Object_Owner_FieldsFragmentDoc = new TypedDocumentString(`
   ... on Shared {
     initialSharedVersion
   }
-  ... on ConsensusV2 {
-    authenticator {
-      ... on Address {
-        address
-      }
+  ... on ConsensusAddressOwner {
+    startVersion
+    owner {
+      address
     }
   }
 }
@@ -68574,11 +70373,10 @@ const Object_FieldsFragmentDoc = new TypedDocumentString(`
   ... on Shared {
     initialSharedVersion
   }
-  ... on ConsensusV2 {
-    authenticator {
-      ... on Address {
-        address
-      }
+  ... on ConsensusAddressOwner {
+    startVersion
+    owner {
+      address
     }
   }
 }`, { "fragmentName": "OBJECT_FIELDS" });
@@ -68617,11 +70415,10 @@ const Move_Object_FieldsFragmentDoc = new TypedDocumentString(`
   ... on Shared {
     initialSharedVersion
   }
-  ... on ConsensusV2 {
-    authenticator {
-      ... on Address {
-        address
-      }
+  ... on ConsensusAddressOwner {
+    startVersion
+    owner {
+      address
     }
   }
 }`, { "fragmentName": "MOVE_OBJECT_FIELDS" });
@@ -68632,6 +70429,9 @@ const Transaction_FieldsFragmentDoc = new TypedDocumentString(`
   signatures
   effects {
     bcs
+    epoch {
+      epochId
+    }
     unchangedSharedObjects {
       nodes {
         __typename
@@ -68757,11 +70557,10 @@ const GetCoinsDocument = new TypedDocumentString(`
   ... on Shared {
     initialSharedVersion
   }
-  ... on ConsensusV2 {
-    authenticator {
-      ... on Address {
-        address
-      }
+  ... on ConsensusAddressOwner {
+    startVersion
+    owner {
+      address
     }
   }
 }`);
@@ -68804,6 +70603,21 @@ const GetReferenceGasPriceDocument = new TypedDocumentString(`
     query getReferenceGasPrice {
   epoch {
     referenceGasPrice
+  }
+}
+    `);
+const ResolveNameServiceNamesDocument = new TypedDocumentString(`
+    query resolveNameServiceNames($address: SuiAddress!, $limit: Int, $cursor: String) {
+  address(address: $address) {
+    suinsRegistrations(first: $limit, after: $cursor) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        domain
+      }
+    }
   }
 }
     `);
@@ -68855,11 +70669,10 @@ fragment OBJECT_OWNER_FIELDS on ObjectOwner {
   ... on Shared {
     initialSharedVersion
   }
-  ... on ConsensusV2 {
-    authenticator {
-      ... on Address {
-        address
-      }
+  ... on ConsensusAddressOwner {
+    startVersion
+    owner {
+      address
     }
   }
 }`);
@@ -68911,11 +70724,10 @@ fragment OBJECT_OWNER_FIELDS on ObjectOwner {
   ... on Shared {
     initialSharedVersion
   }
-  ... on ConsensusV2 {
-    authenticator {
-      ... on Address {
-        address
-      }
+  ... on ConsensusAddressOwner {
+    startVersion
+    owner {
+      address
     }
   }
 }`);
@@ -68934,6 +70746,9 @@ const DryRunTransactionBlockDocument = new TypedDocumentString(`
   signatures
   effects {
     bcs
+    epoch {
+      epochId
+    }
     unchangedSharedObjects {
       nodes {
         __typename
@@ -68996,6 +70811,9 @@ const ExecuteTransactionBlockDocument = new TypedDocumentString(`
   signatures
   effects {
     bcs
+    epoch {
+      epochId
+    }
     unchangedSharedObjects {
       nodes {
         __typename
@@ -69053,6 +70871,9 @@ const GetTransactionBlockDocument = new TypedDocumentString(`
   signatures
   effects {
     bcs
+    epoch {
+      epochId
+    }
     unchangedSharedObjects {
       nodes {
         __typename
@@ -70832,18 +72653,26 @@ var import_internal = __nccwpck_require__(86921);
 var import_v1 = __nccwpck_require__(40113);
 var import_v2 = __nccwpck_require__(83768);
 var import_Inputs = __nccwpck_require__(17484);
-var import_json_rpc_resolver = __nccwpck_require__(71700);
+var import_resolve = __nccwpck_require__(56013);
 var import_object = __nccwpck_require__(53714);
 var import_pure = __nccwpck_require__(80059);
 var import_TransactionData = __nccwpck_require__(31553);
 var import_utils = __nccwpck_require__(16500);
+var import_NamedPackagesPlugin = __nccwpck_require__(96153);
 var _serializationPlugins, _buildPlugins, _intentResolvers, _inputSection, _commandSection, _availableResults, _pendingPromises, _added, _data, _Transaction_instances, fork_fn, addCommand_fn, addInput_fn, normalizeTransactionArgument_fn, resolveArgument_fn, prepareBuild_fn, runPlugins_fn, waitForPendingTasks_fn, sortCommandsAndInputs_fn;
 function createTransactionResult(index, length = Infinity) {
-  const baseResult = { $kind: "Result", Result: index };
+  const baseResult = {
+    $kind: "Result",
+    get Result() {
+      return typeof index === "function" ? index() : index;
+    }
+  };
   const nestedResults = [];
   const nestedResultFor = (resultIndex) => nestedResults[resultIndex] ?? (nestedResults[resultIndex] = {
     $kind: "NestedResult",
-    NestedResult: [index, resultIndex]
+    get NestedResult() {
+      return [typeof index === "function" ? index() : index, resultIndex];
+    }
   });
   return new Proxy(baseResult, {
     set() {
@@ -70942,8 +72771,9 @@ const _Transaction = class _Transaction {
     __privateSet(tx, _data, import_TransactionData.TransactionDataBuilder.fromKindBytes(
       typeof serialized === "string" ? (0, import_bcs.fromBase64)(serialized) : serialized
     ));
-    __privateSet(tx, _inputSection, __privateGet(tx, _data).inputs);
-    __privateSet(tx, _commandSection, __privateGet(tx, _data).commands);
+    __privateSet(tx, _inputSection, __privateGet(tx, _data).inputs.slice());
+    __privateSet(tx, _commandSection, __privateGet(tx, _data).commands.slice());
+    __privateSet(tx, _availableResults, new Set(__privateGet(tx, _commandSection).map((_, i) => i)));
     return tx;
   }
   /**
@@ -70963,8 +72793,9 @@ const _Transaction = class _Transaction {
     } else {
       __privateSet(newTransaction, _data, import_TransactionData.TransactionDataBuilder.restore(JSON.parse(transaction)));
     }
-    __privateSet(newTransaction, _inputSection, __privateGet(newTransaction, _data).inputs);
-    __privateSet(newTransaction, _commandSection, __privateGet(newTransaction, _data).commands);
+    __privateSet(newTransaction, _inputSection, __privateGet(newTransaction, _data).inputs.slice());
+    __privateSet(newTransaction, _commandSection, __privateGet(newTransaction, _data).commands.slice());
+    __privateSet(newTransaction, _availableResults, new Set(__privateGet(newTransaction, _commandSection).map((_, i) => i)));
     return newTransaction;
   }
   static registerGlobalSerializationPlugin(stepOrStep, step) {
@@ -71103,6 +72934,7 @@ const _Transaction = class _Transaction {
           name: "AsyncTransactionThunk",
           inputs: {},
           data: {
+            resultIndex: __privateGet(this, _data).commands.length,
             result: null
           }
         }
@@ -71112,7 +72944,7 @@ const _Transaction = class _Transaction {
           placeholder.$Intent.data.result = result2;
         })
       );
-      const txResult = createTransactionResult(__privateGet(this, _data).commands.length - 1);
+      const txResult = createTransactionResult(() => placeholder.$Intent.data.resultIndex);
       __privateGet(this, _added).set(command, txResult);
       return txResult;
     } else {
@@ -71201,8 +73033,15 @@ const _Transaction = class _Transaction {
   }
   async toJSON(options = {}) {
     await this.prepareForSerialization(options);
+    const fullyResolved = this.isFullyResolved();
     return JSON.stringify(
-      (0, import_valibot.parse)(import_v2.SerializedTransactionDataV2, __privateGet(this, _data).snapshot()),
+      (0, import_valibot.parse)(
+        import_v2.SerializedTransactionDataV2,
+        fullyResolved ? {
+          ...__privateGet(this, _data).snapshot(),
+          digest: __privateGet(this, _data).getDigest()
+        } : __privateGet(this, _data).snapshot()
+      ),
       (_key, value) => typeof value === "bigint" ? value.toString() : value,
       2
     );
@@ -71212,6 +73051,32 @@ const _Transaction = class _Transaction {
     const { signer, ...buildOptions } = options;
     const bytes = await this.build(buildOptions);
     return signer.signTransaction(bytes);
+  }
+  /**
+   *  Ensures that:
+   *  - All objects have been fully resolved to a specific version
+   *  - All pure inputs have been serialized to bytes
+   *  - All async thunks have been fully resolved
+   *  - All transaction intents have been resolved
+   * 	- The gas payment, budget, and price have been set
+   *  - The transaction sender has been set
+   *
+   *  When true, the transaction will always be built to the same bytes and digest (unless the transaction is mutated)
+   */
+  isFullyResolved() {
+    if (!__privateGet(this, _data).sender) {
+      return false;
+    }
+    if (__privateGet(this, _pendingPromises).size > 0) {
+      return false;
+    }
+    if (__privateGet(this, _data).commands.some((cmd) => cmd.$Intent)) {
+      return false;
+    }
+    if ((0, import_resolve.needsTransactionResolution)(__privateGet(this, _data), {})) {
+      return false;
+    }
+    return true;
   }
   /** Build the transaction to BCS bytes. */
   async build(options = {}) {
@@ -71223,6 +73088,7 @@ const _Transaction = class _Transaction {
   }
   /** Derive transaction digest */
   async getDigest(options = {}) {
+    await this.prepareForSerialization(options);
     await __privateMethod(this, _Transaction_instances, prepareBuild_fn).call(this, options);
     return __privateGet(this, _data).getDigest();
   }
@@ -71245,6 +73111,7 @@ const _Transaction = class _Transaction {
       }
       steps.push(__privateGet(this, _intentResolvers).get(intent));
     }
+    steps.push((0, import_NamedPackagesPlugin.namedPackagesPlugin)());
     await __privateMethod(this, _Transaction_instances, runPlugins_fn).call(this, steps, options);
   }
 };
@@ -71320,7 +73187,7 @@ prepareBuild_fn = async function(options) {
   if (!options.onlyTransactionKind && !__privateGet(this, _data).sender) {
     throw new Error("Missing transaction sender");
   }
-  await __privateMethod(this, _Transaction_instances, runPlugins_fn).call(this, [...__privateGet(this, _buildPlugins), import_json_rpc_resolver.resolveTransactionData], options);
+  await __privateMethod(this, _Transaction_instances, runPlugins_fn).call(this, [...__privateGet(this, _buildPlugins), import_resolve.resolveTransactionPlugin], options);
 };
 runPlugins_fn = async function(plugins, options) {
   const createNext = (i) => {
@@ -71350,8 +73217,8 @@ runPlugins_fn = async function(plugins, options) {
     };
   };
   await createNext(0)();
-  __privateSet(this, _inputSection, __privateGet(this, _data).inputs);
-  __privateSet(this, _commandSection, __privateGet(this, _data).commands);
+  __privateSet(this, _inputSection, __privateGet(this, _data).inputs.slice());
+  __privateSet(this, _commandSection, __privateGet(this, _data).commands.slice());
 };
 waitForPendingTasks_fn = async function() {
   while (__privateGet(this, _pendingPromises).size > 0) {
@@ -71380,6 +73247,7 @@ sortCommandsAndInputs_fn = function() {
   __privateGet(this, _data).inputs = orderedInputs;
   __privateSet(this, _commandSection, filteredCommands);
   __privateSet(this, _inputSection, orderedInputs);
+  __privateSet(this, _availableResults, new Set(filteredCommands.map((_, i) => i)));
   function getOriginalIndex(index) {
     const command = unorderedCommands[index];
     if (command.$Intent?.name === "AsyncTransactionThunk") {
@@ -71411,6 +73279,14 @@ sortCommandsAndInputs_fn = function() {
     }
     return arg;
   });
+  for (const [i, cmd] of unorderedCommands.entries()) {
+    if (cmd.$Intent?.name === "AsyncTransactionThunk") {
+      try {
+        cmd.$Intent.data.resultIndex = getOriginalIndex(i);
+      } catch (e) {
+      }
+    }
+  }
 };
 let Transaction = _Transaction;
 //# sourceMappingURL=Transaction.js.map
@@ -72541,7 +74417,8 @@ const SerializedTransactionDataV2 = (0, import_valibot.object)({
   expiration: (0, import_valibot.nullish)(TransactionExpiration),
   gasData: GasData,
   inputs: (0, import_valibot.array)(CallArg),
-  commands: (0, import_valibot.array)(Command)
+  commands: (0, import_valibot.array)(Command),
+  digest: (0, import_valibot.optional)((0, import_valibot.nullable)((0, import_valibot.string)()))
 });
 //# sourceMappingURL=v2.js.map
 
@@ -73371,7 +75248,7 @@ __export(transactions_exports, {
   UpgradePolicy: () => import_Commands.UpgradePolicy,
   coinWithBalance: () => import_CoinWithBalance.coinWithBalance,
   getPureBcsSchema: () => import_serializer.getPureBcsSchema,
-  isArgument: () => import_utils2.isArgument,
+  isArgument: () => import_utils.isArgument,
   isTransaction: () => import_Transaction.isTransaction,
   namedPackagesPlugin: () => import_NamedPackagesPlugin.namedPackagesPlugin,
   normalizedTypeToMoveTypeSignature: () => import_serializer.normalizedTypeToMoveTypeSignature
@@ -73388,7 +75265,7 @@ var import_parallel = __nccwpck_require__(82024);
 var import_CoinWithBalance = __nccwpck_require__(49258);
 var import_Arguments = __nccwpck_require__(4845);
 var import_NamedPackagesPlugin = __nccwpck_require__(96153);
-var import_utils2 = __nccwpck_require__(16500);
+var import_utils = __nccwpck_require__(16500);
 //# sourceMappingURL=index.js.map
 
 
@@ -73418,7 +75295,8 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var CoinWithBalance_exports = {};
 __export(CoinWithBalance_exports, {
-  coinWithBalance: () => coinWithBalance
+  coinWithBalance: () => coinWithBalance,
+  getSuiClient: () => getSuiClient
 });
 module.exports = __toCommonJS(CoinWithBalance_exports);
 var import_valibot = __nccwpck_require__(48275);
@@ -73426,7 +75304,7 @@ var import_bcs = __nccwpck_require__(56244);
 var import_sui_types = __nccwpck_require__(24818);
 var import_Commands = __nccwpck_require__(88783);
 var import_Inputs = __nccwpck_require__(17484);
-var import_json_rpc_resolver = __nccwpck_require__(71700);
+var import_resolve = __nccwpck_require__(56013);
 const COIN_WITH_BALANCE = "CoinWithBalance";
 const SUI_TYPE = (0, import_sui_types.normalizeStructTag)("0x2::sui::SUI");
 function coinWithBalance({
@@ -73483,7 +75361,7 @@ async function resolveCoinBalance(transactionData, buildOptions, next) {
     }
   }
   const coinsByType = /* @__PURE__ */ new Map();
-  const client = (0, import_json_rpc_resolver.getClient)(buildOptions);
+  const client = getSuiClient(buildOptions);
   await Promise.all(
     [...coinTypes].map(async (coinType) => {
       coinsByType.set(
@@ -73577,365 +75455,14 @@ async function getCoinsOfType({
     throw new Error(`Not enough coins of type ${coinType} to satisfy requested balance`);
   }
 }
+function getSuiClient(options) {
+  const client = (0, import_resolve.getClient)(options);
+  if (!client.jsonRpc) {
+    throw new Error(`CoinWithBalance intent currently only works with SuiClient`);
+  }
+  return client;
+}
 //# sourceMappingURL=CoinWithBalance.js.map
-
-
-/***/ }),
-
-/***/ 71700:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var json_rpc_resolver_exports = {};
-__export(json_rpc_resolver_exports, {
-  getClient: () => getClient,
-  resolveTransactionData: () => resolveTransactionData
-});
-module.exports = __toCommonJS(json_rpc_resolver_exports);
-var import_valibot = __nccwpck_require__(48275);
-var import_bcs = __nccwpck_require__(56244);
-var import_utils = __nccwpck_require__(33973);
-var import_internal = __nccwpck_require__(86921);
-var import_Inputs = __nccwpck_require__(17484);
-var import_serializer = __nccwpck_require__(71649);
-var import_utils2 = __nccwpck_require__(5041);
-const MAX_OBJECTS_PER_FETCH = 50;
-const GAS_SAFE_OVERHEAD = 1000n;
-const MAX_GAS = 5e10;
-async function resolveTransactionData(transactionData, options, next) {
-  await normalizeInputs(transactionData, options);
-  await resolveObjectReferences(transactionData, options);
-  if (!options.onlyTransactionKind) {
-    await setGasPrice(transactionData, options);
-    await setGasBudget(transactionData, options);
-    await setGasPayment(transactionData, options);
-  }
-  await validate(transactionData);
-  return await next();
-}
-async function setGasPrice(transactionData, options) {
-  if (!transactionData.gasConfig.price) {
-    transactionData.gasConfig.price = String(await getClient(options).getReferenceGasPrice());
-  }
-}
-async function setGasBudget(transactionData, options) {
-  if (transactionData.gasConfig.budget) {
-    return;
-  }
-  const dryRunResult = await getClient(options).dryRunTransactionBlock({
-    transactionBlock: transactionData.build({
-      overrides: {
-        gasData: {
-          budget: String(MAX_GAS),
-          payment: []
-        }
-      }
-    })
-  });
-  if (dryRunResult.effects.status.status !== "success") {
-    throw new Error(
-      `Dry run failed, could not automatically determine a budget: ${dryRunResult.effects.status.error}`,
-      { cause: dryRunResult }
-    );
-  }
-  const safeOverhead = GAS_SAFE_OVERHEAD * BigInt(transactionData.gasConfig.price || 1n);
-  const baseComputationCostWithOverhead = BigInt(dryRunResult.effects.gasUsed.computationCost) + safeOverhead;
-  const gasBudget = baseComputationCostWithOverhead + BigInt(dryRunResult.effects.gasUsed.storageCost) - BigInt(dryRunResult.effects.gasUsed.storageRebate);
-  transactionData.gasConfig.budget = String(
-    gasBudget > baseComputationCostWithOverhead ? gasBudget : baseComputationCostWithOverhead
-  );
-}
-async function setGasPayment(transactionData, options) {
-  if (!transactionData.gasConfig.payment) {
-    const coins = await getClient(options).getCoins({
-      owner: transactionData.gasConfig.owner || transactionData.sender,
-      coinType: import_utils.SUI_TYPE_ARG
-    });
-    const paymentCoins = coins.data.filter((coin) => {
-      const matchingInput = transactionData.inputs.find((input) => {
-        if (input.Object?.ImmOrOwnedObject) {
-          return coin.coinObjectId === input.Object.ImmOrOwnedObject.objectId;
-        }
-        return false;
-      });
-      return !matchingInput;
-    }).map((coin) => ({
-      objectId: coin.coinObjectId,
-      digest: coin.digest,
-      version: coin.version
-    }));
-    if (!paymentCoins.length) {
-      throw new Error("No valid gas coins found for the transaction.");
-    }
-    transactionData.gasConfig.payment = paymentCoins.map((payment) => (0, import_valibot.parse)(import_internal.ObjectRef, payment));
-  }
-}
-async function resolveObjectReferences(transactionData, options) {
-  const objectsToResolve = transactionData.inputs.filter((input) => {
-    return input.UnresolvedObject && !(input.UnresolvedObject.version || input.UnresolvedObject?.initialSharedVersion);
-  });
-  const dedupedIds = [
-    ...new Set(
-      objectsToResolve.map((input) => (0, import_utils.normalizeSuiObjectId)(input.UnresolvedObject.objectId))
-    )
-  ];
-  const objectChunks = dedupedIds.length ? (0, import_utils2.chunk)(dedupedIds, MAX_OBJECTS_PER_FETCH) : [];
-  const resolved = (await Promise.all(
-    objectChunks.map(
-      (chunk2) => getClient(options).multiGetObjects({
-        ids: chunk2,
-        options: { showOwner: true }
-      })
-    )
-  )).flat();
-  const responsesById = new Map(
-    dedupedIds.map((id, index) => {
-      return [id, resolved[index]];
-    })
-  );
-  const invalidObjects = Array.from(responsesById).filter(([_, obj]) => obj.error).map(([_, obj]) => JSON.stringify(obj.error));
-  if (invalidObjects.length) {
-    throw new Error(`The following input objects are invalid: ${invalidObjects.join(", ")}`);
-  }
-  const objects = resolved.map((object) => {
-    if (object.error || !object.data) {
-      throw new Error(`Failed to fetch object: ${object.error}`);
-    }
-    const owner = object.data.owner;
-    const initialSharedVersion = owner && typeof owner === "object" && "Shared" in owner ? owner.Shared.initial_shared_version : null;
-    return {
-      objectId: object.data.objectId,
-      digest: object.data.digest,
-      version: object.data.version,
-      initialSharedVersion
-    };
-  });
-  const objectsById = new Map(
-    dedupedIds.map((id, index) => {
-      return [id, objects[index]];
-    })
-  );
-  for (const [index, input] of transactionData.inputs.entries()) {
-    if (!input.UnresolvedObject) {
-      continue;
-    }
-    let updated;
-    const id = (0, import_utils.normalizeSuiAddress)(input.UnresolvedObject.objectId);
-    const object = objectsById.get(id);
-    if (input.UnresolvedObject.initialSharedVersion ?? object?.initialSharedVersion) {
-      updated = import_Inputs.Inputs.SharedObjectRef({
-        objectId: id,
-        initialSharedVersion: input.UnresolvedObject.initialSharedVersion || object?.initialSharedVersion,
-        mutable: isUsedAsMutable(transactionData, index)
-      });
-    } else if (isUsedAsReceiving(transactionData, index)) {
-      updated = import_Inputs.Inputs.ReceivingRef(
-        {
-          objectId: id,
-          digest: input.UnresolvedObject.digest ?? object?.digest,
-          version: input.UnresolvedObject.version ?? object?.version
-        }
-      );
-    }
-    transactionData.inputs[transactionData.inputs.indexOf(input)] = updated ?? import_Inputs.Inputs.ObjectRef({
-      objectId: id,
-      digest: input.UnresolvedObject.digest ?? object?.digest,
-      version: input.UnresolvedObject.version ?? object?.version
-    });
-  }
-}
-async function normalizeInputs(transactionData, options) {
-  const { inputs, commands } = transactionData;
-  const moveCallsToResolve = [];
-  const moveFunctionsToResolve = /* @__PURE__ */ new Set();
-  commands.forEach((command) => {
-    if (command.MoveCall) {
-      if (command.MoveCall._argumentTypes) {
-        return;
-      }
-      const inputs2 = command.MoveCall.arguments.map((arg) => {
-        if (arg.$kind === "Input") {
-          return transactionData.inputs[arg.Input];
-        }
-        return null;
-      });
-      const needsResolution = inputs2.some(
-        (input) => input?.UnresolvedPure || input?.UnresolvedObject
-      );
-      if (needsResolution) {
-        const functionName = `${command.MoveCall.package}::${command.MoveCall.module}::${command.MoveCall.function}`;
-        moveFunctionsToResolve.add(functionName);
-        moveCallsToResolve.push(command.MoveCall);
-      }
-    }
-    switch (command.$kind) {
-      case "SplitCoins":
-        command.SplitCoins.amounts.forEach((amount) => {
-          normalizeRawArgument(amount, import_bcs.bcs.U64, transactionData);
-        });
-        break;
-      case "TransferObjects":
-        normalizeRawArgument(command.TransferObjects.address, import_bcs.bcs.Address, transactionData);
-        break;
-    }
-  });
-  const moveFunctionParameters = /* @__PURE__ */ new Map();
-  if (moveFunctionsToResolve.size > 0) {
-    const client = getClient(options);
-    await Promise.all(
-      [...moveFunctionsToResolve].map(async (functionName) => {
-        const [packageId, moduleId, functionId] = functionName.split("::");
-        const def = await client.getNormalizedMoveFunction({
-          package: packageId,
-          module: moduleId,
-          function: functionId
-        });
-        moveFunctionParameters.set(
-          functionName,
-          def.parameters.map((param) => (0, import_serializer.normalizedTypeToMoveTypeSignature)(param))
-        );
-      })
-    );
-  }
-  if (moveCallsToResolve.length) {
-    await Promise.all(
-      moveCallsToResolve.map(async (moveCall) => {
-        const parameters = moveFunctionParameters.get(
-          `${moveCall.package}::${moveCall.module}::${moveCall.function}`
-        );
-        if (!parameters) {
-          return;
-        }
-        const hasTxContext = parameters.length > 0 && (0, import_serializer.isTxContext)(parameters.at(-1));
-        const params = hasTxContext ? parameters.slice(0, parameters.length - 1) : parameters;
-        moveCall._argumentTypes = params;
-      })
-    );
-  }
-  commands.forEach((command) => {
-    if (!command.MoveCall) {
-      return;
-    }
-    const moveCall = command.MoveCall;
-    const fnName = `${moveCall.package}::${moveCall.module}::${moveCall.function}`;
-    const params = moveCall._argumentTypes;
-    if (!params) {
-      return;
-    }
-    if (params.length !== command.MoveCall.arguments.length) {
-      throw new Error(`Incorrect number of arguments for ${fnName}`);
-    }
-    params.forEach((param, i) => {
-      const arg = moveCall.arguments[i];
-      if (arg.$kind !== "Input") return;
-      const input = inputs[arg.Input];
-      if (!input.UnresolvedPure && !input.UnresolvedObject) {
-        return;
-      }
-      const inputValue = input.UnresolvedPure?.value ?? input.UnresolvedObject?.objectId;
-      const schema = (0, import_serializer.getPureBcsSchema)(param.body);
-      if (schema) {
-        arg.type = "pure";
-        inputs[inputs.indexOf(input)] = import_Inputs.Inputs.Pure(schema.serialize(inputValue));
-        return;
-      }
-      if (typeof inputValue !== "string") {
-        throw new Error(
-          `Expect the argument to be an object id string, got ${JSON.stringify(
-            inputValue,
-            null,
-            2
-          )}`
-        );
-      }
-      arg.type = "object";
-      const unresolvedObject = input.UnresolvedPure ? {
-        $kind: "UnresolvedObject",
-        UnresolvedObject: {
-          objectId: inputValue
-        }
-      } : input;
-      inputs[arg.Input] = unresolvedObject;
-    });
-  });
-}
-function validate(transactionData) {
-  transactionData.inputs.forEach((input, index) => {
-    if (input.$kind !== "Object" && input.$kind !== "Pure") {
-      throw new Error(
-        `Input at index ${index} has not been resolved.  Expected a Pure or Object input, but found ${JSON.stringify(
-          input
-        )}`
-      );
-    }
-  });
-}
-function normalizeRawArgument(arg, schema, transactionData) {
-  if (arg.$kind !== "Input") {
-    return;
-  }
-  const input = transactionData.inputs[arg.Input];
-  if (input.$kind !== "UnresolvedPure") {
-    return;
-  }
-  transactionData.inputs[arg.Input] = import_Inputs.Inputs.Pure(schema.serialize(input.UnresolvedPure.value));
-}
-function isUsedAsMutable(transactionData, index) {
-  let usedAsMutable = false;
-  transactionData.getInputUses(index, (arg, tx) => {
-    if (tx.MoveCall && tx.MoveCall._argumentTypes) {
-      const argIndex = tx.MoveCall.arguments.indexOf(arg);
-      usedAsMutable = tx.MoveCall._argumentTypes[argIndex].ref !== "&" || usedAsMutable;
-    }
-    if (tx.$kind === "MakeMoveVec" || tx.$kind === "MergeCoins" || tx.$kind === "SplitCoins") {
-      usedAsMutable = true;
-    }
-  });
-  return usedAsMutable;
-}
-function isUsedAsReceiving(transactionData, index) {
-  let usedAsReceiving = false;
-  transactionData.getInputUses(index, (arg, tx) => {
-    if (tx.MoveCall && tx.MoveCall._argumentTypes) {
-      const argIndex = tx.MoveCall.arguments.indexOf(arg);
-      usedAsReceiving = isReceivingType(tx.MoveCall._argumentTypes[argIndex]) || usedAsReceiving;
-    }
-  });
-  return usedAsReceiving;
-}
-function isReceivingType(type) {
-  if (typeof type.body !== "object" || !("datatype" in type.body)) {
-    return false;
-  }
-  return type.body.datatype.package === "0x2" && type.body.datatype.module === "transfer" && type.body.datatype.type === "Receiving";
-}
-function getClient(options) {
-  if (!options.client) {
-    throw new Error(
-      `No sui client passed to Transaction#build, but transaction data was not sufficient to build offline.`
-    );
-  }
-  return options.client;
-}
-//# sourceMappingURL=json-rpc-resolver.js.map
 
 
 /***/ }),
@@ -74011,257 +75538,53 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var NamedPackagesPlugin_exports = {};
 __export(NamedPackagesPlugin_exports, {
+  getClient: () => getClient,
   namedPackagesPlugin: () => namedPackagesPlugin
 });
 module.exports = __toCommonJS(NamedPackagesPlugin_exports);
-var import_sui_types = __nccwpck_require__(24818);
-var import_utils = __nccwpck_require__(31767);
-const namedPackagesPlugin = ({
-  url,
-  pageSize = 50,
-  overrides = { packages: {}, types: {} }
-}) => {
-  Object.keys(overrides.types).forEach((type) => {
-    if ((0, import_sui_types.parseStructTag)(type).typeParams.length > 0)
-      throw new Error(
-        "Type overrides must be first-level only. If you want to supply generic types, just pass each type individually."
-      );
-  });
-  const cache = overrides;
-  return async (transactionData, _buildOptions, next) => {
-    const names = (0, import_utils.findNamesInTransaction)(transactionData);
-    const [packages, types] = await Promise.all([
-      resolvePackages(
-        names.packages.filter((x) => !cache.packages[x]),
-        url,
-        pageSize
-      ),
-      resolveTypes(
-        [...(0, import_utils.getFirstLevelNamedTypes)(names.types)].filter((x) => !cache.types[x]),
-        url,
-        pageSize
-      )
-    ]);
-    Object.assign(cache.packages, packages);
-    Object.assign(cache.types, types);
-    const composedTypes = (0, import_utils.populateNamedTypesFromCache)(names.types, cache.types);
-    (0, import_utils.replaceNames)(transactionData, {
-      packages: { ...cache.packages },
-      // we include the "composed" type cache too.
-      types: composedTypes
+var import_cache = __nccwpck_require__(9420);
+var import_mvr = __nccwpck_require__(13893);
+var import_mvr2 = __nccwpck_require__(13893);
+const cacheMap = /* @__PURE__ */ new WeakMap();
+const namedPackagesPlugin = (options) => {
+  let mvrClient;
+  if (options) {
+    const overrides = options.overrides ?? {
+      packages: {},
+      types: {}
+    };
+    if (!cacheMap.has(overrides)) {
+      cacheMap.set(overrides, new import_cache.ClientCache());
+    }
+    mvrClient = new import_mvr.MvrClient({
+      cache: cacheMap.get(overrides),
+      url: options.url,
+      pageSize: options.pageSize,
+      overrides
     });
+  }
+  return async (transactionData, buildOptions, next) => {
+    const names = (0, import_mvr2.findNamesInTransaction)(transactionData);
+    if (names.types.length === 0 && names.packages.length === 0) {
+      return next();
+    }
+    const resolved = await (mvrClient || getClient(buildOptions).core.mvr).resolve({
+      types: names.types,
+      packages: names.packages
+    });
+    (0, import_mvr2.replaceNames)(transactionData, resolved);
     await next();
   };
-  async function resolvePackages(packages, apiUrl, pageSize2) {
-    if (packages.length === 0) return {};
-    const batches = (0, import_utils.batch)(packages, pageSize2);
-    const results = {};
-    await Promise.all(
-      batches.map(async (batch2) => {
-        const response = await fetch(`${apiUrl}/v1/resolution/bulk`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            names: batch2
-          })
-        });
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({}));
-          throw new Error(`Failed to resolve packages: ${errorBody?.message}`);
-        }
-        const data = await response.json();
-        if (!data?.resolution) return;
-        for (const pkg of Object.keys(data?.resolution)) {
-          const pkgData = data.resolution[pkg]?.package_id;
-          if (!pkgData) continue;
-          results[pkg] = pkgData;
-        }
-      })
-    );
-    return results;
-  }
-  async function resolveTypes(types, apiUrl, pageSize2) {
-    if (types.length === 0) return {};
-    const batches = (0, import_utils.batch)(types, pageSize2);
-    const results = {};
-    await Promise.all(
-      batches.map(async (batch2) => {
-        const response = await fetch(`${apiUrl}/v1/struct-definition/bulk`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            types: batch2
-          })
-        });
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({}));
-          throw new Error(`Failed to resolve types: ${errorBody?.message}`);
-        }
-        const data = await response.json();
-        if (!data?.resolution) return;
-        for (const type of Object.keys(data?.resolution)) {
-          const typeData = data.resolution[type]?.type_tag;
-          if (!typeData) continue;
-          results[type] = typeData;
-        }
-      })
-    );
-    return results;
-  }
 };
+function getClient(options) {
+  if (!options.client) {
+    throw new Error(
+      `No sui client passed to Transaction#build, but transaction data was not sufficient to build offline.`
+    );
+  }
+  return options.client;
+}
 //# sourceMappingURL=NamedPackagesPlugin.js.map
-
-
-/***/ }),
-
-/***/ 31767:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var utils_exports = {};
-__export(utils_exports, {
-  batch: () => batch,
-  findNamesInTransaction: () => findNamesInTransaction,
-  getFirstLevelNamedTypes: () => getFirstLevelNamedTypes,
-  populateNamedTypesFromCache: () => populateNamedTypesFromCache,
-  replaceNames: () => replaceNames
-});
-module.exports = __toCommonJS(utils_exports);
-var import_move_registry = __nccwpck_require__(77514);
-var import_sui_types = __nccwpck_require__(24818);
-const NAME_SEPARATOR = "/";
-function findNamesInTransaction(builder) {
-  const packages = /* @__PURE__ */ new Set();
-  const types = /* @__PURE__ */ new Set();
-  for (const command of builder.commands) {
-    if (command.MakeMoveVec?.type) {
-      getNamesFromTypeList([command.MakeMoveVec.type]).forEach((type) => {
-        types.add(type);
-      });
-      continue;
-    }
-    if (!("MoveCall" in command)) continue;
-    const tx = command.MoveCall;
-    if (!tx) continue;
-    const pkg = tx.package.split("::")[0];
-    if (hasMvrName(pkg)) {
-      if (!(0, import_move_registry.isValidNamedPackage)(pkg)) throw new Error(`Invalid package name: ${pkg}`);
-      packages.add(pkg);
-    }
-    getNamesFromTypeList(tx.typeArguments ?? []).forEach((type) => {
-      types.add(type);
-    });
-  }
-  return {
-    packages: [...packages],
-    types: [...types]
-  };
-}
-function getFirstLevelNamedTypes(types) {
-  const results = /* @__PURE__ */ new Set();
-  for (const type of types) {
-    findMvrNames(type).forEach((name) => results.add(name));
-  }
-  return results;
-}
-function findMvrNames(type) {
-  const types = /* @__PURE__ */ new Set();
-  if (typeof type === "string" && !hasMvrName(type)) return types;
-  const tag = isStructTag(type) ? type : (0, import_sui_types.parseStructTag)(type);
-  if (hasMvrName(tag.address)) types.add(`${tag.address}::${tag.module}::${tag.name}`);
-  for (const param of tag.typeParams) {
-    findMvrNames(param).forEach((name) => types.add(name));
-  }
-  return types;
-}
-function populateNamedTypesFromCache(types, typeCache) {
-  const composedTypes = {};
-  types.forEach((type) => {
-    const normalized = (0, import_sui_types.normalizeStructTag)(findAndReplaceCachedTypes(type, typeCache));
-    composedTypes[type] = normalized;
-  });
-  return composedTypes;
-}
-function findAndReplaceCachedTypes(tag, typeCache) {
-  const type = isStructTag(tag) ? tag : (0, import_sui_types.parseStructTag)(tag);
-  const typeTag = `${type.address}::${type.module}::${type.name}`;
-  const cacheHit = typeCache[typeTag];
-  return {
-    ...type,
-    address: cacheHit ? cacheHit.split("::")[0] : type.address,
-    typeParams: type.typeParams.map((param) => findAndReplaceCachedTypes(param, typeCache))
-  };
-}
-function replaceNames(builder, cache) {
-  for (const command of builder.commands) {
-    if (command.MakeMoveVec?.type) {
-      if (!hasMvrName(command.MakeMoveVec.type)) continue;
-      if (!cache.types[command.MakeMoveVec.type])
-        throw new Error(`No resolution found for type: ${command.MakeMoveVec.type}`);
-      command.MakeMoveVec.type = cache.types[command.MakeMoveVec.type];
-    }
-    const tx = command.MoveCall;
-    if (!tx) continue;
-    const nameParts = tx.package.split("::");
-    const name = nameParts[0];
-    if (hasMvrName(name) && !cache.packages[name])
-      throw new Error(`No address found for package: ${name}`);
-    if (hasMvrName(name)) {
-      nameParts[0] = cache.packages[name];
-      tx.package = nameParts.join("::");
-    }
-    const types = tx.typeArguments;
-    if (!types) continue;
-    for (let i = 0; i < types.length; i++) {
-      if (!hasMvrName(types[i])) continue;
-      if (!cache.types[types[i]]) throw new Error(`No resolution found for type: ${types[i]}`);
-      types[i] = cache.types[types[i]];
-    }
-    tx.typeArguments = types;
-  }
-}
-function batch(arr, size) {
-  const batches = [];
-  for (let i = 0; i < arr.length; i += size) {
-    batches.push(arr.slice(i, i + size));
-  }
-  return batches;
-}
-function getNamesFromTypeList(types) {
-  const names = /* @__PURE__ */ new Set();
-  for (const type of types) {
-    if (hasMvrName(type)) {
-      if (!(0, import_move_registry.isValidNamedType)(type)) throw new Error(`Invalid type with names: ${type}`);
-      names.add(type);
-    }
-  }
-  return names;
-}
-function hasMvrName(nameOrType) {
-  return nameOrType.includes(NAME_SEPARATOR) || nameOrType.includes("@") || nameOrType.includes(".sui");
-}
-function isStructTag(type) {
-  return typeof type === "object" && "address" in type && "module" in type && "name" in type && "typeParams" in type;
-}
-//# sourceMappingURL=utils.js.map
 
 
 /***/ }),
@@ -74327,6 +75650,112 @@ function createPure(makePure) {
   return pure;
 }
 //# sourceMappingURL=pure.js.map
+
+
+/***/ }),
+
+/***/ 56013:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var resolve_exports = {};
+__export(resolve_exports, {
+  getClient: () => getClient,
+  needsTransactionResolution: () => needsTransactionResolution,
+  resolveTransactionPlugin: () => resolveTransactionPlugin
+});
+module.exports = __toCommonJS(resolve_exports);
+var import_Inputs = __nccwpck_require__(17484);
+var import_bcs = __nccwpck_require__(56244);
+var import_json_rpc_resolver = __nccwpck_require__(83788);
+function needsTransactionResolution(data, options) {
+  if (data.inputs.some((input) => {
+    return input.UnresolvedObject || input.UnresolvedPure;
+  })) {
+    return true;
+  }
+  if (!options.onlyTransactionKind) {
+    if (!data.gasConfig.price || !data.gasConfig.budget || !data.gasConfig.payment) {
+      return true;
+    }
+  }
+  return false;
+}
+async function resolveTransactionPlugin(transactionData, options, next) {
+  normalizeRawArguments(transactionData);
+  if (!needsTransactionResolution(transactionData, options)) {
+    await validate(transactionData);
+    return next();
+  }
+  const client = getClient(options);
+  const plugin = client.core?.resolveTransactionPlugin() ?? (0, import_json_rpc_resolver.suiClientResolveTransactionPlugin)(client);
+  return plugin(transactionData, options, async () => {
+    await validate(transactionData);
+    await next();
+  });
+}
+function validate(transactionData) {
+  transactionData.inputs.forEach((input, index) => {
+    if (input.$kind !== "Object" && input.$kind !== "Pure") {
+      throw new Error(
+        `Input at index ${index} has not been resolved.  Expected a Pure or Object input, but found ${JSON.stringify(
+          input
+        )}`
+      );
+    }
+  });
+}
+function getClient(options) {
+  if (!options.client) {
+    throw new Error(
+      `No sui client passed to Transaction#build, but transaction data was not sufficient to build offline.`
+    );
+  }
+  return options.client;
+}
+function normalizeRawArguments(transactionData) {
+  for (const command of transactionData.commands) {
+    switch (command.$kind) {
+      case "SplitCoins":
+        command.SplitCoins.amounts.forEach((amount) => {
+          normalizeRawArgument(amount, import_bcs.bcs.U64, transactionData);
+        });
+        break;
+      case "TransferObjects":
+        normalizeRawArgument(command.TransferObjects.address, import_bcs.bcs.Address, transactionData);
+        break;
+    }
+  }
+}
+function normalizeRawArgument(arg, schema, transactionData) {
+  if (arg.$kind !== "Input") {
+    return;
+  }
+  const input = transactionData.inputs[arg.Input];
+  if (input.$kind !== "UnresolvedPure") {
+    return;
+  }
+  transactionData.inputs[arg.Input] = import_Inputs.Inputs.Pure(schema.serialize(input.UnresolvedPure.value));
+}
+//# sourceMappingURL=resolve.js.map
 
 
 /***/ }),
@@ -75164,22 +76593,33 @@ function parseSignature(signature, options = {}) {
   };
 }
 function publicKeyFromRawBytes(signatureScheme, bytes, options = {}) {
+  let publicKey;
   switch (signatureScheme) {
     case "ED25519":
-      return new import_publickey.Ed25519PublicKey(bytes);
+      publicKey = new import_publickey.Ed25519PublicKey(bytes);
+      break;
     case "Secp256k1":
-      return new import_publickey3.Secp256k1PublicKey(bytes);
+      publicKey = new import_publickey3.Secp256k1PublicKey(bytes);
+      break;
     case "Secp256r1":
-      return new import_publickey4.Secp256r1PublicKey(bytes);
+      publicKey = new import_publickey4.Secp256r1PublicKey(bytes);
+      break;
     case "MultiSig":
-      return new import_publickey5.MultiSigPublicKey(bytes);
+      publicKey = new import_publickey5.MultiSigPublicKey(bytes);
+      break;
     case "ZkLogin":
-      return new import_publickey6.ZkLoginPublicIdentifier(bytes, options);
+      publicKey = import_publickey6.ZkLoginPublicIdentifier.fromBytes(bytes, options);
+      break;
     case "Passkey":
-      return new import_publickey2.PasskeyPublicKey(bytes);
+      publicKey = new import_publickey2.PasskeyPublicKey(bytes);
+      break;
     default:
       throw new Error(`Unsupported signature scheme ${signatureScheme}`);
   }
+  if (options.address && publicKey.toSuiAddress() !== options.address) {
+    throw new Error(`Public key bytes do not match the provided address`);
+  }
+  return publicKey;
 }
 function publicKeyFromSuiBytes(publicKey, options = {}) {
   const bytes = typeof publicKey === "string" ? (0, import_bcs.fromBase64)(publicKey) : publicKey;
@@ -75219,8 +76659,8 @@ __export(version_exports, {
   TARGETED_RPC_VERSION: () => TARGETED_RPC_VERSION
 });
 module.exports = __toCommonJS(version_exports);
-const PACKAGE_VERSION = "1.29.0";
-const TARGETED_RPC_VERSION = "1.49.0";
+const PACKAGE_VERSION = "1.36.2";
+const TARGETED_RPC_VERSION = "1.53.0";
 //# sourceMappingURL=version.js.map
 
 
@@ -75640,6 +77080,39 @@ const _ZkLoginPublicIdentifier = class _ZkLoginPublicIdentifier extends import_p
     if (__privateGet(this, _legacyAddress)) {
       __privateSet(this, _data, normalizeZkLoginPublicKeyBytes(__privateGet(this, _data)));
     }
+  }
+  static fromBytes(bytes, {
+    client,
+    address,
+    legacyAddress
+  } = {}) {
+    let publicKey;
+    if (legacyAddress === true) {
+      publicKey = new _ZkLoginPublicIdentifier(normalizeZkLoginPublicKeyBytes(bytes, true), {
+        client
+      });
+    } else if (legacyAddress === false) {
+      publicKey = new _ZkLoginPublicIdentifier(normalizeZkLoginPublicKeyBytes(bytes, false), {
+        client
+      });
+    } else if (address) {
+      publicKey = new _ZkLoginPublicIdentifier(normalizeZkLoginPublicKeyBytes(bytes, false), {
+        client
+      });
+      if (publicKey.toSuiAddress() !== address) {
+        publicKey = new _ZkLoginPublicIdentifier(normalizeZkLoginPublicKeyBytes(bytes, true), {
+          client
+        });
+      }
+    } else {
+      publicKey = new _ZkLoginPublicIdentifier(bytes, {
+        client
+      });
+    }
+    if (address && publicKey.toSuiAddress() !== address) {
+      throw new Error("Public key bytes do not match the provided address");
+    }
+    return publicKey;
   }
   static fromProof(address, proof) {
     const { issBase64Details, addressSeed } = proof;
@@ -76083,6 +77556,332 @@ function chunk(array, size) {
 
 /***/ }),
 
+/***/ 40238:
+/***/ ((module) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var dataloader_exports = {};
+__export(dataloader_exports, {
+  DataLoader: () => DataLoader
+});
+module.exports = __toCommonJS(dataloader_exports);
+class DataLoader {
+  constructor(batchLoadFn, options) {
+    if (typeof batchLoadFn !== "function") {
+      throw new TypeError(
+        `DataLoader must be constructed with a function which accepts Array<key> and returns Promise<Array<value>>, but got: ${batchLoadFn}.`
+      );
+    }
+    this._batchLoadFn = batchLoadFn;
+    this._maxBatchSize = getValidMaxBatchSize(options);
+    this._batchScheduleFn = getValidBatchScheduleFn(options);
+    this._cacheKeyFn = getValidCacheKeyFn(options);
+    this._cacheMap = getValidCacheMap(options);
+    this._batch = null;
+    this.name = getValidName(options);
+  }
+  /**
+   * Loads a key, returning a `Promise` for the value represented by that key.
+   */
+  load(key) {
+    if (key === null || key === void 0) {
+      throw new TypeError(
+        `The loader.load() function must be called with a value, but got: ${String(key)}.`
+      );
+    }
+    const batch = getCurrentBatch(this);
+    const cacheMap = this._cacheMap;
+    let cacheKey;
+    if (cacheMap) {
+      cacheKey = this._cacheKeyFn(key);
+      const cachedPromise = cacheMap.get(cacheKey);
+      if (cachedPromise) {
+        const cacheHits = batch.cacheHits || (batch.cacheHits = []);
+        return new Promise((resolve) => {
+          cacheHits.push(() => {
+            resolve(cachedPromise);
+          });
+        });
+      }
+    }
+    batch.keys.push(key);
+    const promise = new Promise((resolve, reject) => {
+      batch.callbacks.push({ resolve, reject });
+    });
+    if (cacheMap) {
+      cacheMap.set(cacheKey, promise);
+    }
+    return promise;
+  }
+  /**
+   * Loads multiple keys, promising an array of values:
+   *
+   *     var [ a, b ] = await myLoader.loadMany([ 'a', 'b' ]);
+   *
+   * This is similar to the more verbose:
+   *
+   *     var [ a, b ] = await Promise.all([
+   *       myLoader.load('a'),
+   *       myLoader.load('b')
+   *     ]);
+   *
+   * However it is different in the case where any load fails. Where
+   * Promise.all() would reject, loadMany() always resolves, however each result
+   * is either a value or an Error instance.
+   *
+   *     var [ a, b, c ] = await myLoader.loadMany([ 'a', 'b', 'badkey' ]);
+   *     // c instanceof Error
+   *
+   */
+  loadMany(keys) {
+    if (!isArrayLike(keys)) {
+      throw new TypeError(
+        `The loader.loadMany() function must be called with Array<key>, but got: ${keys}.`
+      );
+    }
+    const loadPromises = [];
+    for (let i = 0; i < keys.length; i++) {
+      loadPromises.push(this.load(keys[i]).catch((error) => error));
+    }
+    return Promise.all(loadPromises);
+  }
+  /**
+   * Clears the value at `key` from the cache, if it exists. Returns itself for
+   * method chaining.
+   */
+  clear(key) {
+    const cacheMap = this._cacheMap;
+    if (cacheMap) {
+      const cacheKey = this._cacheKeyFn(key);
+      cacheMap.delete(cacheKey);
+    }
+    return this;
+  }
+  /**
+   * Clears the entire cache. To be used when some event results in unknown
+   * invalidations across this particular `DataLoader`. Returns itself for
+   * method chaining.
+   */
+  clearAll() {
+    const cacheMap = this._cacheMap;
+    if (cacheMap) {
+      cacheMap.clear();
+    }
+    return this;
+  }
+  /**
+   * Adds the provided key and value to the cache. If the key already
+   * exists, no change is made. Returns itself for method chaining.
+   *
+   * To prime the cache with an error at a key, provide an Error instance.
+   */
+  prime(key, value) {
+    const cacheMap = this._cacheMap;
+    if (cacheMap) {
+      const cacheKey = this._cacheKeyFn(key);
+      if (cacheMap.get(cacheKey) === void 0) {
+        let promise;
+        if (value instanceof Error) {
+          promise = Promise.reject(value);
+          promise.catch(() => {
+          });
+        } else {
+          promise = Promise.resolve(value);
+        }
+        cacheMap.set(cacheKey, promise);
+      }
+    }
+    return this;
+  }
+}
+const enqueuePostPromiseJob = (
+  /** @ts-ignore */
+  typeof process === "object" && typeof process.nextTick === "function" ? function(fn) {
+    if (!resolvedPromise) {
+      resolvedPromise = Promise.resolve();
+    }
+    resolvedPromise.then(() => {
+      process.nextTick(fn);
+    });
+  } : (
+    // @ts-ignore
+    typeof setImmediate === "function" ? function(fn) {
+      setImmediate(fn);
+    } : function(fn) {
+      setTimeout(fn);
+    }
+  )
+);
+let resolvedPromise;
+function getCurrentBatch(loader) {
+  const existingBatch = loader._batch;
+  if (existingBatch !== null && !existingBatch.hasDispatched && existingBatch.keys.length < loader._maxBatchSize) {
+    return existingBatch;
+  }
+  const newBatch = { hasDispatched: false, keys: [], callbacks: [] };
+  loader._batch = newBatch;
+  loader._batchScheduleFn(() => {
+    dispatchBatch(loader, newBatch);
+  });
+  return newBatch;
+}
+function dispatchBatch(loader, batch) {
+  batch.hasDispatched = true;
+  if (batch.keys.length === 0) {
+    resolveCacheHits(batch);
+    return;
+  }
+  let batchPromise;
+  try {
+    batchPromise = loader._batchLoadFn(batch.keys);
+  } catch (e) {
+    return failedDispatch(
+      loader,
+      batch,
+      new TypeError(
+        `DataLoader must be constructed with a function which accepts Array<key> and returns Promise<Array<value>>, but the function errored synchronously: ${String(e)}.`
+      )
+    );
+  }
+  if (!batchPromise || typeof batchPromise.then !== "function") {
+    return failedDispatch(
+      loader,
+      batch,
+      new TypeError(
+        `DataLoader must be constructed with a function which accepts Array<key> and returns Promise<Array<value>>, but the function did not return a Promise: ${String(batchPromise)}.`
+      )
+    );
+  }
+  Promise.resolve(batchPromise).then((values) => {
+    if (!isArrayLike(values)) {
+      throw new TypeError(
+        `DataLoader must be constructed with a function which accepts Array<key> and returns Promise<Array<value>>, but the function did not return a Promise of an Array: ${String(values)}.`
+      );
+    }
+    if (values.length !== batch.keys.length) {
+      throw new TypeError(
+        `DataLoader must be constructed with a function which accepts Array<key> and returns Promise<Array<value>>, but the function did not return a Promise of an Array of the same length as the Array of keys.
+
+Keys:
+${String(batch.keys)}
+
+Values:
+${String(values)}`
+      );
+    }
+    resolveCacheHits(batch);
+    for (let i = 0; i < batch.callbacks.length; i++) {
+      const value = values[i];
+      if (value instanceof Error) {
+        batch.callbacks[i].reject(value);
+      } else {
+        batch.callbacks[i].resolve(value);
+      }
+    }
+  }).catch((error) => {
+    failedDispatch(loader, batch, error);
+  });
+}
+function failedDispatch(loader, batch, error) {
+  resolveCacheHits(batch);
+  for (let i = 0; i < batch.keys.length; i++) {
+    loader.clear(batch.keys[i]);
+    batch.callbacks[i].reject(error);
+  }
+}
+function resolveCacheHits(batch) {
+  if (batch.cacheHits) {
+    for (let i = 0; i < batch.cacheHits.length; i++) {
+      batch.cacheHits[i]();
+    }
+  }
+}
+function getValidMaxBatchSize(options) {
+  const shouldBatch = !options || options.batch !== false;
+  if (!shouldBatch) {
+    return 1;
+  }
+  const maxBatchSize = options && options.maxBatchSize;
+  if (maxBatchSize === void 0) {
+    return Infinity;
+  }
+  if (typeof maxBatchSize !== "number" || maxBatchSize < 1) {
+    throw new TypeError(`maxBatchSize must be a positive number: ${maxBatchSize}`);
+  }
+  return maxBatchSize;
+}
+function getValidBatchScheduleFn(options) {
+  const batchScheduleFn = options && options.batchScheduleFn;
+  if (batchScheduleFn === void 0) {
+    return enqueuePostPromiseJob;
+  }
+  if (typeof batchScheduleFn !== "function") {
+    throw new TypeError(`batchScheduleFn must be a function: ${batchScheduleFn}`);
+  }
+  return batchScheduleFn;
+}
+function getValidCacheKeyFn(options) {
+  const cacheKeyFn = options && options.cacheKeyFn;
+  if (cacheKeyFn === void 0) {
+    return (key) => key;
+  }
+  if (typeof cacheKeyFn !== "function") {
+    throw new TypeError(`cacheKeyFn must be a function: ${cacheKeyFn}`);
+  }
+  return cacheKeyFn;
+}
+function getValidCacheMap(options) {
+  const shouldCache = !options || options.cache !== false;
+  if (!shouldCache) {
+    return null;
+  }
+  const cacheMap = options && options.cacheMap;
+  if (cacheMap === void 0) {
+    return /* @__PURE__ */ new Map();
+  }
+  if (cacheMap !== null) {
+    const cacheFunctions = ["get", "set", "delete", "clear"];
+    const missingFunctions = cacheFunctions.filter(
+      (fnName) => cacheMap && typeof cacheMap[fnName] !== "function"
+    );
+    if (missingFunctions.length !== 0) {
+      throw new TypeError("Custom cacheMap missing methods: " + missingFunctions.join(", "));
+    }
+  }
+  return cacheMap;
+}
+function getValidName(options) {
+  if (options && options.name) {
+    return options.name;
+  }
+  return null;
+}
+function isArrayLike(x) {
+  return typeof x === "object" && x !== null && "length" in x && typeof x.length === "number" && (x.length === 0 || x.length > 0 && Object.prototype.hasOwnProperty.call(x, x.length - 1));
+}
+//# sourceMappingURL=dataloader.js.map
+
+
+/***/ }),
+
 /***/ 53264:
 /***/ ((module) => {
 
@@ -76152,6 +77951,7 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var index_exports = {};
 __export(index_exports, {
+  DataLoader: () => import_dataloader.DataLoader,
   chunk: () => import_chunk.chunk,
   fromBase58: () => import_b58.fromBase58,
   fromBase64: () => import_b64.fromBase64,
@@ -76167,6 +77967,7 @@ var import_b64 = __nccwpck_require__(71853);
 var import_hex = __nccwpck_require__(53264);
 var import_chunk = __nccwpck_require__(90860);
 var import_with_resolver = __nccwpck_require__(41556);
+var import_dataloader = __nccwpck_require__(40238);
 //# sourceMappingURL=index.js.map
 
 
@@ -76222,9 +78023,11 @@ function promiseWithResolvers() {
 
 "use strict";
 
+var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __typeError = (msg) => {
   throw TypeError(msg);
@@ -76241,6 +78044,14 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
 var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
@@ -76257,15 +78068,15 @@ var import_client = __nccwpck_require__(70827);
 var import_transactions = __nccwpck_require__(59417);
 var import_utils = __nccwpck_require__(33973);
 var import_constants = __nccwpck_require__(3401);
-var import_blob = __nccwpck_require__(70697);
-var import_metadata = __nccwpck_require__(26187);
-var import_staking_inner = __nccwpck_require__(39134);
-var import_staking_pool = __nccwpck_require__(72850);
-var import_staking = __nccwpck_require__(51833);
-var import_storage_resource = __nccwpck_require__(89104);
-var import_subsidies = __nccwpck_require__(8641);
-var import_system_state_inner = __nccwpck_require__(66494);
-var import_system = __nccwpck_require__(63999);
+var import_blob = __nccwpck_require__(52056);
+var metadata = __toESM(__nccwpck_require__(89726));
+var import_staking_inner = __nccwpck_require__(80609);
+var import_staking_pool = __nccwpck_require__(62315);
+var import_staking = __nccwpck_require__(7022);
+var import_storage_resource = __nccwpck_require__(16925);
+var subsidies = __toESM(__nccwpck_require__(13547));
+var import_system_state_inner = __nccwpck_require__(3399);
+var import_system = __nccwpck_require__(10946);
 var import_error = __nccwpck_require__(1166);
 var import_client2 = __nccwpck_require__(958);
 var import_error2 = __nccwpck_require__(98831);
@@ -76275,7 +78086,14 @@ var import_object_loader = __nccwpck_require__(17639);
 var import_randomness = __nccwpck_require__(13344);
 var import_wasm = __nccwpck_require__(60418);
 var import_utils3 = __nccwpck_require__(5041);
-var _storageNodeClient, _wasmUrl, _packageConfig, _suiClient, _objectLoader, _blobMetadataConcurrencyLimit, _readCommittee, _cache, _WalrusClient_instances, walType_fn, getPackageId_fn, getSystemContract_fn, getSubsidiesContract_fn, getBlobContract_fn, getMetadataContract_fn, wasmBindings_fn, internalReadBlob_fn, getCertificationEpoch_fn, getReadCommittee_fn, forceGetReadCommittee_fn, withWal_fn, writeBlobAttributesForRef_fn, executeTransaction_fn, getCommittee_fn, getActiveCommittee_fn, stakingPool_fn, getNodeByShardIndex_fn, retryOnPossibleEpochChange_fn;
+var import_client3 = __nccwpck_require__(68013);
+var import_quilts = __nccwpck_require__(10854);
+var import_blob2 = __nccwpck_require__(19124);
+var import_blob3 = __nccwpck_require__(1641);
+var import_file = __nccwpck_require__(37300);
+var import_quilt_file = __nccwpck_require__(76681);
+var import_quilt = __nccwpck_require__(95630);
+var _storageNodeClient, _wasmUrl, _packageConfig, _suiClient, _objectLoader, _blobMetadataConcurrencyLimit, _readCommittee, _cache, _uploadRelayConfig, _uploadRelayClient, _WalrusClient_instances, walType_fn, getPackageId_fn, getWalrusPackageId_fn, getSubsidiesPackageId_fn, wasmBindings_fn, internalReadBlob_fn, getCertificationEpoch_fn, getReadCommittee_fn, forceGetReadCommittee_fn, withWal_fn, loadTipConfig_fn, getCreatedBlob_fn, writeBlobAttributesForRef_fn, executeTransaction_fn, getCommittee_fn, getActiveCommittee_fn, stakingPool_fn, getNodeByShardIndex_fn, retryOnPossibleEpochChange_fn;
 const _WalrusClient = class _WalrusClient {
   constructor(config) {
     __privateAdd(this, _WalrusClient_instances);
@@ -76287,8 +78105,11 @@ const _WalrusClient = class _WalrusClient {
     __privateAdd(this, _blobMetadataConcurrencyLimit, 10);
     __privateAdd(this, _readCommittee);
     __privateAdd(this, _cache);
+    __privateAdd(this, _uploadRelayConfig, null);
+    __privateAdd(this, _uploadRelayClient, null);
     /** Read a blob from the storage nodes */
     this.readBlob = __privateMethod(this, _WalrusClient_instances, retryOnPossibleEpochChange_fn).call(this, __privateMethod(this, _WalrusClient_instances, internalReadBlob_fn));
+    this.getSecondarySliver = __privateMethod(this, _WalrusClient_instances, retryOnPossibleEpochChange_fn).call(this, this.internalGetSecondarySliver);
     if (config.network && !config.packageConfig) {
       const network = config.network;
       switch (network) {
@@ -76305,6 +78126,10 @@ const _WalrusClient = class _WalrusClient {
       __privateSet(this, _packageConfig, config.packageConfig);
     }
     __privateSet(this, _wasmUrl, config.wasmUrl);
+    __privateSet(this, _uploadRelayConfig, config.uploadRelay ?? null);
+    if (__privateGet(this, _uploadRelayConfig)) {
+      __privateSet(this, _uploadRelayClient, new import_client3.UploadRelayClient(__privateGet(this, _uploadRelayConfig)));
+    }
     __privateSet(this, _suiClient, config.suiClient ?? new import_client.SuiClient({
       url: config.suiRpcUrl
     }));
@@ -76372,6 +78197,38 @@ const _WalrusClient = class _WalrusClient {
       (0, import_staking_inner.StakingInnerV1)()
     );
   }
+  async computeBlobMetadata({ bytes, numShards }) {
+    let shardCount;
+    if (typeof numShards === "number") {
+      shardCount = numShards;
+    } else {
+      const systemState = await this.systemState();
+      shardCount = systemState.committee.n_shards;
+    }
+    const bindings = await __privateMethod(this, _WalrusClient_instances, wasmBindings_fn).call(this);
+    const { blobId, metadata: metadata2, rootHash } = bindings.computeMetadata(shardCount, bytes);
+    let sha256Hash;
+    const nonce = crypto.getRandomValues(new Uint8Array(32));
+    return {
+      rootHash,
+      blobId,
+      metadata: {
+        encodingType: metadata2.V1.encoding_type,
+        hashes: Array.from(metadata2.V1.hashes).map((hashes) => ({
+          primaryHash: hashes.primary_hash,
+          secondaryHash: hashes.secondary_hash
+        })),
+        unencodedLength: metadata2.V1.unencoded_length
+      },
+      nonce,
+      blobDigest: () => {
+        if (!sha256Hash) {
+          sha256Hash = crypto.subtle.digest("SHA-256", bytes).then((hash) => new Uint8Array(hash));
+        }
+        return sha256Hash;
+      }
+    };
+  }
   async getBlobMetadata({ blobId, signal }) {
     const committee = await __privateMethod(this, _WalrusClient_instances, getReadCommittee_fn).call(this, { blobId, signal });
     const randomizedNodes = (0, import_randomness.shuffle)(committee.nodes);
@@ -76435,6 +78292,25 @@ const _WalrusClient = class _WalrusClient {
         });
       });
     }
+  }
+  async internalGetSecondarySliver({ blobId, index, signal }) {
+    const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
+    const stakingState = await this.stakingState();
+    const numShards = stakingState.n_shards;
+    const sliverPairIndex = (0, import_utils2.sliverPairIndexFromSecondarySliverIndex)(index, numShards);
+    const shardIndex = (0, import_utils2.toShardIndex)(sliverPairIndex, blobId, numShards);
+    const node = await __privateMethod(this, _WalrusClient_instances, getNodeByShardIndex_fn).call(this, committee, shardIndex);
+    if (!node) {
+      throw new Error(`No node found for shard index ${shardIndex}`);
+    }
+    const sliver = await __privateGet(this, _storageNodeClient).getSliver(
+      { blobId, sliverPairIndex, sliverType: "secondary" },
+      {
+        nodeUrl: node.networkUrl,
+        signal
+      }
+    );
+    return sliver;
   }
   async getSlivers({ blobId, signal }) {
     const committee = await __privateMethod(this, _WalrusClient_instances, getReadCommittee_fn).call(this, { blobId, signal });
@@ -76619,12 +78495,15 @@ const _WalrusClient = class _WalrusClient {
       const systemState = await this.systemState();
       const encodedSize = (0, import_utils2.encodedBlobLength)(size, systemState.committee.n_shards);
       const { storageCost } = await this.storageCost(size, epochs);
-      const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
-      const subsidiesContract = __privateGet(this, _packageConfig).subsidiesObjectId ? await __privateMethod(this, _WalrusClient_instances, getSubsidiesContract_fn).call(this) : null;
+      const [walrusPackageId, subsidiesPackageId] = await Promise.all([
+        __privateMethod(this, _WalrusClient_instances, getWalrusPackageId_fn).call(this),
+        __privateMethod(this, _WalrusClient_instances, getSubsidiesPackageId_fn).call(this)
+      ]);
       return tx.add(
-        __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, storageCost, owner, walCoin ?? null, subsidiesContract !== null, (coin, tx2) => {
+        __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, storageCost, owner, walCoin ?? null, subsidiesPackageId !== null, (coin, tx2) => {
           return tx2.add(
-            subsidiesContract ? subsidiesContract.reserve_space({
+            subsidiesPackageId ? subsidies.reserveSpace({
+              package: subsidiesPackageId,
               arguments: [
                 __privateGet(this, _packageConfig).subsidiesObjectId,
                 systemObject.id.id,
@@ -76632,7 +78511,8 @@ const _WalrusClient = class _WalrusClient {
                 epochs,
                 coin
               ]
-            }) : systemContract.reserve_space({
+            }) : (0, import_system.reserveSpace)({
+              package: walrusPackageId,
               arguments: [systemObject.id.id, encodedSize, epochs, coin]
             })
           );
@@ -76689,7 +78569,7 @@ const _WalrusClient = class _WalrusClient {
     }
     return {
       digest,
-      storage: (0, import_storage_resource.Storage)().parse(suiBlobObject.content)
+      storage: (0, import_storage_resource.Storage)().parse(await suiBlobObject.content)
     };
   }
   /**
@@ -76712,11 +78592,12 @@ const _WalrusClient = class _WalrusClient {
   }) {
     return async (tx) => {
       const { writeCost } = await this.storageCost(size, epochs);
-      const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
+      const walrusPackageId = await __privateMethod(this, _WalrusClient_instances, getWalrusPackageId_fn).call(this);
       return tx.add(
         __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, writeCost, owner, walCoin ?? null, false, async (writeCoin, tx2) => {
           const blob = tx2.add(
-            systemContract.register_blob({
+            (0, import_system.registerBlob)({
+              package: walrusPackageId,
               arguments: [
                 tx2.object(__privateGet(this, _packageConfig).systemObjectId),
                 this.createStorage({ size, epochs, walCoin, owner }),
@@ -76741,6 +78622,62 @@ const _WalrusClient = class _WalrusClient {
           return blob;
         })
       );
+    };
+  }
+  addAuthPayload({
+    size,
+    blobDigest,
+    nonce
+  }) {
+    return async (transaction) => {
+      const nonceDigest = await crypto.subtle.digest("SHA-256", nonce);
+      const lengthBytes = import_bcs.bcs.u64().serialize(size).toBytes();
+      const digest = typeof blobDigest === "function" ? await blobDigest() : blobDigest;
+      const authPayload = new Uint8Array(
+        nonceDigest.byteLength + digest.byteLength + lengthBytes.byteLength
+      );
+      authPayload.set(digest, 0);
+      authPayload.set(new Uint8Array(nonceDigest), digest.byteLength);
+      authPayload.set(lengthBytes, nonceDigest.byteLength + digest.byteLength);
+      transaction.pure(authPayload);
+    };
+  }
+  async calculateUploadRelayTip(options) {
+    const systemState = await this.systemState();
+    const encodedSize = (0, import_utils2.encodedBlobLength)(options.size, systemState.committee.n_shards);
+    const tipConfig = await __privateMethod(this, _WalrusClient_instances, loadTipConfig_fn).call(this);
+    if (!tipConfig) {
+      return 0n;
+    }
+    const { max, kind } = tipConfig;
+    const amount = "const" in kind ? kind.const : BigInt(kind.linear.base) + BigInt(kind.linear.perEncodedKib) * ((BigInt(encodedSize) + 1023n) / 1024n);
+    if (max != null && amount > max) {
+      throw new import_error.WalrusClientError(
+        `Tip amount (${amount}) exceeds the maximum allowed tip (${max})`
+      );
+    }
+    return amount;
+  }
+  sendUploadRelayTip({
+    size,
+    blobDigest,
+    nonce
+  }) {
+    return async (transaction) => {
+      const tipConfig = await __privateMethod(this, _WalrusClient_instances, loadTipConfig_fn).call(this);
+      if (tipConfig) {
+        transaction.add(this.addAuthPayload({ size, blobDigest, nonce }));
+        const amount = await this.calculateUploadRelayTip({ size });
+        const { address } = tipConfig;
+        transaction.transferObjects(
+          [
+            (0, import_transactions.coinWithBalance)({
+              balance: amount
+            })
+          ],
+          address
+        );
+      }
     };
   }
   /**
@@ -76791,8 +78728,57 @@ const _WalrusClient = class _WalrusClient {
     }
     return {
       digest,
-      blob: (0, import_blob.Blob)().parse(suiBlobObject.content)
+      blob: (0, import_blob.Blob)().parse(await suiBlobObject.content)
     };
+  }
+  async certificateFromConfirmations({
+    confirmations,
+    blobId,
+    deletable,
+    blobObjectId
+  }) {
+    const systemState = await this.systemState();
+    const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
+    if (confirmations.length !== systemState.committee.members.length) {
+      throw new import_error.WalrusClientError(
+        "Invalid number of confirmations. Confirmations array must contain an entry for each node"
+      );
+    }
+    const confirmationMessage = import_bcs2.StorageConfirmation.serialize({
+      intent: import_bcs2.IntentType.BLOB_CERT_MSG,
+      epoch: systemState.committee.epoch,
+      messageContents: {
+        blobId,
+        blobType: deletable ? {
+          Deletable: {
+            objectId: blobObjectId
+          }
+        } : {
+          Permanent: null
+        }
+      }
+    }).toBase64();
+    const bindings = await __privateMethod(this, _WalrusClient_instances, wasmBindings_fn).call(this);
+    const verifySignature = bindings.getVerifySignature();
+    const filteredConfirmations = confirmations.map((confirmation, index) => {
+      const isValid = confirmation?.serializedMessage === confirmationMessage && verifySignature(
+        confirmation,
+        new Uint8Array(committee.nodes[index].info.public_key.bytes)
+      );
+      return isValid ? {
+        index,
+        ...confirmation
+      } : null;
+    }).filter((confirmation) => confirmation !== null);
+    if (!(0, import_utils2.isQuorum)(filteredConfirmations.length, systemState.committee.members.length)) {
+      throw new import_error.NotEnoughBlobConfirmationsError(
+        `Too many invalid confirmations received for blob (${filteredConfirmations.length} of ${systemState.committee.members.length})`
+      );
+    }
+    return bindings.combineSignatures(
+      filteredConfirmations,
+      filteredConfirmations.map(({ index }) => index)
+    );
   }
   /**
    * Certify a blob in a transaction
@@ -76802,53 +78788,19 @@ const _WalrusClient = class _WalrusClient {
    * tx.add(client.certifyBlob({ blobId, blobObjectId, confirmations }));
    * ```
    */
-  certifyBlob({ blobId, blobObjectId, confirmations, deletable }) {
+  certifyBlob({ blobId, blobObjectId, confirmations, certificate, deletable }) {
     return async (tx) => {
       const systemState = await this.systemState();
-      const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
-      if (confirmations.length !== systemState.committee.members.length) {
-        throw new import_error.WalrusClientError(
-          "Invalid number of confirmations. Confirmations array must contain an entry for each node"
-        );
-      }
-      const confirmationMessage = import_bcs2.StorageConfirmation.serialize({
-        intent: import_bcs2.IntentType.BLOB_CERT_MSG,
-        epoch: systemState.committee.epoch,
-        messageContents: {
-          blobId,
-          blobType: deletable ? {
-            Deletable: {
-              objectId: blobObjectId
-            }
-          } : {
-            Permanent: null
-          }
-        }
-      }).toBase64();
-      const bindings = await __privateMethod(this, _WalrusClient_instances, wasmBindings_fn).call(this);
-      const verifySignature = bindings.getVerifySignature();
-      const filteredConfirmations = confirmations.map((confirmation, index) => {
-        const isValid = confirmation?.serializedMessage === confirmationMessage && verifySignature(
-          confirmation,
-          new Uint8Array(committee.nodes[index].info.public_key.bytes)
-        );
-        return isValid ? {
-          index,
-          ...confirmation
-        } : null;
-      }).filter((confirmation) => confirmation !== null);
-      if (!(0, import_utils2.isQuorum)(filteredConfirmations.length, systemState.committee.members.length)) {
-        throw new import_error.NotEnoughBlobConfirmationsError(
-          `Too many invalid confirmations received for blob (${filteredConfirmations.length} of ${systemState.committee.members.length})`
-        );
-      }
-      const combinedSignature = bindings.combineSignatures(
-        filteredConfirmations,
-        filteredConfirmations.map(({ index }) => index)
-      );
-      const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
+      const combinedSignature = certificate ?? await this.certificateFromConfirmations({
+        confirmations,
+        blobId,
+        deletable,
+        blobObjectId
+      });
+      const walrusPackageId = await __privateMethod(this, _WalrusClient_instances, getWalrusPackageId_fn).call(this);
       tx.add(
-        systemContract.certify_blob({
+        (0, import_system.certifyBlob)({
+          package: walrusPackageId,
           arguments: [
             tx.object(__privateGet(this, _packageConfig).systemObjectId),
             tx.object(blobObjectId),
@@ -76873,12 +78825,9 @@ const _WalrusClient = class _WalrusClient {
    */
   certifyBlobTransaction({
     transaction = new import_transactions.Transaction(),
-    blobId,
-    blobObjectId,
-    confirmations,
-    deletable
+    ...options
   }) {
-    transaction.add(this.certifyBlob({ blobId, blobObjectId, confirmations, deletable }));
+    transaction.add(this.certifyBlob(options));
     return transaction;
   }
   /**
@@ -76908,9 +78857,10 @@ const _WalrusClient = class _WalrusClient {
    */
   deleteBlob({ blobObjectId }) {
     return async (tx) => {
-      const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
+      const walrusPackageId = await __privateMethod(this, _WalrusClient_instances, getWalrusPackageId_fn).call(this);
       const storage = tx.add(
-        systemContract.delete_blob({
+        (0, import_system.deleteBlob)({
+          package: walrusPackageId,
           arguments: [tx.object(__privateGet(this, _packageConfig).systemObjectId), tx.object(blobObjectId)]
         })
       );
@@ -76970,12 +78920,13 @@ const _WalrusClient = class _WalrusClient {
         return;
       }
       const { storageCost } = await this.storageCost(Number(blob.storage.storage_size), numEpochs);
-      const systemContract = await __privateMethod(this, _WalrusClient_instances, getSystemContract_fn).call(this);
-      const subsidiesContract = __privateGet(this, _packageConfig).subsidiesObjectId ? await __privateMethod(this, _WalrusClient_instances, getSubsidiesContract_fn).call(this) : null;
+      const walrusPackageId = await __privateMethod(this, _WalrusClient_instances, getWalrusPackageId_fn).call(this);
+      const subsidiesPackageId = __privateGet(this, _packageConfig).subsidiesObjectId ? await __privateMethod(this, _WalrusClient_instances, getSubsidiesPackageId_fn).call(this) : null;
       return tx.add(
-        __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, storageCost, owner, walCoin ?? null, subsidiesContract !== null, async (coin, tx2) => {
+        __privateMethod(this, _WalrusClient_instances, withWal_fn).call(this, storageCost, owner, walCoin ?? null, subsidiesPackageId !== null, async (coin, tx2) => {
           tx2.add(
-            subsidiesContract ? subsidiesContract.extend_blob({
+            subsidiesPackageId ? subsidies.extendBlob({
+              package: subsidiesPackageId,
               arguments: [
                 __privateGet(this, _packageConfig).subsidiesObjectId,
                 __privateGet(this, _packageConfig).systemObjectId,
@@ -76983,7 +78934,8 @@ const _WalrusClient = class _WalrusClient {
                 numEpochs,
                 coin
               ]
-            }) : systemContract.extend_blob({
+            }) : (0, import_system.extendBlob)({
+              package: walrusPackageId,
               arguments: [__privateGet(this, _packageConfig).systemObjectId, blobObjectId, numEpochs, coin]
             })
           );
@@ -77031,8 +78983,10 @@ const _WalrusClient = class _WalrusClient {
         bcs: import_bcs.bcs.string().serialize("metadata").toBytes()
       }
     });
-    const metadata = (0, import_metadata.Metadata)().parse(response.dynamicField.value.bcs);
-    return Object.fromEntries(metadata.metadata.contents.map(({ key, value }) => [key, value]));
+    const parsedMetadata = metadata.Metadata().parse(response.dynamicField.value.bcs);
+    return Object.fromEntries(
+      parsedMetadata.metadata.contents.map(({ key, value }) => [key, value])
+    );
   }
   /**
    * Write attributes to a blob
@@ -77120,11 +79074,11 @@ const _WalrusClient = class _WalrusClient {
    * const res = await client.writeMetadataToNode({ nodeIndex, blobId, metadata });
    * ```
    */
-  async writeMetadataToNode({ nodeIndex, blobId, metadata, signal }) {
+  async writeMetadataToNode({ nodeIndex, blobId, metadata: metadata2, signal }) {
     const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
     const node = committee.nodes[nodeIndex];
     return await __privateGet(this, _storageNodeClient).storeBlobMetadata(
-      { blobId, metadata },
+      { blobId, metadata: metadata2 },
       { nodeUrl: node.networkUrl, signal }
     );
   }
@@ -77167,7 +79121,7 @@ const _WalrusClient = class _WalrusClient {
     const committee = await __privateMethod(this, _WalrusClient_instances, getActiveCommittee_fn).call(this);
     const numShards = systemState.committee.n_shards;
     const bindings = await __privateMethod(this, _WalrusClient_instances, wasmBindings_fn).call(this);
-    const { blobId, metadata, sliverPairs, rootHash } = bindings.encodeBlob(numShards, blob);
+    const { blobId, metadata: metadata2, sliverPairs, rootHash } = bindings.encodeBlob(numShards, blob);
     const sliversByNodeMap = /* @__PURE__ */ new Map();
     while (sliverPairs.length > 0) {
       const { primary, secondary } = sliverPairs.pop();
@@ -77194,7 +79148,7 @@ const _WalrusClient = class _WalrusClient {
     for (let i = 0; i < systemState.committee.members.length; i++) {
       sliversByNode.push(sliversByNodeMap.get(i) ?? { primary: [], secondary: [] });
     }
-    return { blobId, metadata, rootHash, sliversByNode };
+    return { blobId, metadata: metadata2, rootHash, sliversByNode };
   }
   /**
    * Write slivers to a storage node
@@ -77240,7 +79194,7 @@ const _WalrusClient = class _WalrusClient {
    */
   async writeEncodedBlobToNodes({
     blobId,
-    metadata,
+    metadata: metadata2,
     sliversByNode,
     signal,
     ...options
@@ -77254,7 +79208,7 @@ const _WalrusClient = class _WalrusClient {
         return this.writeEncodedBlobToNode({
           blobId,
           nodeIndex,
-          metadata,
+          metadata: metadata2,
           slivers,
           signal: signal ? AbortSignal.any([controller.signal, signal]) : controller.signal,
           ...options
@@ -77273,6 +79227,23 @@ const _WalrusClient = class _WalrusClient {
     return confirmations;
   }
   /**
+   * Writes a blob to to an upload relay
+   *
+   * @usage
+   * ```ts
+   * await client.writeBlobToUploadRelay({ blob, deletable, epochs, signer });
+   * ```
+   */
+  async writeBlobToUploadRelay(options) {
+    if (!__privateGet(this, _uploadRelayClient)) {
+      throw new import_error.WalrusClientError("Upload relay not configured");
+    }
+    return __privateGet(this, _uploadRelayClient).writeBlob({
+      ...options,
+      requiresTip: !!__privateGet(this, _uploadRelayConfig)?.sendTip
+    });
+  }
+  /**
    * Write encoded blob to a storage node
    *
    * @usage
@@ -77283,7 +79254,7 @@ const _WalrusClient = class _WalrusClient {
   async writeEncodedBlobToNode({
     nodeIndex,
     blobId,
-    metadata,
+    metadata: metadata2,
     slivers,
     signal,
     ...options
@@ -77291,7 +79262,7 @@ const _WalrusClient = class _WalrusClient {
     await this.writeMetadataToNode({
       nodeIndex,
       blobId,
-      metadata,
+      metadata: metadata2,
       signal
     });
     await this.writeSliversToNode({ blobId, slivers, signal, nodeIndex });
@@ -77318,37 +79289,125 @@ const _WalrusClient = class _WalrusClient {
     owner,
     attributes
   }) {
-    const { sliversByNode, blobId, metadata, rootHash } = await this.encodeBlob(blob);
-    const suiBlobObject = await this.executeRegisterBlobTransaction({
-      signer,
-      size: blob.length,
-      epochs,
-      blobId,
-      rootHash,
-      deletable,
-      owner: owner ?? signer.toSuiAddress(),
-      attributes
-    });
-    const blobObjectId = suiBlobObject.blob.id.id;
-    const confirmations = await this.writeEncodedBlobToNodes({
-      blobId,
-      metadata,
-      sliversByNode,
-      deletable,
-      objectId: blobObjectId,
-      signal
-    });
-    await this.executeCertifyBlobTransaction({
-      signer,
-      blobId,
-      blobObjectId,
-      confirmations,
-      deletable
+    if (!__privateGet(this, _uploadRelayConfig)) {
+      const encoded = await this.encodeBlob(blob);
+      const blobId = encoded.blobId;
+      const { sliversByNode, metadata: metadata2, rootHash } = encoded;
+      const suiBlobObject = await this.executeRegisterBlobTransaction({
+        signer,
+        size: blob.length,
+        epochs,
+        blobId,
+        rootHash,
+        deletable,
+        owner: owner ?? signer.toSuiAddress(),
+        attributes
+      });
+      const blobObjectId = suiBlobObject.blob.id.id;
+      const confirmations = await this.writeEncodedBlobToNodes({
+        blobId,
+        metadata: metadata2,
+        sliversByNode,
+        deletable,
+        objectId: blobObjectId,
+        signal
+      });
+      await this.executeCertifyBlobTransaction({
+        signer,
+        blobId,
+        blobObjectId,
+        confirmations,
+        deletable
+      });
+      return {
+        blobId,
+        blobObject: await __privateGet(this, _objectLoader).load(blobObjectId, (0, import_blob.Blob)())
+      };
+    } else {
+      const metadata2 = await this.computeBlobMetadata({
+        bytes: blob
+      });
+      const blobId = metadata2.blobId;
+      const transaction = new import_transactions.Transaction();
+      transaction.add(
+        this.sendUploadRelayTip({
+          size: blob.length,
+          blobDigest: metadata2.blobDigest,
+          nonce: metadata2.nonce
+        })
+      );
+      const registerResult = await this.executeRegisterBlobTransaction({
+        signer,
+        transaction,
+        size: blob.length,
+        epochs,
+        blobId: metadata2.blobId,
+        rootHash: metadata2.rootHash,
+        deletable,
+        owner: owner ?? signer.toSuiAddress(),
+        attributes
+      });
+      await __privateGet(this, _suiClient).core.waitForTransaction({
+        digest: registerResult.digest
+      });
+      const result = await this.writeBlobToUploadRelay({
+        blobId,
+        blob,
+        nonce: metadata2.nonce,
+        txDigest: registerResult.digest,
+        signal,
+        deletable,
+        blobObjectId: registerResult.blob.id.id,
+        encodingType: metadata2.metadata.encodingType
+      });
+      const certificate = result.certificate;
+      const blobObjectId = registerResult.blob.id.id;
+      await this.executeCertifyBlobTransaction({
+        signer,
+        blobId,
+        blobObjectId,
+        certificate,
+        deletable
+      });
+      return {
+        blobId,
+        blobObject: await __privateGet(this, _objectLoader).load(blobObjectId, (0, import_blob.Blob)())
+      };
+    }
+  }
+  async writeQuilt({ blobs, ...options }) {
+    const encoded = await this.encodeQuilt({ blobs });
+    const result = await this.writeBlob({
+      blob: encoded.quilt,
+      ...options
     });
     return {
-      blobId,
-      blobObject: await __privateGet(this, _objectLoader).load(blobObjectId, (0, import_blob.Blob)())
+      ...result,
+      index: {
+        ...encoded.index,
+        patches: encoded.index.patches.map((patch) => ({
+          ...patch,
+          patchId: (0, import_quilts.encodeQuiltPatchId)({
+            quiltId: result.blobId,
+            patchId: {
+              version: 1,
+              startIndex: patch.startIndex,
+              endIndex: patch.endIndex
+            }
+          })
+        }))
+      }
     };
+  }
+  async encodeQuilt({
+    blobs
+  }) {
+    const systemState = await this.systemState();
+    const encoded = (0, import_quilts.encodeQuilt)({
+      blobs,
+      numShards: systemState.committee.n_shards
+    });
+    return encoded;
   }
   /**
    * Reset cached data in the client
@@ -77362,6 +79421,234 @@ const _WalrusClient = class _WalrusClient {
     __privateGet(this, _objectLoader).clearAll();
     __privateGet(this, _cache).clear();
   }
+  async getBlob({ blobId }) {
+    return new import_blob3.WalrusBlob({
+      reader: new import_blob2.BlobReader({
+        client: this,
+        blobId,
+        numShards: (await this.systemState()).committee.n_shards
+      }),
+      client: this
+    });
+  }
+  async getFiles({ ids }) {
+    const readersByBlobId = /* @__PURE__ */ new Map();
+    const quiltReadersByBlobId = /* @__PURE__ */ new Map();
+    const parsedIds = ids.map((id) => (0, import_quilts.parseWalrusId)(id));
+    const numShards = (await this.systemState()).committee.n_shards;
+    for (const id of parsedIds) {
+      const blobId = id.kind === "blob" ? id.id : id.id.quiltId;
+      if (!readersByBlobId.has(blobId)) {
+        readersByBlobId.set(
+          blobId,
+          new import_blob2.BlobReader({
+            client: this,
+            blobId,
+            numShards
+          })
+        );
+      }
+      if (id.kind === "quiltPatch") {
+        if (!quiltReadersByBlobId.has(blobId)) {
+          quiltReadersByBlobId.set(
+            blobId,
+            new import_quilt.QuiltReader({
+              blob: readersByBlobId.get(blobId)
+            })
+          );
+        }
+      }
+    }
+    return parsedIds.map((id) => {
+      if (id.kind === "blob") {
+        return new import_file.WalrusFile({
+          reader: readersByBlobId.get(id.id)
+        });
+      }
+      return new import_file.WalrusFile({
+        reader: new import_quilt_file.QuiltFileReader({
+          quilt: quiltReadersByBlobId.get(id.id.quiltId),
+          sliverIndex: id.id.patchId.startIndex
+        })
+      });
+    });
+  }
+  async writeFiles({ files, ...options }) {
+    const { blobId, index, blobObject } = await this.writeQuilt({
+      ...options,
+      blobs: await Promise.all(
+        files.map(async (file, i) => ({
+          contents: await file.bytes(),
+          identifier: await file.getIdentifier() ?? `file-${i}`,
+          tags: await file.getTags() ?? {}
+        }))
+      )
+    });
+    return index.patches.map((patch) => ({
+      id: patch.patchId,
+      blobId,
+      blobObject
+    }));
+  }
+  writeFilesFlow({ files }) {
+    const encode = async () => {
+      const { quilt, index } = await this.encodeQuilt({
+        blobs: await Promise.all(
+          files.map(async (file, i) => ({
+            contents: await file.bytes(),
+            identifier: await file.getIdentifier() ?? `file-${i}`,
+            tags: await file.getTags() ?? {}
+          }))
+        )
+      });
+      const metadata2 = __privateGet(this, _uploadRelayClient) ? await this.computeBlobMetadata({
+        bytes: quilt
+      }) : await this.encodeBlob(quilt);
+      return {
+        metadata: metadata2,
+        size: quilt.length,
+        data: __privateGet(this, _uploadRelayClient) ? quilt : void 0,
+        index
+      };
+    };
+    const register = ({ data, metadata: metadata2, index, size }, { epochs, deletable, owner, attributes }) => {
+      const transaction = new import_transactions.Transaction();
+      transaction.setSenderIfNotSet(owner);
+      if (__privateGet(this, _uploadRelayClient)) {
+        const meta = metadata2;
+        transaction.add(
+          this.sendUploadRelayTip({
+            size,
+            blobDigest: meta.blobDigest,
+            nonce: meta.nonce
+          })
+        );
+      }
+      transaction.transferObjects(
+        [
+          this.registerBlob({
+            size,
+            epochs,
+            blobId: metadata2.blobId,
+            rootHash: metadata2.rootHash,
+            deletable,
+            owner,
+            attributes
+          })
+        ],
+        owner
+      );
+      return {
+        registerTransaction: transaction,
+        index,
+        data,
+        metadata: metadata2,
+        deletable
+      };
+    };
+    const upload = async ({ index, data, metadata: metadata2, deletable }, { digest }) => {
+      const blobObject = await __privateMethod(this, _WalrusClient_instances, getCreatedBlob_fn).call(this, digest);
+      if (__privateGet(this, _uploadRelayClient)) {
+        const meta2 = metadata2;
+        return {
+          index,
+          blobObject,
+          metadata: metadata2,
+          deletable,
+          certificate: (await this.writeBlobToUploadRelay({
+            blobId: metadata2.blobId,
+            blob: data,
+            nonce: meta2.nonce,
+            txDigest: digest,
+            blobObjectId: blobObject.id.id,
+            deletable,
+            encodingType: meta2.metadata.encodingType
+          })).certificate
+        };
+      }
+      const meta = metadata2;
+      return {
+        index,
+        blobObject,
+        metadata: metadata2,
+        deletable,
+        confirmations: await this.writeEncodedBlobToNodes({
+          blobId: metadata2.blobId,
+          objectId: blobObject.id.id,
+          metadata: meta.metadata,
+          sliversByNode: meta.sliversByNode,
+          deletable
+        })
+      };
+    };
+    const certify = ({
+      index,
+      metadata: metadata2,
+      confirmations,
+      certificate,
+      blobObject,
+      deletable
+    }) => {
+      return {
+        index,
+        blobObject,
+        metadata: metadata2,
+        transaction: confirmations ? this.certifyBlobTransaction({
+          blobId: metadata2.blobId,
+          blobObjectId: blobObject.id.id,
+          confirmations,
+          deletable
+        }) : this.certifyBlobTransaction({
+          certificate,
+          blobId: metadata2.blobId,
+          blobObjectId: blobObject.id.id,
+          deletable
+        })
+      };
+    };
+    async function listFiles({ index, blobObject, metadata: metadata2 }) {
+      return index.patches.map((patch) => ({
+        id: (0, import_quilts.encodeQuiltPatchId)({
+          quiltId: metadata2.blobId,
+          patchId: {
+            version: 1,
+            startIndex: patch.startIndex,
+            endIndex: patch.endIndex
+          }
+        }),
+        blobId: metadata2.blobId,
+        blobObject
+      }));
+    }
+    const stepResults = {};
+    function getResults(step, current) {
+      if (!stepResults[step]) {
+        throw new Error(`${step} must be executed before calling ${current}`);
+      }
+      return stepResults[step];
+    }
+    return {
+      encode: async () => {
+        if (!stepResults.encode) {
+          stepResults.encode = await encode();
+        }
+      },
+      register: (options) => {
+        stepResults.register = register(getResults("encode", "register"), options);
+        return stepResults.register.registerTransaction;
+      },
+      upload: async (options) => {
+        stepResults.upload = await upload(getResults("register", "upload"), options);
+      },
+      certify: () => {
+        stepResults.certify = certify(getResults("upload", "certify"));
+        return stepResults.certify.transaction;
+      },
+      listFiles: async () => {
+        return listFiles(getResults("certify", "listFiles"));
+      }
+    };
+  }
 };
 _storageNodeClient = new WeakMap();
 _wasmUrl = new WeakMap();
@@ -77371,6 +79658,8 @@ _objectLoader = new WeakMap();
 _blobMetadataConcurrencyLimit = new WeakMap();
 _readCommittee = new WeakMap();
 _cache = new WeakMap();
+_uploadRelayConfig = new WeakMap();
+_uploadRelayClient = new WeakMap();
 _WalrusClient_instances = new WeakSet();
 /** The Move type for a WAL coin */
 walType_fn = function() {
@@ -77398,32 +79687,22 @@ getPackageId_fn = function() {
     return (0, import_utils.parseStructTag)(system.type).address;
   });
 };
-getSystemContract_fn = function() {
-  return __privateGet(this, _cache).read(["getSystemContract"], async () => {
+getWalrusPackageId_fn = function() {
+  return __privateGet(this, _cache).read(["getSystemPackageId"], async () => {
     const { package_id } = await this.systemObject();
-    return (0, import_system.init)(package_id);
+    return package_id;
   });
 };
-getSubsidiesContract_fn = function() {
+getSubsidiesPackageId_fn = function() {
   return __privateGet(this, _cache).read(["getSubsidiesContract"], async () => {
     if (!__privateGet(this, _packageConfig).subsidiesObjectId) {
-      throw new import_error.WalrusClientError("Subsidies object ID not defined in package config");
+      return null;
     }
-    const subsidiesObject = await __privateGet(this, _objectLoader).load(__privateGet(this, _packageConfig).subsidiesObjectId);
-    const packageId = (0, import_utils.parseStructTag)(subsidiesObject.type).address;
-    return (0, import_subsidies.init)(packageId);
-  });
-};
-getBlobContract_fn = function() {
-  return __privateGet(this, _cache).read(["getBlobContract"], async () => {
-    const { package_id } = await this.systemObject();
-    return (0, import_blob.init)(package_id);
-  });
-};
-getMetadataContract_fn = function() {
-  return __privateGet(this, _cache).read(["getMetadataContract"], async () => {
-    const { package_id } = await this.systemObject();
-    return (0, import_metadata.init)(package_id);
+    const subsidiesObject = await __privateGet(this, _objectLoader).load(
+      __privateGet(this, _packageConfig).subsidiesObjectId,
+      subsidies.Subsidies()
+    );
+    return subsidiesObject.package_id;
   });
 };
 wasmBindings_fn = function() {
@@ -77447,7 +79726,7 @@ internalReadBlob_fn = async function({ blobId, signal }) {
     systemState.committee.n_shards,
     blobBytes
   );
-  if (reconstructedBlobMetadata.blob_id !== blobId) {
+  if (reconstructedBlobMetadata.blobId !== blobId) {
     throw new import_error.InconsistentBlobError("The specified blob was encoded incorrectly.");
   }
   return blobBytes;
@@ -77513,20 +79792,57 @@ withWal_fn = function(amount, owner, source, withSubsidies, fn) {
     return result;
   };
 };
+loadTipConfig_fn = function() {
+  return __privateGet(this, _cache).read(["upload-relay-tip-config"], async () => {
+    if (!__privateGet(this, _uploadRelayConfig)?.sendTip || !__privateGet(this, _uploadRelayClient)) {
+      return null;
+    }
+    if ("kind" in __privateGet(this, _uploadRelayConfig).sendTip) {
+      return __privateGet(this, _uploadRelayConfig).sendTip;
+    }
+    const tipConfig = await __privateGet(this, _uploadRelayClient).tipConfig();
+    return {
+      ...tipConfig,
+      max: __privateGet(this, _uploadRelayConfig).sendTip.max
+    };
+  });
+};
+getCreatedBlob_fn = async function(digest) {
+  const blobType = await this.getBlobType();
+  const {
+    transaction: { effects }
+  } = await __privateGet(this, _suiClient).core.waitForTransaction({
+    digest
+  });
+  const createdObjectIds = effects?.changedObjects.filter((object) => object.idOperation === "Created").map((object) => object.id);
+  const createdObjects = await __privateGet(this, _suiClient).core.getObjects({
+    objectIds: createdObjectIds
+  });
+  const suiBlobObject = createdObjects.objects.find(
+    (object) => !(object instanceof Error) && object.type === blobType
+  );
+  if (suiBlobObject instanceof Error || !suiBlobObject) {
+    throw new import_error.WalrusClientError(
+      `Blob object not found in transaction effects for transaction (${digest})`
+    );
+  }
+  return (0, import_blob.Blob)().parse(await suiBlobObject.content);
+};
 writeBlobAttributesForRef_fn = function({
   attributes,
   existingAttributes,
   blob
 }) {
   return async (tx) => {
-    const blobContract = await __privateMethod(this, _WalrusClient_instances, getBlobContract_fn).call(this);
-    const metadataContract = await __privateMethod(this, _WalrusClient_instances, getMetadataContract_fn).call(this);
+    const walrusPackageId = await __privateMethod(this, _WalrusClient_instances, getWalrusPackageId_fn).call(this);
     if (!existingAttributes) {
       tx.add(
-        blobContract.add_metadata({
+        (0, import_blob.addMetadata)({
+          package: walrusPackageId,
           arguments: [
             blob,
-            metadataContract._new({
+            metadata._new({
+              package: walrusPackageId,
               arguments: []
             })
           ]
@@ -77538,14 +79854,16 @@ writeBlobAttributesForRef_fn = function({
       if (value === null) {
         if (existingAttributes && key in existingAttributes) {
           tx.add(
-            blobContract.remove_metadata_pair({
+            (0, import_blob.removeMetadataPair)({
+              package: walrusPackageId,
               arguments: [blob, key]
             })
           );
         }
       } else {
         tx.add(
-          blobContract.insert_or_update_metadata_pair({
+          (0, import_blob.insertOrUpdateMetadataPair)({
+            package: walrusPackageId,
             arguments: [blob, key, value]
           })
         );
@@ -77555,13 +79873,9 @@ writeBlobAttributesForRef_fn = function({
 };
 executeTransaction_fn = async function(transaction, signer, action) {
   transaction.setSenderIfNotSet(signer.toSuiAddress());
-  const bytes = await transaction.build({ client: __privateGet(this, _suiClient).jsonRpc });
-  const { signature } = await signer.signTransaction(bytes);
-  const {
-    transaction: { digest, effects }
-  } = await __privateGet(this, _suiClient).core.executeTransaction({
-    transaction: bytes,
-    signatures: [signature]
+  const { digest, effects } = await signer.signAndExecuteTransaction({
+    transaction,
+    client: __privateGet(this, _suiClient)
   });
   if (effects?.status.error) {
     throw new import_error.WalrusClientError(`Failed to ${action} (${digest}): ${effects?.status.error}`);
@@ -77601,7 +79915,7 @@ getActiveCommittee_fn = function() {
   });
 };
 stakingPool_fn = async function(committee) {
-  const nodeIds = committee.pos0.contents.map((node) => node.key);
+  const nodeIds = committee[0].contents.map((node) => node.key);
   return __privateGet(this, _objectLoader).loadManyOrThrow(nodeIds, (0, import_staking_pool.StakingPool)());
 };
 getNodeByShardIndex_fn = async function(committeeInfo, index) {
@@ -77686,7 +80000,584 @@ const statusLifecycleRank = {
 
 /***/ }),
 
-/***/ 20168:
+/***/ 20513:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var balance_exports = {};
+__export(balance_exports, {
+  Balance: () => Balance
+});
+module.exports = __toCommonJS(balance_exports);
+var import_bcs = __nccwpck_require__(56244);
+function Balance() {
+  return import_bcs.bcs.struct("Balance", {
+    value: import_bcs.bcs.u64()
+  });
+}
+//# sourceMappingURL=balance.js.map
+
+
+/***/ }),
+
+/***/ 69216:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var coin_exports = {};
+__export(coin_exports, {
+  Coin: () => Coin
+});
+module.exports = __toCommonJS(coin_exports);
+var import_bcs = __nccwpck_require__(56244);
+var object = __toESM(__nccwpck_require__(11242));
+var balance = __toESM(__nccwpck_require__(20513));
+function Coin() {
+  return import_bcs.bcs.struct("Coin", {
+    id: object.UID(),
+    balance: balance.Balance()
+  });
+}
+//# sourceMappingURL=coin.js.map
+
+
+/***/ }),
+
+/***/ 11242:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var object_exports = {};
+__export(object_exports, {
+  UID: () => UID
+});
+module.exports = __toCommonJS(object_exports);
+var import_bcs = __nccwpck_require__(56244);
+function UID() {
+  return import_bcs.bcs.struct("UID", {
+    id: import_bcs.bcs.Address
+  });
+}
+//# sourceMappingURL=object.js.map
+
+
+/***/ }),
+
+/***/ 13547:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var subsidies_exports = {};
+__export(subsidies_exports, {
+  AdminCap: () => AdminCap,
+  CombinedPayment: () => CombinedPayment,
+  Subsidies: () => Subsidies,
+  V3: () => V3,
+  _new: () => _new,
+  addFunds: () => addFunds,
+  adminCapSubsidiesId: () => adminCapSubsidiesId,
+  buyerSubsidyRate: () => buyerSubsidyRate,
+  extendBlob: () => extendBlob,
+  newWithInitialRatesAndFunds: () => newWithInitialRatesAndFunds,
+  registerBlob: () => registerBlob,
+  reserveSpace: () => reserveSpace,
+  setBuyerSubsidyRate: () => setBuyerSubsidyRate,
+  setSystemSubsidyRate: () => setSystemSubsidyRate,
+  subsidyPoolValue: () => subsidyPoolValue,
+  systemSubsidyRate: () => systemSubsidyRate,
+  withdrawBalance: () => withdrawBalance
+});
+module.exports = __toCommonJS(subsidies_exports);
+var import_bcs = __nccwpck_require__(56244);
+var import_utils = __nccwpck_require__(13822);
+var object = __toESM(__nccwpck_require__(11242));
+var balance = __toESM(__nccwpck_require__(20513));
+var coin = __toESM(__nccwpck_require__(69216));
+function V3() {
+  return import_bcs.bcs.tuple([import_bcs.bcs.bool()], { name: "V3" });
+}
+function AdminCap() {
+  return import_bcs.bcs.struct("AdminCap", {
+    id: object.UID(),
+    subsidies_id: import_bcs.bcs.Address
+  });
+}
+function Subsidies() {
+  return import_bcs.bcs.struct("Subsidies", {
+    id: object.UID(),
+    /**
+     * The subsidy rate applied to the buyer at the moment of storage purchase in basis
+     * points.
+     */
+    buyer_subsidy_rate: import_bcs.bcs.u16(),
+    /**
+     * The subsidy rate applied to the storage node when buying storage in basis
+     * points.
+     */
+    system_subsidy_rate: import_bcs.bcs.u16(),
+    /** The balance of funds available in the subsidy pool. */
+    subsidy_pool: balance.Balance(),
+    /** Package ID of the subsidies contract. */
+    package_id: import_bcs.bcs.Address,
+    /** The version of the subsidies contract. */
+    version: import_bcs.bcs.u64()
+  });
+}
+function CombinedPayment() {
+  return import_bcs.bcs.struct("CombinedPayment", {
+    payment: coin.Coin(),
+    initial_payment_value: import_bcs.bcs.u64(),
+    initial_pool_value: import_bcs.bcs.u64()
+  });
+}
+function _new(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [
+    "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
+  ];
+  const parameterNames = ["packageId"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "new",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function newWithInitialRatesAndFunds(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [
+    "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
+    "u16",
+    "u16",
+    `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
+  ];
+  const parameterNames = [
+    "packageId",
+    "initialBuyerSubsidyRate",
+    "initialSystemSubsidyRate",
+    "initialFunds"
+  ];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "new_with_initial_rates_and_funds",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function addFunds(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [
+    `${packageAddress}::subsidies::Subsidies`,
+    `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
+  ];
+  const parameterNames = ["self", "funds"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "add_funds",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setBuyerSubsidyRate(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [
+    `${packageAddress}::subsidies::Subsidies`,
+    `${packageAddress}::subsidies::AdminCap`,
+    "u16"
+  ];
+  const parameterNames = ["self", "cap", "newRate"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "set_buyer_subsidy_rate",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function withdrawBalance(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [
+    `${packageAddress}::subsidies::Subsidies`,
+    `${packageAddress}::subsidies::AdminCap`
+  ];
+  const parameterNames = ["self", "cap"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "withdraw_balance",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setSystemSubsidyRate(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [
+    `${packageAddress}::subsidies::Subsidies`,
+    `${packageAddress}::subsidies::AdminCap`,
+    "u16"
+  ];
+  const parameterNames = ["self", "cap", "newRate"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "set_system_subsidy_rate",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function extendBlob(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [
+    `${packageAddress}::subsidies::Subsidies`,
+    `${packageAddress}::system::System`,
+    `${packageAddress}::blob::Blob`,
+    "u32",
+    `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
+  ];
+  const parameterNames = ["self", "system", "blob", "epochsAhead", "payment"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "extend_blob",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function reserveSpace(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [
+    `${packageAddress}::subsidies::Subsidies`,
+    `${packageAddress}::system::System`,
+    "u64",
+    "u32",
+    `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
+  ];
+  const parameterNames = ["self", "system", "storageAmount", "epochsAhead", "payment"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "reserve_space",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function registerBlob(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [
+    `${packageAddress}::subsidies::Subsidies`,
+    `${packageAddress}::system::System`,
+    `${packageAddress}::storage_resource::Storage`,
+    "u256",
+    "u256",
+    "u64",
+    "u8",
+    "bool",
+    `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
+  ];
+  const parameterNames = [
+    "self",
+    "system",
+    "storage",
+    "blobId",
+    "rootHash",
+    "size",
+    "encodingType",
+    "deletable",
+    "writePayment"
+  ];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "register_blob",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function adminCapSubsidiesId(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [`${packageAddress}::subsidies::AdminCap`];
+  const parameterNames = ["adminCap"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "admin_cap_subsidies_id",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function subsidyPoolValue(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [`${packageAddress}::subsidies::Subsidies`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "subsidy_pool_value",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function buyerSubsidyRate(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [`${packageAddress}::subsidies::Subsidies`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "buyer_subsidy_rate",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function systemSubsidyRate(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus_subsidies";
+  const argumentsTypes = [`${packageAddress}::subsidies::Subsidies`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "subsidies",
+    function: "system_subsidy_rate",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+//# sourceMappingURL=subsidies.js.map
+
+
+/***/ }),
+
+/***/ 13822:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var utils_exports = {};
+__export(utils_exports, {
+  getPureBcsSchema: () => getPureBcsSchema,
+  normalizeMoveArguments: () => normalizeMoveArguments
+});
+module.exports = __toCommonJS(utils_exports);
+var import_bcs = __nccwpck_require__(56244);
+var import_utils = __nccwpck_require__(33973);
+var import_transactions = __nccwpck_require__(59417);
+const MOVE_STDLIB_ADDRESS = (0, import_utils.normalizeSuiAddress)("0x1");
+const SUI_FRAMEWORK_ADDRESS = (0, import_utils.normalizeSuiAddress)("0x2");
+const SUI_SYSTEM_ADDRESS = (0, import_utils.normalizeSuiAddress)("0x3");
+function getPureBcsSchema(typeTag) {
+  const parsedTag = typeof typeTag === "string" ? import_bcs.TypeTagSerializer.parseFromStr(typeTag) : typeTag;
+  if ("u8" in parsedTag) {
+    return import_bcs.bcs.U8;
+  } else if ("u16" in parsedTag) {
+    return import_bcs.bcs.U16;
+  } else if ("u32" in parsedTag) {
+    return import_bcs.bcs.U32;
+  } else if ("u64" in parsedTag) {
+    return import_bcs.bcs.U64;
+  } else if ("u128" in parsedTag) {
+    return import_bcs.bcs.U128;
+  } else if ("u256" in parsedTag) {
+    return import_bcs.bcs.U256;
+  } else if ("address" in parsedTag) {
+    return import_bcs.bcs.Address;
+  } else if ("bool" in parsedTag) {
+    return import_bcs.bcs.Bool;
+  } else if ("vector" in parsedTag) {
+    const type = getPureBcsSchema(parsedTag.vector);
+    return type ? import_bcs.bcs.vector(type) : null;
+  } else if ("struct" in parsedTag) {
+    const structTag = parsedTag.struct;
+    const pkg = (0, import_utils.normalizeSuiAddress)(parsedTag.struct.address);
+    if (pkg === MOVE_STDLIB_ADDRESS) {
+      if ((structTag.module === "ascii" || structTag.module === "string") && structTag.name === "String") {
+        return import_bcs.bcs.String;
+      }
+      if (structTag.module === "option" && structTag.name === "Option") {
+        const type = getPureBcsSchema(structTag.typeParams[0]);
+        return type ? import_bcs.bcs.vector(type) : null;
+      }
+    }
+    if (pkg === SUI_FRAMEWORK_ADDRESS && structTag.module === "Object" && structTag.name === "ID") {
+      return import_bcs.bcs.Address;
+    }
+  }
+  return null;
+}
+function normalizeMoveArguments(args, argTypes, parameterNames) {
+  if (parameterNames && argTypes.length !== parameterNames.length) {
+    throw new Error(
+      `Invalid number of parameterNames, expected ${argTypes.length}, got ${parameterNames.length}`
+    );
+  }
+  const normalizedArgs = [];
+  let index = 0;
+  for (const [i, argType] of argTypes.entries()) {
+    if (argType === `${SUI_FRAMEWORK_ADDRESS}::deny_list::DenyList`) {
+      normalizedArgs.push((tx) => tx.object.denyList());
+      continue;
+    }
+    if (argType === `${SUI_FRAMEWORK_ADDRESS}::random::Random`) {
+      normalizedArgs.push((tx) => tx.object.random());
+      continue;
+    }
+    if (argType === `${SUI_FRAMEWORK_ADDRESS}::clock::Clock`) {
+      normalizedArgs.push((tx) => tx.object.clock());
+      continue;
+    }
+    if (argType === `${SUI_SYSTEM_ADDRESS}::sui_system::SuiSystemState`) {
+      normalizedArgs.push((tx) => tx.object.system());
+      continue;
+    }
+    let arg;
+    if (Array.isArray(args)) {
+      if (index >= args.length) {
+        throw new Error(
+          `Invalid number of arguments, expected at least ${index + 1}, got ${args.length}`
+        );
+      }
+      arg = args[index];
+    } else {
+      if (!parameterNames) {
+        throw new Error(`Expected arguments to be passed as an array`);
+      }
+      const name = parameterNames[index];
+      arg = args[name];
+      if (arg == null) {
+        throw new Error(`Parameter ${name} is required`);
+      }
+    }
+    index += 1;
+    if (typeof arg === "function" || (0, import_transactions.isArgument)(arg)) {
+      normalizedArgs.push(arg);
+      continue;
+    }
+    const type = argTypes[i];
+    const bcsType = getPureBcsSchema(type);
+    if (bcsType) {
+      const bytes = bcsType.serialize(arg);
+      normalizedArgs.push((tx) => tx.pure(bytes));
+      continue;
+    } else if (typeof arg === "string") {
+      normalizedArgs.push((tx) => tx.object(arg));
+      continue;
+    }
+    throw new Error(`Invalid argument ${stringify(arg)} for type ${type}`);
+  }
+  return normalizedArgs;
+}
+function stringify(val) {
+  if (typeof val === "object") {
+    return JSON.stringify(val, (val2) => val2);
+  }
+  if (typeof val === "bigint") {
+    return val.toString();
+  }
+  return val;
+}
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 56153:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -77712,7 +80603,10 @@ var auth_exports = {};
 __export(auth_exports, {
   Authenticated: () => Authenticated,
   Authorized: () => Authorized,
-  init: () => init
+  authenticateSender: () => authenticateSender,
+  authenticateWithObject: () => authenticateWithObject,
+  authorizedAddress: () => authorizedAddress,
+  authorizedObject: () => authorizedObject
 });
 module.exports = __toCommonJS(auth_exports);
 var import_bcs = __nccwpck_require__(56244);
@@ -77729,72 +80623,56 @@ function Authorized() {
     ObjectID: import_bcs.bcs.Address
   });
 }
-function init(packageAddress) {
-  function authenticate_sender(options) {
-    const argumentsTypes = [];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "auth",
-      function: "authenticate_sender",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function authenticate_with_object(options) {
-    const argumentsTypes = [`${options.typeArguments[0]}`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "auth",
-      function: "authenticate_with_object",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes),
-      typeArguments: options.typeArguments
-    });
-  }
-  function authorized_address(options) {
-    const argumentsTypes = ["address"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "auth",
-      function: "authorized_address",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function authorized_object(options) {
-    const argumentsTypes = [
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "auth",
-      function: "authorized_object",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function matches(options) {
-    const argumentsTypes = [
-      `${packageAddress}::auth::Authenticated`,
-      `${packageAddress}::auth::Authorized`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "auth",
-      function: "matches",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    authenticate_sender,
-    authenticate_with_object,
-    authorized_address,
-    authorized_object,
-    matches
-  };
+function authenticateSender(options = {}) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "auth",
+    function: "authenticate_sender"
+  });
+}
+function authenticateWithObject(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${options.typeArguments[0]}`];
+  const parameterNames = ["obj"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "auth",
+    function: "authenticate_with_object",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames),
+    typeArguments: options.typeArguments
+  });
+}
+function authorizedAddress(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = ["address"];
+  const parameterNames = ["addr"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "auth",
+    function: "authorized_address",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function authorizedObject(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
+  ];
+  const parameterNames = ["id"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "auth",
+    function: "authorized_object",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
 }
 //# sourceMappingURL=auth.js.map
 
 
 /***/ }),
 
-/***/ 70697:
+/***/ 52056:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -77830,13 +80708,30 @@ var blob_exports = {};
 __export(blob_exports, {
   Blob: () => Blob,
   BlobIdDerivation: () => BlobIdDerivation,
-  init: () => init
+  addMetadata: () => addMetadata,
+  addOrReplaceMetadata: () => addOrReplaceMetadata,
+  blobId: () => blobId,
+  burn: () => burn,
+  certifiedEpoch: () => certifiedEpoch,
+  deriveBlobId: () => deriveBlobId,
+  encodedSize: () => encodedSize,
+  encodingType: () => encodingType,
+  endEpoch: () => endEpoch,
+  insertOrUpdateMetadataPair: () => insertOrUpdateMetadataPair,
+  isDeletable: () => isDeletable,
+  objectId: () => objectId,
+  registeredEpoch: () => registeredEpoch,
+  removeMetadataPair: () => removeMetadataPair,
+  removeMetadataPairIfExists: () => removeMetadataPairIfExists,
+  size: () => size,
+  storage: () => storage,
+  takeMetadata: () => takeMetadata
 });
 module.exports = __toCommonJS(blob_exports);
 var import_bcs = __nccwpck_require__(56244);
-var object = __toESM(__nccwpck_require__(64371));
-var storage_resource = __toESM(__nccwpck_require__(89104));
 var import_utils = __nccwpck_require__(13822);
+var object = __toESM(__nccwpck_require__(62731));
+var storage_resource = __toESM(__nccwpck_require__(16925));
 function Blob() {
   return import_bcs.bcs.struct("Blob", {
     id: object.UID(),
@@ -77856,309 +80751,226 @@ function BlobIdDerivation() {
     root_hash: import_bcs.bcs.u256()
   });
 }
-function init(packageAddress) {
-  function object_id(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "object_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function registered_epoch(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "registered_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function blob_id(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "blob_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function size(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "size",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function encoding_type(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "encoding_type",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function certified_epoch(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "certified_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function storage(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "storage",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function encoded_size(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`, "u16"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "encoded_size",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function storage_mut(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "storage_mut",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function end_epoch(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "end_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function assert_certified_not_expired(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`, "u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "assert_certified_not_expired",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function derive_blob_id(options) {
-    const argumentsTypes = ["u256", "u8", "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "derive_blob_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function _new(options) {
-    const argumentsTypes = [
-      `${packageAddress}::storage_resource::Storage`,
-      "u256",
-      "u256",
-      "u64",
-      "u8",
-      "bool",
-      "u32",
-      "u16"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "new",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function certify_with_certified_msg(options) {
-    const argumentsTypes = [
-      `${packageAddress}::blob::Blob`,
-      "u32",
-      `${packageAddress}::messages::CertifiedBlobMessage`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "certify_with_certified_msg",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function _delete(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`, "u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "delete",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function burn(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "burn",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function extend_with_resource(options) {
-    const argumentsTypes = [
-      `${packageAddress}::blob::Blob`,
-      `${packageAddress}::storage_resource::Storage`,
-      "u32"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "extend_with_resource",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function emit_certified(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`, "bool"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "emit_certified",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function add_metadata(options) {
-    const argumentsTypes = [
-      `${packageAddress}::blob::Blob`,
-      `${packageAddress}::metadata::Metadata`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "add_metadata",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function add_or_replace_metadata(options) {
-    const argumentsTypes = [
-      `${packageAddress}::blob::Blob`,
-      `${packageAddress}::metadata::Metadata`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "add_or_replace_metadata",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function take_metadata(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "take_metadata",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function metadata(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "metadata",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function metadata_or_create(options) {
-    const argumentsTypes = [`${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "metadata_or_create",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function insert_or_update_metadata_pair(options) {
-    const argumentsTypes = [
-      `${packageAddress}::blob::Blob`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "insert_or_update_metadata_pair",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function remove_metadata_pair(options) {
-    const argumentsTypes = [
-      `${packageAddress}::blob::Blob`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "remove_metadata_pair",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function remove_metadata_pair_if_exists(options) {
-    const argumentsTypes = [
-      `${packageAddress}::blob::Blob`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "blob",
-      function: "remove_metadata_pair_if_exists",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    object_id,
-    registered_epoch,
-    blob_id,
-    size,
-    encoding_type,
-    certified_epoch,
-    storage,
-    encoded_size,
-    storage_mut,
-    end_epoch,
-    assert_certified_not_expired,
-    derive_blob_id,
-    _new,
-    certify_with_certified_msg,
-    _delete,
-    burn,
-    extend_with_resource,
-    emit_certified,
-    add_metadata,
-    add_or_replace_metadata,
-    take_metadata,
-    metadata,
-    metadata_or_create,
-    insert_or_update_metadata_pair,
-    remove_metadata_pair,
-    remove_metadata_pair_if_exists
-  };
+function objectId(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "object_id",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function registeredEpoch(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "registered_epoch",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function blobId(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "blob_id",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function size(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "size",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function encodingType(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "encoding_type",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function certifiedEpoch(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "certified_epoch",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function storage(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "storage",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function isDeletable(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "is_deletable",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function encodedSize(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`, "u16"];
+  const parameterNames = ["self", "nShards"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "encoded_size",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function endEpoch(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "end_epoch",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function deriveBlobId(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = ["u256", "u8", "u64"];
+  const parameterNames = ["rootHash", "encodingType", "size"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "derive_blob_id",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function burn(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "burn",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function addMetadata(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::blob::Blob`,
+    `${packageAddress}::metadata::Metadata`
+  ];
+  const parameterNames = ["self", "metadata"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "add_metadata",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function addOrReplaceMetadata(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::blob::Blob`,
+    `${packageAddress}::metadata::Metadata`
+  ];
+  const parameterNames = ["self", "metadata"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "add_or_replace_metadata",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function takeMetadata(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::blob::Blob`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "take_metadata",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function insertOrUpdateMetadataPair(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::blob::Blob`,
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
+  ];
+  const parameterNames = ["self", "key", "value"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "insert_or_update_metadata_pair",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function removeMetadataPair(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::blob::Blob`,
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
+  ];
+  const parameterNames = ["self", "key"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "remove_metadata_pair",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function removeMetadataPairIfExists(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::blob::Blob`,
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
+  ];
+  const parameterNames = ["self", "key"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "blob",
+    function: "remove_metadata_pair_if_exists",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
 }
 //# sourceMappingURL=blob.js.map
 
 
 /***/ }),
 
-/***/ 46595:
+/***/ 27608:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78194,13 +81006,11 @@ var bls_aggregate_exports = {};
 __export(bls_aggregate_exports, {
   BlsCommittee: () => BlsCommittee,
   BlsCommitteeMember: () => BlsCommitteeMember,
-  RequiredWeight: () => RequiredWeight,
-  init: () => init
+  RequiredWeight: () => RequiredWeight
 });
 module.exports = __toCommonJS(bls_aggregate_exports);
 var import_bcs = __nccwpck_require__(56244);
-var group_ops = __toESM(__nccwpck_require__(90702));
-var import_utils = __nccwpck_require__(13822);
+var group_ops = __toESM(__nccwpck_require__(97126));
 function BlsCommitteeMember() {
   return import_bcs.bcs.struct("BlsCommitteeMember", {
     public_key: group_ops.Element(),
@@ -78210,217 +81020,30 @@ function BlsCommitteeMember() {
 }
 function BlsCommittee() {
   return import_bcs.bcs.struct("BlsCommittee", {
+    /** A vector of committee members */
     members: import_bcs.bcs.vector(BlsCommitteeMember()),
+    /** The total number of shards held by the committee */
     n_shards: import_bcs.bcs.u16(),
+    /** The epoch in which the committee is active. */
     epoch: import_bcs.bcs.u32(),
+    /** The aggregation of public keys for all members of the committee */
     total_aggregated_key: group_ops.Element()
   });
 }
 function RequiredWeight() {
   return import_bcs.bcs.enum("RequiredWeight", {
+    /** Verify that the signers form a quorum. */
     Quorum: null,
+    /** Verify that the signers include at least one correct node. */
     OneCorrectNode: null
   });
-}
-function init(packageAddress) {
-  function new_bls_committee(options) {
-    const argumentsTypes = ["u32", `vector<${packageAddress}::bls_aggregate::BlsCommitteeMember>`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "new_bls_committee",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function new_bls_committee_member(options) {
-    const argumentsTypes = [
-      "0x0000000000000000000000000000000000000000000000000000000000000002::group_ops::Element<0x0000000000000000000000000000000000000000000000000000000000000002::bls12381::UncompressedG1>",
-      "u16",
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "new_bls_committee_member",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function node_id(options) {
-    const argumentsTypes = [`${packageAddress}::bls_aggregate::BlsCommitteeMember`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "node_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function epoch(options) {
-    const argumentsTypes = [`${packageAddress}::bls_aggregate::BlsCommittee`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function n_shards(options) {
-    const argumentsTypes = [`${packageAddress}::bls_aggregate::BlsCommittee`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "n_shards",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function n_members(options) {
-    const argumentsTypes = [`${packageAddress}::bls_aggregate::BlsCommittee`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "n_members",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function get_idx(options) {
-    const argumentsTypes = [`${packageAddress}::bls_aggregate::BlsCommittee`, "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "get_idx",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function contains(options) {
-    const argumentsTypes = [
-      `${packageAddress}::bls_aggregate::BlsCommittee`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "contains",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function get_member_weight(options) {
-    const argumentsTypes = [
-      `${packageAddress}::bls_aggregate::BlsCommittee`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "get_member_weight",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function find_index(options) {
-    const argumentsTypes = [
-      `${packageAddress}::bls_aggregate::BlsCommittee`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "find_index",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function to_vec_map(options) {
-    const argumentsTypes = [`${packageAddress}::bls_aggregate::BlsCommittee`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "to_vec_map",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function verify_quorum_in_epoch(options) {
-    const argumentsTypes = [
-      `${packageAddress}::bls_aggregate::BlsCommittee`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "verify_quorum_in_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function is_quorum(options) {
-    const argumentsTypes = [`${packageAddress}::bls_aggregate::BlsCommittee`, "u16"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "is_quorum",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function verify_one_correct_node_in_epoch(options) {
-    const argumentsTypes = [
-      `${packageAddress}::bls_aggregate::BlsCommittee`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "verify_one_correct_node_in_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function includes_one_correct_node(options) {
-    const argumentsTypes = [`${packageAddress}::bls_aggregate::BlsCommittee`, "u16"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "includes_one_correct_node",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function verify_certificate_and_weight(options) {
-    const argumentsTypes = [
-      `${packageAddress}::bls_aggregate::BlsCommittee`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>",
-      `${packageAddress}::bls_aggregate::RequiredWeight`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "bls_aggregate",
-      function: "verify_certificate_and_weight",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    new_bls_committee,
-    new_bls_committee_member,
-    node_id,
-    epoch,
-    n_shards,
-    n_members,
-    get_idx,
-    contains,
-    get_member_weight,
-    find_index,
-    to_vec_map,
-    verify_quorum_in_epoch,
-    is_quorum,
-    verify_one_correct_node_in_epoch,
-    includes_one_correct_node,
-    verify_certificate_and_weight
-  };
 }
 //# sourceMappingURL=bls_aggregate.js.map
 
 
 /***/ }),
 
-/***/ 61837:
+/***/ 34334:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78455,121 +81078,71 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var committee_exports = {};
 __export(committee_exports, {
   Committee: () => Committee,
-  init: () => init
+  inner: () => inner,
+  shards: () => shards,
+  size: () => size,
+  toInner: () => toInner
 });
 module.exports = __toCommonJS(committee_exports);
 var import_bcs = __nccwpck_require__(56244);
-var vec_map = __toESM(__nccwpck_require__(56354));
 var import_utils = __nccwpck_require__(13822);
+var vec_map = __toESM(__nccwpck_require__(52605));
 function Committee() {
-  return import_bcs.bcs.struct("Committee", {
-    pos0: vec_map.VecMap(import_bcs.bcs.Address, import_bcs.bcs.vector(import_bcs.bcs.u16()))
+  return import_bcs.bcs.tuple([vec_map.VecMap(import_bcs.bcs.Address, import_bcs.bcs.vector(import_bcs.bcs.u16()))], { name: "Committee" });
+}
+function shards(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::committee::Committee`,
+    "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
+  ];
+  const parameterNames = ["cmt", "nodeId"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "committee",
+    function: "shards",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
   });
 }
-function init(packageAddress) {
-  function empty(options) {
-    const argumentsTypes = [];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "committee",
-      function: "empty",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function contains(options) {
-    const argumentsTypes = [
-      `${packageAddress}::committee::Committee`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "committee",
-      function: "contains",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function initialize(options) {
-    const argumentsTypes = [
-      "0x0000000000000000000000000000000000000000000000000000000000000002::vec_map::VecMap<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID, u16>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "committee",
-      function: "initialize",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function transition(options) {
-    const argumentsTypes = [
-      `${packageAddress}::committee::Committee`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::vec_map::VecMap<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID, u16>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "committee",
-      function: "transition",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function shards(options) {
-    const argumentsTypes = [
-      `${packageAddress}::committee::Committee`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "committee",
-      function: "shards",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function size(options) {
-    const argumentsTypes = [`${packageAddress}::committee::Committee`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "committee",
-      function: "size",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function inner(options) {
-    const argumentsTypes = [`${packageAddress}::committee::Committee`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "committee",
-      function: "inner",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function to_inner(options) {
-    const argumentsTypes = [`${packageAddress}::committee::Committee`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "committee",
-      function: "to_inner",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function diff(options) {
-    const argumentsTypes = [
-      `${packageAddress}::committee::Committee`,
-      `${packageAddress}::committee::Committee`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "committee",
-      function: "diff",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return { empty, contains, initialize, transition, shards, size, inner, to_inner, diff };
+function size(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::committee::Committee`];
+  const parameterNames = ["cmt"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "committee",
+    function: "size",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function inner(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::committee::Committee`];
+  const parameterNames = ["cmt"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "committee",
+    function: "inner",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function toInner(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::committee::Committee`];
+  const parameterNames = ["cmt"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "committee",
+    function: "to_inner",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
 }
 //# sourceMappingURL=committee.js.map
 
 
 /***/ }),
 
-/***/ 11108:
+/***/ 11628:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78607,10 +81180,12 @@ __export(bag_exports, {
 });
 module.exports = __toCommonJS(bag_exports);
 var import_bcs = __nccwpck_require__(56244);
-var object = __toESM(__nccwpck_require__(64371));
+var object = __toESM(__nccwpck_require__(62731));
 function Bag() {
   return import_bcs.bcs.struct("Bag", {
+    /** the ID of this bag */
     id: object.UID(),
+    /** the number of key-value pairs in the bag */
     size: import_bcs.bcs.u64()
   });
 }
@@ -78619,7 +81194,7 @@ function Bag() {
 
 /***/ }),
 
-/***/ 12774:
+/***/ 72046:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78643,16 +81218,10 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var balance_exports = {};
 __export(balance_exports, {
-  Balance: () => Balance,
-  Supply: () => Supply
+  Balance: () => Balance
 });
 module.exports = __toCommonJS(balance_exports);
 var import_bcs = __nccwpck_require__(56244);
-function Supply() {
-  return import_bcs.bcs.struct("Supply", {
-    value: import_bcs.bcs.u64()
-  });
-}
 function Balance() {
   return import_bcs.bcs.struct("Balance", {
     value: import_bcs.bcs.u64()
@@ -78663,58 +81232,7 @@ function Balance() {
 
 /***/ }),
 
-/***/ 99200:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var dynamic_field_exports = {};
-__export(dynamic_field_exports, {
-  Field: () => Field
-});
-module.exports = __toCommonJS(dynamic_field_exports);
-var import_bcs = __nccwpck_require__(56244);
-var object = __toESM(__nccwpck_require__(64371));
-function Field(...typeParameters) {
-  return import_bcs.bcs.struct("Field", {
-    id: object.UID(),
-    name: typeParameters[0],
-    value: typeParameters[1]
-  });
-}
-//# sourceMappingURL=dynamic_field.js.map
-
-
-/***/ }),
-
-/***/ 90702:
+/***/ 97126:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78752,7 +81270,7 @@ function Element() {
 
 /***/ }),
 
-/***/ 64371:
+/***/ 62731:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78776,16 +81294,10 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var object_exports = {};
 __export(object_exports, {
-  ID: () => ID,
   UID: () => UID
 });
 module.exports = __toCommonJS(object_exports);
 var import_bcs = __nccwpck_require__(56244);
-function ID() {
-  return import_bcs.bcs.struct("ID", {
-    bytes: import_bcs.bcs.Address
-  });
-}
 function UID() {
   return import_bcs.bcs.struct("UID", {
     id: import_bcs.bcs.Address
@@ -78796,7 +81308,7 @@ function UID() {
 
 /***/ }),
 
-/***/ 24488:
+/***/ 47104:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78834,10 +81346,12 @@ __export(object_table_exports, {
 });
 module.exports = __toCommonJS(object_table_exports);
 var import_bcs = __nccwpck_require__(56244);
-var object = __toESM(__nccwpck_require__(64371));
+var object = __toESM(__nccwpck_require__(62731));
 function ObjectTable() {
   return import_bcs.bcs.struct("ObjectTable", {
+    /** the ID of this table */
     id: object.UID(),
+    /** the number of key-value pairs in the table */
     size: import_bcs.bcs.u64()
   });
 }
@@ -78846,7 +81360,7 @@ function ObjectTable() {
 
 /***/ }),
 
-/***/ 75058:
+/***/ 93354:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78884,10 +81398,12 @@ __export(table_exports, {
 });
 module.exports = __toCommonJS(table_exports);
 var import_bcs = __nccwpck_require__(56244);
-var object = __toESM(__nccwpck_require__(64371));
+var object = __toESM(__nccwpck_require__(62731));
 function Table() {
   return import_bcs.bcs.struct("Table", {
+    /** the ID of this table */
     id: object.UID(),
+    /** the number of key-value pairs in the table */
     size: import_bcs.bcs.u64()
   });
 }
@@ -78896,7 +81412,7 @@ function Table() {
 
 /***/ }),
 
-/***/ 56354:
+/***/ 52605:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78941,7 +81457,7 @@ function Entry(...typeParameters) {
 
 /***/ }),
 
-/***/ 65076:
+/***/ 51297:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78965,64 +81481,26 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var epoch_parameters_exports = {};
 __export(epoch_parameters_exports, {
-  EpochParams: () => EpochParams,
-  init: () => init
+  EpochParams: () => EpochParams
 });
 module.exports = __toCommonJS(epoch_parameters_exports);
 var import_bcs = __nccwpck_require__(56244);
-var import_utils = __nccwpck_require__(13822);
 function EpochParams() {
   return import_bcs.bcs.struct("EpochParams", {
+    /** The storage capacity of the system. */
     total_capacity_size: import_bcs.bcs.u64(),
+    /** The price per unit size of storage. */
     storage_price_per_unit_size: import_bcs.bcs.u64(),
+    /** The write price per unit size. */
     write_price_per_unit_size: import_bcs.bcs.u64()
   });
-}
-function init(packageAddress) {
-  function _new(options) {
-    const argumentsTypes = ["u64", "u64", "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "epoch_parameters",
-      function: "new",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function capacity(options) {
-    const argumentsTypes = [`${packageAddress}::epoch_parameters::EpochParams`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "epoch_parameters",
-      function: "capacity",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function storage_price(options) {
-    const argumentsTypes = [`${packageAddress}::epoch_parameters::EpochParams`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "epoch_parameters",
-      function: "storage_price",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function write_price(options) {
-    const argumentsTypes = [`${packageAddress}::epoch_parameters::EpochParams`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "epoch_parameters",
-      function: "write_price",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return { _new, capacity, storage_price, write_price };
 }
 //# sourceMappingURL=epoch_parameters.js.map
 
 
 /***/ }),
 
-/***/ 41732:
+/***/ 71917:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -79058,13 +81536,11 @@ var event_blob_exports = {};
 __export(event_blob_exports, {
   EventBlob: () => EventBlob,
   EventBlobAttestation: () => EventBlobAttestation,
-  EventBlobCertificationState: () => EventBlobCertificationState,
-  init: () => init
+  EventBlobCertificationState: () => EventBlobCertificationState
 });
 module.exports = __toCommonJS(event_blob_exports);
 var import_bcs = __nccwpck_require__(56244);
-var vec_map = __toESM(__nccwpck_require__(56354));
-var import_utils = __nccwpck_require__(13822);
+var vec_map = __toESM(__nccwpck_require__(52605));
 function EventBlobAttestation() {
   return import_bcs.bcs.struct("EventBlobAttestation", {
     checkpoint_sequence_num: import_bcs.bcs.u64(),
@@ -79073,189 +81549,26 @@ function EventBlobAttestation() {
 }
 function EventBlob() {
   return import_bcs.bcs.struct("EventBlob", {
+    /** Blob id of the certified event blob. */
     blob_id: import_bcs.bcs.u256(),
+    /** Ending sui checkpoint of the certified event blob. */
     ending_checkpoint_sequence_number: import_bcs.bcs.u64()
   });
 }
 function EventBlobCertificationState() {
   return import_bcs.bcs.struct("EventBlobCertificationState", {
+    /** Latest certified event blob. */
     latest_certified_blob: import_bcs.bcs.option(EventBlob()),
+    /** Current event blob being attested. */
     aggregate_weight_per_blob: vec_map.VecMap(EventBlob(), import_bcs.bcs.u16())
   });
-}
-function init(packageAddress) {
-  function new_attestation(options) {
-    const argumentsTypes = ["u64", "u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "new_attestation",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function last_attested_event_blob_checkpoint_seq_num(options) {
-    const argumentsTypes = [`${packageAddress}::event_blob::EventBlobAttestation`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "last_attested_event_blob_checkpoint_seq_num",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function last_attested_event_blob_epoch(options) {
-    const argumentsTypes = [`${packageAddress}::event_blob::EventBlobAttestation`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "last_attested_event_blob_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function new_event_blob(options) {
-    const argumentsTypes = ["u64", "u256"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "new_event_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function blob_id(options) {
-    const argumentsTypes = [`${packageAddress}::event_blob::EventBlob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "blob_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function ending_checkpoint_sequence_number(options) {
-    const argumentsTypes = [`${packageAddress}::event_blob::EventBlob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "ending_checkpoint_sequence_number",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function create_with_empty_state(options) {
-    const argumentsTypes = [];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "create_with_empty_state",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function get_latest_certified_blob_id(options) {
-    const argumentsTypes = [`${packageAddress}::event_blob::EventBlobCertificationState`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "get_latest_certified_blob_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function get_latest_certified_checkpoint_sequence_number(options) {
-    const argumentsTypes = [`${packageAddress}::event_blob::EventBlobCertificationState`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "get_latest_certified_checkpoint_sequence_number",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function get_num_tracked_blobs(options) {
-    const argumentsTypes = [`${packageAddress}::event_blob::EventBlobCertificationState`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "get_num_tracked_blobs",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function is_blob_already_certified(options) {
-    const argumentsTypes = [`${packageAddress}::event_blob::EventBlobCertificationState`, "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "is_blob_already_certified",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function update_latest_certified_event_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::event_blob::EventBlobCertificationState`,
-      "u64",
-      "u256"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "update_latest_certified_event_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function update_aggregate_weight(options) {
-    const argumentsTypes = [
-      `${packageAddress}::event_blob::EventBlobCertificationState`,
-      "u256",
-      "u64",
-      "u16"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "update_aggregate_weight",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function start_tracking_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::event_blob::EventBlobCertificationState`,
-      "u256",
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "start_tracking_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function reset(options) {
-    const argumentsTypes = [`${packageAddress}::event_blob::EventBlobCertificationState`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "event_blob",
-      function: "reset",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    new_attestation,
-    last_attested_event_blob_checkpoint_seq_num,
-    last_attested_event_blob_epoch,
-    new_event_blob,
-    blob_id,
-    ending_checkpoint_sequence_number,
-    create_with_empty_state,
-    get_latest_certified_blob_id,
-    get_latest_certified_checkpoint_sequence_number,
-    get_num_tracked_blobs,
-    is_blob_already_certified,
-    update_latest_certified_event_blob,
-    update_aggregate_weight,
-    start_tracking_blob,
-    reset
-  };
 }
 //# sourceMappingURL=event_blob.js.map
 
 
 /***/ }),
 
-/***/ 49016:
+/***/ 50521:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -79291,90 +81604,99 @@ var extended_field_exports = {};
 __export(extended_field_exports, {
   ExtendedField: () => ExtendedField,
   Key: () => Key,
-  init: () => init
+  _new: () => _new,
+  borrow: () => borrow,
+  borrowMut: () => borrowMut,
+  destroy: () => destroy,
+  swap: () => swap
 });
 module.exports = __toCommonJS(extended_field_exports);
 var import_bcs = __nccwpck_require__(56244);
-var object = __toESM(__nccwpck_require__(64371));
 var import_utils = __nccwpck_require__(13822);
+var object = __toESM(__nccwpck_require__(62731));
 function ExtendedField() {
   return import_bcs.bcs.struct("ExtendedField", {
     id: object.UID()
   });
 }
 function Key() {
-  return import_bcs.bcs.struct("Key", {
-    dummy_field: import_bcs.bcs.bool()
+  return import_bcs.bcs.tuple([import_bcs.bcs.bool()], { name: "Key" });
+}
+function _new(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${options.typeArguments[0]}`];
+  const parameterNames = ["value"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "extended_field",
+    function: "new",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames),
+    typeArguments: options.typeArguments
   });
 }
-function init(packageAddress) {
-  function _new(options) {
-    const argumentsTypes = [`${options.typeArguments[0]}`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "extended_field",
-      function: "new",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes),
-      typeArguments: options.typeArguments
-    });
-  }
-  function borrow(options) {
-    const argumentsTypes = [
-      `${packageAddress}::extended_field::ExtendedField<${options.typeArguments[0]}>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "extended_field",
-      function: "borrow",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes),
-      typeArguments: options.typeArguments
-    });
-  }
-  function borrow_mut(options) {
-    const argumentsTypes = [
-      `${packageAddress}::extended_field::ExtendedField<${options.typeArguments[0]}>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "extended_field",
-      function: "borrow_mut",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes),
-      typeArguments: options.typeArguments
-    });
-  }
-  function swap(options) {
-    const argumentsTypes = [
-      `${packageAddress}::extended_field::ExtendedField<${options.typeArguments[0]}>`,
-      `${options.typeArguments[0]}`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "extended_field",
-      function: "swap",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes),
-      typeArguments: options.typeArguments
-    });
-  }
-  function destroy(options) {
-    const argumentsTypes = [
-      `${packageAddress}::extended_field::ExtendedField<${options.typeArguments[0]}>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "extended_field",
-      function: "destroy",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes),
-      typeArguments: options.typeArguments
-    });
-  }
-  return { _new, borrow, borrow_mut, swap, destroy };
+function borrow(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::extended_field::ExtendedField<${options.typeArguments[0]}>`
+  ];
+  const parameterNames = ["field"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "extended_field",
+    function: "borrow",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames),
+    typeArguments: options.typeArguments
+  });
+}
+function borrowMut(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::extended_field::ExtendedField<${options.typeArguments[0]}>`
+  ];
+  const parameterNames = ["field"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "extended_field",
+    function: "borrow_mut",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames),
+    typeArguments: options.typeArguments
+  });
+}
+function swap(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::extended_field::ExtendedField<${options.typeArguments[0]}>`,
+    `${options.typeArguments[0]}`
+  ];
+  const parameterNames = ["field", "value"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "extended_field",
+    function: "swap",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames),
+    typeArguments: options.typeArguments
+  });
+}
+function destroy(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::extended_field::ExtendedField<${options.typeArguments[0]}>`
+  ];
+  const parameterNames = ["field"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "extended_field",
+    function: "destroy",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames),
+    typeArguments: options.typeArguments
+  });
 }
 //# sourceMappingURL=extended_field.js.map
 
 
 /***/ }),
 
-/***/ 26187:
+/***/ 89726:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -79409,72 +81731,77 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var metadata_exports = {};
 __export(metadata_exports, {
   Metadata: () => Metadata,
-  init: () => init
+  _new: () => _new,
+  insertOrUpdate: () => insertOrUpdate,
+  remove: () => remove,
+  removeIfExists: () => removeIfExists
 });
 module.exports = __toCommonJS(metadata_exports);
 var import_bcs = __nccwpck_require__(56244);
-var vec_map = __toESM(__nccwpck_require__(56354));
 var import_utils = __nccwpck_require__(13822);
+var vec_map = __toESM(__nccwpck_require__(52605));
 function Metadata() {
   return import_bcs.bcs.struct("Metadata", {
     metadata: vec_map.VecMap(import_bcs.bcs.string(), import_bcs.bcs.string())
   });
 }
-function init(packageAddress) {
-  function _new(options) {
-    const argumentsTypes = [];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "metadata",
-      function: "new",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function insert_or_update(options) {
-    const argumentsTypes = [
-      `${packageAddress}::metadata::Metadata`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "metadata",
-      function: "insert_or_update",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function remove(options) {
-    const argumentsTypes = [
-      `${packageAddress}::metadata::Metadata`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "metadata",
-      function: "remove",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function remove_if_exists(options) {
-    const argumentsTypes = [
-      `${packageAddress}::metadata::Metadata`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "metadata",
-      function: "remove_if_exists",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return { _new, insert_or_update, remove, remove_if_exists };
+function _new(options = {}) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "metadata",
+    function: "new"
+  });
+}
+function insertOrUpdate(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::metadata::Metadata`,
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
+  ];
+  const parameterNames = ["self", "key", "value"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "metadata",
+    function: "insert_or_update",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function remove(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::metadata::Metadata`,
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
+  ];
+  const parameterNames = ["self", "key"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "metadata",
+    function: "remove",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function removeIfExists(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::metadata::Metadata`,
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
+  ];
+  const parameterNames = ["self", "key"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "metadata",
+    function: "remove_if_exists",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
 }
 //# sourceMappingURL=metadata.js.map
 
 
 /***/ }),
 
-/***/ 37128:
+/***/ 27765:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -79508,128 +81835,20 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var pending_values_exports = {};
 __export(pending_values_exports, {
-  PendingValues: () => PendingValues,
-  init: () => init
+  PendingValues: () => PendingValues
 });
 module.exports = __toCommonJS(pending_values_exports);
 var import_bcs = __nccwpck_require__(56244);
-var vec_map = __toESM(__nccwpck_require__(56354));
-var import_utils = __nccwpck_require__(13822);
+var vec_map = __toESM(__nccwpck_require__(52605));
 function PendingValues() {
-  return import_bcs.bcs.struct("PendingValues", {
-    pos0: vec_map.VecMap(import_bcs.bcs.u32(), import_bcs.bcs.u64())
-  });
-}
-function init(packageAddress) {
-  function empty(options) {
-    const argumentsTypes = [];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "pending_values",
-      function: "empty",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function insert_or_add(options) {
-    const argumentsTypes = [`${packageAddress}::pending_values::PendingValues`, "u32", "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "pending_values",
-      function: "insert_or_add",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function insert_or_replace(options) {
-    const argumentsTypes = [`${packageAddress}::pending_values::PendingValues`, "u32", "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "pending_values",
-      function: "insert_or_replace",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function reduce(options) {
-    const argumentsTypes = [`${packageAddress}::pending_values::PendingValues`, "u32", "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "pending_values",
-      function: "reduce",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function value_at(options) {
-    const argumentsTypes = [`${packageAddress}::pending_values::PendingValues`, "u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "pending_values",
-      function: "value_at",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function flush(options) {
-    const argumentsTypes = [`${packageAddress}::pending_values::PendingValues`, "u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "pending_values",
-      function: "flush",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function inner(options) {
-    const argumentsTypes = [`${packageAddress}::pending_values::PendingValues`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "pending_values",
-      function: "inner",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function inner_mut(options) {
-    const argumentsTypes = [`${packageAddress}::pending_values::PendingValues`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "pending_values",
-      function: "inner_mut",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function unwrap(options) {
-    const argumentsTypes = [`${packageAddress}::pending_values::PendingValues`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "pending_values",
-      function: "unwrap",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function is_empty(options) {
-    const argumentsTypes = [`${packageAddress}::pending_values::PendingValues`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "pending_values",
-      function: "is_empty",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    empty,
-    insert_or_add,
-    insert_or_replace,
-    reduce,
-    value_at,
-    flush,
-    inner,
-    inner_mut,
-    unwrap,
-    is_empty
-  };
+  return import_bcs.bcs.tuple([vec_map.VecMap(import_bcs.bcs.u32(), import_bcs.bcs.u64())], { name: "PendingValues" });
 }
 //# sourceMappingURL=pending_values.js.map
 
 
 /***/ }),
 
-/***/ 51833:
+/***/ 7022:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -79664,12 +81883,38 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var staking_exports = {};
 __export(staking_exports, {
   Staking: () => Staking,
-  init: () => init
+  addCommissionToPools: () => addCommissionToPools,
+  calculateRewards: () => calculateRewards,
+  canWithdrawStakedWalEarly: () => canWithdrawStakedWalEarly,
+  collectCommission: () => collectCommission,
+  committee: () => committee,
+  computeNextCommittee: () => computeNextCommittee,
+  epoch: () => epoch,
+  epochSyncDone: () => epochSyncDone,
+  initiateEpochChange: () => initiateEpochChange,
+  nodeMetadata: () => nodeMetadata,
+  registerCandidate: () => registerCandidate,
+  requestWithdrawStake: () => requestWithdrawStake,
+  setCommissionReceiver: () => setCommissionReceiver,
+  setGovernanceAuthorized: () => setGovernanceAuthorized,
+  setName: () => setName,
+  setNetworkAddress: () => setNetworkAddress,
+  setNetworkPublicKey: () => setNetworkPublicKey,
+  setNextCommission: () => setNextCommission,
+  setNextPublicKey: () => setNextPublicKey,
+  setNodeCapacityVote: () => setNodeCapacityVote,
+  setNodeMetadata: () => setNodeMetadata,
+  setStoragePriceVote: () => setStoragePriceVote,
+  setWritePriceVote: () => setWritePriceVote,
+  stakeWithPool: () => stakeWithPool,
+  tryJoinActiveSet: () => tryJoinActiveSet,
+  votingEnd: () => votingEnd,
+  withdrawStake: () => withdrawStake
 });
 module.exports = __toCommonJS(staking_exports);
 var import_bcs = __nccwpck_require__(56244);
-var object = __toESM(__nccwpck_require__(64371));
 var import_utils = __nccwpck_require__(13822);
+var object = __toESM(__nccwpck_require__(62731));
 function Staking() {
   return import_bcs.bcs.struct("Staking", {
     id: object.UID(),
@@ -79678,469 +81923,431 @@ function Staking() {
     new_package_id: import_bcs.bcs.option(import_bcs.bcs.Address)
   });
 }
-function init(packageAddress) {
-  function create(options) {
-    const argumentsTypes = [
-      "u64",
-      "u64",
-      "u16",
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      "0x0000000000000000000000000000000000000000000000000000000000000002::clock::Clock"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "create",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function register_candidate(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
-      `${packageAddress}::node_metadata::NodeMetadata`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>",
-      "u16",
-      "u64",
-      "u64",
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "register_candidate",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_next_commission(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u16"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_next_commission",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function collect_commission(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      `${packageAddress}::auth::Authenticated`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "collect_commission",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_commission_receiver(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      `${packageAddress}::auth::Authenticated`,
-      `${packageAddress}::auth::Authorized`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_commission_receiver",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_governance_authorized(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      `${packageAddress}::auth::Authenticated`,
-      `${packageAddress}::auth::Authorized`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_governance_authorized",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function check_governance_authorization(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      `${packageAddress}::auth::Authenticated`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "check_governance_authorization",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function get_current_node_weight(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "get_current_node_weight",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function compute_next_committee(options) {
-    const argumentsTypes = [`${packageAddress}::staking::Staking`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "compute_next_committee",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_storage_price_vote(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_storage_price_vote",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_write_price_vote(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_write_price_vote",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_node_capacity_vote(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_node_capacity_vote",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function node_metadata(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "node_metadata",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_next_public_key(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_next_public_key",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_name(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_name",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_network_address(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_network_address",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_network_public_key(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_network_public_key",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_node_metadata(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      `${packageAddress}::node_metadata::NodeMetadata`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_node_metadata",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function voting_end(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::clock::Clock"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "voting_end",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function initiate_epoch_change(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::system::System`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::clock::Clock"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "initiate_epoch_change",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function epoch_sync_done(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u32",
-      "0x0000000000000000000000000000000000000000000000000000000000000002::clock::Clock"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "epoch_sync_done",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function stake_with_pool(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "stake_with_pool",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function request_withdraw_stake(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::staked_wal::StakedWal`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "request_withdraw_stake",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function withdraw_stake(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::staked_wal::StakedWal`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "withdraw_stake",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function try_join_active_set(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      `${packageAddress}::storage_node::StorageNodeCap`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "try_join_active_set",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function package_id(options) {
-    const argumentsTypes = [`${packageAddress}::staking::Staking`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "package_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function version(options) {
-    const argumentsTypes = [`${packageAddress}::staking::Staking`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "version",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function epoch(options) {
-    const argumentsTypes = [`${packageAddress}::staking::Staking`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function is_quorum(options) {
-    const argumentsTypes = [`${packageAddress}::staking::Staking`, "u16"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "is_quorum",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function calculate_rewards(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      "u64",
-      "u32",
-      "u32"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "calculate_rewards",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_new_package_id(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking::Staking`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "set_new_package_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function migrate(options) {
-    const argumentsTypes = [`${packageAddress}::staking::Staking`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "migrate",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function inner_mut(options) {
-    const argumentsTypes = [`${packageAddress}::staking::Staking`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "inner_mut",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function inner(options) {
-    const argumentsTypes = [`${packageAddress}::staking::Staking`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking",
-      function: "inner",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    create,
-    register_candidate,
-    set_next_commission,
-    collect_commission,
-    set_commission_receiver,
-    set_governance_authorized,
-    check_governance_authorization,
-    get_current_node_weight,
-    compute_next_committee,
-    set_storage_price_vote,
-    set_write_price_vote,
-    set_node_capacity_vote,
-    node_metadata,
-    set_next_public_key,
-    set_name,
-    set_network_address,
-    set_network_public_key,
-    set_node_metadata,
-    voting_end,
-    initiate_epoch_change,
-    epoch_sync_done,
-    stake_with_pool,
-    request_withdraw_stake,
-    withdraw_stake,
-    try_join_active_set,
-    package_id,
-    version,
-    epoch,
-    is_quorum,
-    calculate_rewards,
-    set_new_package_id,
-    migrate,
-    inner_mut,
-    inner
-  };
+function registerCandidate(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
+    `${packageAddress}::node_metadata::NodeMetadata`,
+    "vector<u8>",
+    "vector<u8>",
+    "vector<u8>",
+    "u16",
+    "u64",
+    "u64",
+    "u64"
+  ];
+  const parameterNames = [
+    "staking",
+    "name",
+    "networkAddress",
+    "metadata",
+    "publicKey",
+    "networkPublicKey",
+    "proofOfPossession",
+    "commissionRate",
+    "storagePrice",
+    "writePrice",
+    "nodeCapacity"
+  ];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "register_candidate",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setNextCommission(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "u16"
+  ];
+  const parameterNames = ["staking", "cap", "commissionRate"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "set_next_commission",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function collectCommission(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
+    `${packageAddress}::auth::Authenticated`
+  ];
+  const parameterNames = ["staking", "nodeId", "auth"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "collect_commission",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setCommissionReceiver(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
+    `${packageAddress}::auth::Authenticated`,
+    `${packageAddress}::auth::Authorized`
+  ];
+  const parameterNames = ["staking", "nodeId", "auth", "receiver"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "set_commission_receiver",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setGovernanceAuthorized(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
+    `${packageAddress}::auth::Authenticated`,
+    `${packageAddress}::auth::Authorized`
+  ];
+  const parameterNames = ["staking", "nodeId", "auth", "authorized"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "set_governance_authorized",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function committee(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::staking::Staking`];
+  const parameterNames = ["staking"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "committee",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function computeNextCommittee(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::staking::Staking`];
+  const parameterNames = ["staking"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "compute_next_committee",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setStoragePriceVote(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "u64"
+  ];
+  const parameterNames = ["self", "cap", "storagePrice"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "set_storage_price_vote",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setWritePriceVote(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "u64"
+  ];
+  const parameterNames = ["self", "cap", "writePrice"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "set_write_price_vote",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setNodeCapacityVote(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "u64"
+  ];
+  const parameterNames = ["self", "cap", "nodeCapacity"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "set_node_capacity_vote",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function nodeMetadata(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
+  ];
+  const parameterNames = ["self", "nodeId"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "node_metadata",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setNextPublicKey(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "vector<u8>",
+    "vector<u8>"
+  ];
+  const parameterNames = ["self", "cap", "publicKey", "proofOfPossession"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "set_next_public_key",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setName(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
+  ];
+  const parameterNames = ["self", "cap", "name"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "set_name",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setNetworkAddress(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
+  ];
+  const parameterNames = ["self", "cap", "networkAddress"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "set_network_address",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setNetworkPublicKey(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "vector<u8>"
+  ];
+  const parameterNames = ["self", "cap", "networkPublicKey"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "set_network_public_key",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function setNodeMetadata(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    `${packageAddress}::node_metadata::NodeMetadata`
+  ];
+  const parameterNames = ["self", "cap", "metadata"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "set_node_metadata",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function votingEnd(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    "0x0000000000000000000000000000000000000000000000000000000000000002::clock::Clock"
+  ];
+  const parameterNames = ["staking", "clock"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "voting_end",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function initiateEpochChange(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::system::System`,
+    "0x0000000000000000000000000000000000000000000000000000000000000002::clock::Clock"
+  ];
+  const parameterNames = ["staking", "system", "clock"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "initiate_epoch_change",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function epochSyncDone(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "u32",
+    "0x0000000000000000000000000000000000000000000000000000000000000002::clock::Clock"
+  ];
+  const parameterNames = ["staking", "cap", "epoch", "clock"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "epoch_sync_done",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function stakeWithPool(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`,
+    "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
+  ];
+  const parameterNames = ["staking", "toStake", "nodeId"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "stake_with_pool",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function requestWithdrawStake(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::staked_wal::StakedWal`
+  ];
+  const parameterNames = ["staking", "stakedWal"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "request_withdraw_stake",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function withdrawStake(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::staked_wal::StakedWal`
+  ];
+  const parameterNames = ["staking", "stakedWal"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "withdraw_stake",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function tryJoinActiveSet(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::storage_node::StorageNodeCap`
+  ];
+  const parameterNames = ["staking", "cap"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "try_join_active_set",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function addCommissionToPools(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    "vector<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+    `vector<0x0000000000000000000000000000000000000000000000000000000000000002::balance::Balance<${packageAddress}::wal::WAL>>`
+  ];
+  const parameterNames = ["staking", "nodeIds", "commissions"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "add_commission_to_pools",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function epoch(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::staking::Staking`];
+  const parameterNames = ["staking"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "epoch",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function calculateRewards(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
+    "u64",
+    "u32",
+    "u32"
+  ];
+  const parameterNames = [
+    "staking",
+    "nodeId",
+    "stakedPrincipal",
+    "activationEpoch",
+    "withdrawEpoch"
+  ];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "calculate_rewards",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function canWithdrawStakedWalEarly(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::staking::Staking`,
+    `${packageAddress}::staked_wal::StakedWal`
+  ];
+  const parameterNames = ["staking", "stakedWal"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "staking",
+    function: "can_withdraw_staked_wal_early",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
 }
 //# sourceMappingURL=staking.js.map
 
 
 /***/ }),
 
-/***/ 39134:
+/***/ 80609:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -80175,29 +82382,56 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var staking_inner_exports = {};
 __export(staking_inner_exports, {
   EpochState: () => EpochState,
-  StakingInnerV1: () => StakingInnerV1,
-  init: () => init
+  StakingInnerV1: () => StakingInnerV1
 });
 module.exports = __toCommonJS(staking_inner_exports);
 var import_bcs = __nccwpck_require__(56244);
-var committee = __toESM(__nccwpck_require__(61837));
-var object_table = __toESM(__nccwpck_require__(24488));
-var epoch_parameters = __toESM(__nccwpck_require__(65076));
-var extended_field = __toESM(__nccwpck_require__(49016));
-var import_utils = __nccwpck_require__(13822);
+var object_table = __toESM(__nccwpck_require__(47104));
+var extended_field = __toESM(__nccwpck_require__(50521));
+var committee = __toESM(__nccwpck_require__(34334));
+var epoch_parameters = __toESM(__nccwpck_require__(51297));
 function StakingInnerV1() {
   return import_bcs.bcs.struct("StakingInnerV1", {
+    /** The number of shards in the system. */
     n_shards: import_bcs.bcs.u16(),
+    /** The duration of an epoch in ms. Does not affect the first (zero) epoch. */
     epoch_duration: import_bcs.bcs.u64(),
+    /**
+     * Special parameter, used only for the first epoch. The timestamp when the first
+     * epoch can be started.
+     */
     first_epoch_start: import_bcs.bcs.u64(),
+    /**
+     * Stored staking pools, each identified by a unique `ID` and contains the
+     * `StakingPool` object. Uses `ObjectTable` to make the pool discovery easier by
+     * avoiding wrapping.
+     *
+     * The key is the ID of the staking pool.
+     */
     pools: object_table.ObjectTable(),
+    /**
+     * The current epoch of the Walrus system. The epochs are not the same as the Sui
+     * epochs, not to be mistaken with `ctx.epoch()`.
+     */
     epoch: import_bcs.bcs.u32(),
+    /** Stores the active set of storage nodes. Tracks the total amount of staked WAL. */
     active_set: extended_field.ExtendedField(),
+    /** The next committee in the system. */
     next_committee: import_bcs.bcs.option(committee.Committee()),
+    /** The current committee in the system. */
     committee: committee.Committee(),
+    /** The previous committee in the system. */
     previous_committee: committee.Committee(),
+    /** The next epoch parameters. */
     next_epoch_params: import_bcs.bcs.option(epoch_parameters.EpochParams()),
+    /** The state of the current epoch. */
     epoch_state: EpochState(),
+    /**
+     * The public keys for the next epoch. The keys are stored in a sorted `VecMap`,
+     * and mirror the order of the nodes in the `next_committee`. The value is set in
+     * the `select_committee` function and consumed in the `next_bls_committee`
+     * function.
+     */
     next_epoch_public_keys: extended_field.ExtendedField()
   });
 }
@@ -80208,590 +82442,12 @@ function EpochState() {
     NextParamsSelected: import_bcs.bcs.u64()
   });
 }
-function init(packageAddress) {
-  function _new(options) {
-    const argumentsTypes = [
-      "u64",
-      "u64",
-      "u16",
-      "0x0000000000000000000000000000000000000000000000000000000000000002::clock::Clock"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "new",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function create_pool(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
-      `${packageAddress}::node_metadata::NodeMetadata`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>",
-      "u16",
-      "u64",
-      "u64",
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "create_pool",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_commission_receiver(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      `${packageAddress}::auth::Authenticated`,
-      `${packageAddress}::auth::Authorized`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "set_commission_receiver",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function collect_commission(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      `${packageAddress}::auth::Authenticated`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "collect_commission",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function voting_end(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::clock::Clock"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "voting_end",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function select_committee_and_calculate_votes(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "select_committee_and_calculate_votes",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function quorum_above(options) {
-    const argumentsTypes = [
-      "0x0000000000000000000000000000000000000000000000000000000000000002::priority_queue::PriorityQueue<u64>",
-      "u16"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "quorum_above",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function quorum_below(options) {
-    const argumentsTypes = [
-      "0x0000000000000000000000000000000000000000000000000000000000000002::priority_queue::PriorityQueue<u64>",
-      "u16"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "quorum_below",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_governance_authorized(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      `${packageAddress}::auth::Authenticated`,
-      `${packageAddress}::auth::Authorized`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "set_governance_authorized",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function check_governance_authorization(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      `${packageAddress}::auth::Authenticated`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "check_governance_authorization",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function get_current_node_weight(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "get_current_node_weight",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_next_commission(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u16"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "set_next_commission",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_storage_price_vote(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "set_storage_price_vote",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_write_price_vote(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "set_write_price_vote",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_node_capacity_vote(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "set_node_capacity_vote",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_next_public_key(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "set_next_public_key",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_name(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "set_name",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_network_address(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "set_network_address",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_network_public_key(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "set_network_public_key",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_node_metadata(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      `${packageAddress}::node_metadata::NodeMetadata`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "set_node_metadata",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function destroy_empty_pool(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "destroy_empty_pool",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function stake_with_pool(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "stake_with_pool",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function request_withdraw_stake(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::staked_wal::StakedWal`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "request_withdraw_stake",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function withdraw_stake(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::staked_wal::StakedWal`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "withdraw_stake",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function try_join_active_set(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "try_join_active_set",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function compute_next_committee(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "compute_next_committee",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function apportionment(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "apportionment",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function dhondt(options) {
-    const argumentsTypes = ["vector<u64>", "u16", "vector<u64>"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "dhondt",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function max_shards_per_node(options) {
-    const argumentsTypes = ["u64", "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "max_shards_per_node",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function initiate_epoch_change(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::clock::Clock",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::vec_map::VecMap<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID, 0x0000000000000000000000000000000000000000000000000000000000000002::balance::Balance<${packageAddress}::wal::WAL>>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "initiate_epoch_change",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function advance_epoch(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `0x0000000000000000000000000000000000000000000000000000000000000002::vec_map::VecMap<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID, 0x0000000000000000000000000000000000000000000000000000000000000002::balance::Balance<${packageAddress}::wal::WAL>>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "advance_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function epoch_sync_done(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u32",
-      "0x0000000000000000000000000000000000000000000000000000000000000002::clock::Clock"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "epoch_sync_done",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function node_metadata(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "node_metadata",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function next_committee(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "next_committee",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function next_epoch_params(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "next_epoch_params",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function epoch(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function committee2(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "committee",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function previous_committee(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "previous_committee",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function next_bls_committee(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "next_bls_committee",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function has_pool(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "has_pool",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function n_shards(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "n_shards",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function calculate_rewards(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_inner::StakingInnerV1`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      "u64",
-      "u32",
-      "u32"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "calculate_rewards",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function new_walrus_context(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "new_walrus_context",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function is_quorum(options) {
-    const argumentsTypes = [`${packageAddress}::staking_inner::StakingInnerV1`, "u16"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "is_quorum",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function is_quorum_for_n_shards(options) {
-    const argumentsTypes = ["u64", "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_inner",
-      function: "is_quorum_for_n_shards",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    _new,
-    create_pool,
-    set_commission_receiver,
-    collect_commission,
-    voting_end,
-    select_committee_and_calculate_votes,
-    quorum_above,
-    quorum_below,
-    set_governance_authorized,
-    check_governance_authorization,
-    get_current_node_weight,
-    set_next_commission,
-    set_storage_price_vote,
-    set_write_price_vote,
-    set_node_capacity_vote,
-    set_next_public_key,
-    set_name,
-    set_network_address,
-    set_network_public_key,
-    set_node_metadata,
-    destroy_empty_pool,
-    stake_with_pool,
-    request_withdraw_stake,
-    withdraw_stake,
-    try_join_active_set,
-    compute_next_committee,
-    apportionment,
-    dhondt,
-    max_shards_per_node,
-    initiate_epoch_change,
-    advance_epoch,
-    epoch_sync_done,
-    node_metadata,
-    next_committee,
-    next_epoch_params,
-    epoch,
-    committee: committee2,
-    previous_committee,
-    next_bls_committee,
-    has_pool,
-    n_shards,
-    calculate_rewards,
-    new_walrus_context,
-    is_quorum,
-    is_quorum_for_n_shards
-  };
-}
 //# sourceMappingURL=staking_inner.js.map
 
 
 /***/ }),
 
-/***/ 72850:
+/***/ 62315:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -80827,46 +82483,94 @@ var staking_pool_exports = {};
 __export(staking_pool_exports, {
   PoolState: () => PoolState,
   StakingPool: () => StakingPool,
-  VotingParams: () => VotingParams,
-  init: () => init
+  VotingParams: () => VotingParams
 });
 module.exports = __toCommonJS(staking_pool_exports);
 var import_bcs = __nccwpck_require__(56244);
-var auth = __toESM(__nccwpck_require__(20168));
-var bag = __toESM(__nccwpck_require__(11108));
-var balance = __toESM(__nccwpck_require__(12774));
-var object = __toESM(__nccwpck_require__(64371));
-var table = __toESM(__nccwpck_require__(75058));
-var pending_values = __toESM(__nccwpck_require__(37128));
-var storage_node = __toESM(__nccwpck_require__(18268));
-var import_utils = __nccwpck_require__(13822);
+var object = __toESM(__nccwpck_require__(62731));
+var storage_node = __toESM(__nccwpck_require__(21721));
+var pending_values = __toESM(__nccwpck_require__(27765));
+var table = __toESM(__nccwpck_require__(93354));
+var balance = __toESM(__nccwpck_require__(72046));
+var auth = __toESM(__nccwpck_require__(56153));
+var bag = __toESM(__nccwpck_require__(11628));
 function VotingParams() {
   return import_bcs.bcs.struct("VotingParams", {
+    /** Voting: storage price for the next epoch. */
     storage_price: import_bcs.bcs.u64(),
+    /** Voting: write price for the next epoch. */
     write_price: import_bcs.bcs.u64(),
+    /** Voting: node capacity for the next epoch. */
     node_capacity: import_bcs.bcs.u64()
   });
 }
 function StakingPool() {
   return import_bcs.bcs.struct("StakingPool", {
     id: object.UID(),
+    /** The current state of the pool. */
     state: PoolState(),
+    /** Current epoch's pool parameters. */
     voting_params: VotingParams(),
+    /** The storage node info for the pool. */
     node_info: storage_node.StorageNodeInfo(),
+    /**
+     * The epoch when the pool is / will be activated. Serves information purposes
+     * only, the checks are performed in the `state` property.
+     */
     activation_epoch: import_bcs.bcs.u32(),
+    /** Epoch when the pool was last updated. */
     latest_epoch: import_bcs.bcs.u32(),
+    /** Currently staked WAL in the pool + rewards pool. */
     wal_balance: import_bcs.bcs.u64(),
+    /** The total number of shares in the current epoch. */
     num_shares: import_bcs.bcs.u64(),
+    /**
+     * The amount of the shares that will be withdrawn in E+1 or E+2. We use this
+     * amount to calculate the WAL withdrawal in the `process_pending_stake`.
+     */
     pending_shares_withdraw: pending_values.PendingValues(),
+    /**
+     * The amount of the stake requested for withdrawal for a node that may part of the
+     * next committee. Stores principals of not yet active stakes. In practice, those
+     * tokens are staked for exactly one epoch.
+     */
     pre_active_withdrawals: pending_values.PendingValues(),
+    /**
+     * The pending commission rate for the pool. Commission rate is applied in E+2, so
+     * we store the value for the matching epoch and apply it in the `advance_epoch`
+     * function.
+     */
     pending_commission_rate: pending_values.PendingValues(),
+    /** The commission rate for the pool, in basis points. */
     commission_rate: import_bcs.bcs.u16(),
+    /**
+     * Historical exchange rates for the pool. The key is the epoch when the exchange
+     * rate was set, and the value is the exchange rate (the ratio of the amount of WAL
+     * tokens for the pool shares).
+     */
     exchange_rates: table.Table(),
+    /**
+     * The amount of stake that will be added to the `wal_balance`. Can hold up to two
+     * keys: E+1 and E+2, due to the differences in the activation epoch.
+     *
+     * ```
+     * E+1 -> Balance
+     * E+2 -> Balance
+     * ```
+     *
+     * Single key is cleared in the `advance_epoch` function, leaving only the next
+     * epoch's stake.
+     */
     pending_stake: pending_values.PendingValues(),
+    /** The rewards that the pool has received from being in the committee. */
     rewards_pool: balance.Balance(),
+    /** The commission that the pool has received from the rewards. */
     commission: balance.Balance(),
+    /** An Object or an address which can claim the commission. */
     commission_receiver: auth.Authorized(),
+    /** An Object or address that can authorize governance actions, such as upgrades. */
     governance_authorized: auth.Authorized(),
+    /** Reserved for future use and migrations. */
     extra_fields: bag.Bag()
   });
 }
@@ -80877,453 +82581,12 @@ function PoolState() {
     Withdrawn: null
   });
 }
-function init(packageAddress) {
-  function _new(options) {
-    const argumentsTypes = [
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
-      `${packageAddress}::node_metadata::NodeMetadata`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>",
-      "u16",
-      "u64",
-      "u64",
-      "u64",
-      `${packageAddress}::walrus_context::WalrusContext`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "new",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_withdrawing(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      `${packageAddress}::walrus_context::WalrusContext`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_withdrawing",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function stake(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      `0x0000000000000000000000000000000000000000000000000000000000000002::balance::Balance<${packageAddress}::wal::WAL>`,
-      `${packageAddress}::walrus_context::WalrusContext`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "stake",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function request_withdraw_stake(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      `${packageAddress}::staked_wal::StakedWal`,
-      "bool",
-      "bool",
-      `${packageAddress}::walrus_context::WalrusContext`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "request_withdraw_stake",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function withdraw_stake(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      `${packageAddress}::staked_wal::StakedWal`,
-      "bool",
-      "bool",
-      `${packageAddress}::walrus_context::WalrusContext`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "withdraw_stake",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function advance_epoch(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      `0x0000000000000000000000000000000000000000000000000000000000000002::balance::Balance<${packageAddress}::wal::WAL>`,
-      `${packageAddress}::walrus_context::WalrusContext`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "advance_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function process_pending_stake(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      `${packageAddress}::walrus_context::WalrusContext`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "process_pending_stake",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_next_commission(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      "u16",
-      `${packageAddress}::walrus_context::WalrusContext`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_next_commission",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_next_storage_price(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`, "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_next_storage_price",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_next_write_price(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`, "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_next_write_price",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_next_node_capacity(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`, "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_next_node_capacity",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_next_public_key(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      "vector<u8>",
-      "vector<u8>",
-      `${packageAddress}::walrus_context::WalrusContext`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_next_public_key",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_name(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_name",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_network_address(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_network_address",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_network_public_key(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`, "vector<u8>"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_network_public_key",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_node_metadata(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      `${packageAddress}::node_metadata::NodeMetadata`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_node_metadata",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function destroy_empty(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "destroy_empty",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function exchange_rate_at_epoch(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`, "u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "exchange_rate_at_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function wal_balance_at_epoch(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`, "u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "wal_balance_at_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function governance_authorized(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "governance_authorized",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_governance_authorized(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      `${packageAddress}::auth::Authenticated`,
-      `${packageAddress}::auth::Authorized`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_governance_authorized",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function commission_receiver(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "commission_receiver",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_commission_receiver(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      `${packageAddress}::auth::Authenticated`,
-      `${packageAddress}::auth::Authorized`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "set_commission_receiver",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function commission_rate(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "commission_rate",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function commission_amount(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "commission_amount",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function collect_commission(options) {
-    const argumentsTypes = [
-      `${packageAddress}::staking_pool::StakingPool`,
-      `${packageAddress}::auth::Authenticated`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "collect_commission",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function rewards_amount(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "rewards_amount",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function wal_balance(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "wal_balance",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function storage_price(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "storage_price",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function write_price(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "write_price",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function node_capacity(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "node_capacity",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function activation_epoch(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "activation_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function node_info(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "node_info",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function is_active(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "is_active",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function is_withdrawing(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "is_withdrawing",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function is_empty(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "is_empty",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function calculate_rewards(options) {
-    const argumentsTypes = [`${packageAddress}::staking_pool::StakingPool`, "u64", "u32", "u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "staking_pool",
-      function: "calculate_rewards",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    _new,
-    set_withdrawing,
-    stake,
-    request_withdraw_stake,
-    withdraw_stake,
-    advance_epoch,
-    process_pending_stake,
-    set_next_commission,
-    set_next_storage_price,
-    set_next_write_price,
-    set_next_node_capacity,
-    set_next_public_key,
-    set_name,
-    set_network_address,
-    set_network_public_key,
-    set_node_metadata,
-    destroy_empty,
-    exchange_rate_at_epoch,
-    wal_balance_at_epoch,
-    governance_authorized,
-    set_governance_authorized,
-    commission_receiver,
-    set_commission_receiver,
-    commission_rate,
-    commission_amount,
-    collect_commission,
-    rewards_amount,
-    wal_balance,
-    storage_price,
-    write_price,
-    node_capacity,
-    activation_epoch,
-    node_info,
-    is_active,
-    is_withdrawing,
-    is_empty,
-    calculate_rewards
-  };
-}
 //# sourceMappingURL=staking_pool.js.map
 
 
 /***/ }),
 
-/***/ 41921:
+/***/ 52296:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -81359,15 +82622,23 @@ var storage_accounting_exports = {};
 __export(storage_accounting_exports, {
   FutureAccounting: () => FutureAccounting,
   FutureAccountingRingBuffer: () => FutureAccountingRingBuffer,
-  init: () => init
+  epoch: () => epoch,
+  maxEpochsAhead: () => maxEpochsAhead,
+  rewards: () => rewards,
+  ringLookup: () => ringLookup,
+  usedCapacity: () => usedCapacity
 });
 module.exports = __toCommonJS(storage_accounting_exports);
 var import_bcs = __nccwpck_require__(56244);
-var balance = __toESM(__nccwpck_require__(12774));
 var import_utils = __nccwpck_require__(13822);
+var balance = __toESM(__nccwpck_require__(72046));
 function FutureAccounting() {
   return import_bcs.bcs.struct("FutureAccounting", {
     epoch: import_bcs.bcs.u32(),
+    /**
+     * This field stores `used_capacity` for the epoch. Currently, impossible to rename
+     * due to package upgrade limitations.
+     */
     used_capacity: import_bcs.bcs.u64(),
     rewards_to_distribute: balance.Balance()
   });
@@ -81379,133 +82650,78 @@ function FutureAccountingRingBuffer() {
     ring_buffer: import_bcs.bcs.vector(FutureAccounting())
   });
 }
-function init(packageAddress) {
-  function new_future_accounting(options) {
-    const argumentsTypes = [
-      "u32",
-      "u64",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::balance::Balance<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_accounting",
-      function: "new_future_accounting",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function epoch(options) {
-    const argumentsTypes = [`${packageAddress}::storage_accounting::FutureAccounting`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_accounting",
-      function: "epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function used_capacity(options) {
-    const argumentsTypes = [`${packageAddress}::storage_accounting::FutureAccounting`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_accounting",
-      function: "used_capacity",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function increase_used_capacity(options) {
-    const argumentsTypes = [`${packageAddress}::storage_accounting::FutureAccounting`, "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_accounting",
-      function: "increase_used_capacity",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function rewards_balance(options) {
-    const argumentsTypes = [`${packageAddress}::storage_accounting::FutureAccounting`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_accounting",
-      function: "rewards_balance",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function delete_empty_future_accounting(options) {
-    const argumentsTypes = [`${packageAddress}::storage_accounting::FutureAccounting`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_accounting",
-      function: "delete_empty_future_accounting",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function unwrap_balance(options) {
-    const argumentsTypes = [`${packageAddress}::storage_accounting::FutureAccounting`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_accounting",
-      function: "unwrap_balance",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function ring_new(options) {
-    const argumentsTypes = ["u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_accounting",
-      function: "ring_new",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function ring_lookup_mut(options) {
-    const argumentsTypes = [
-      `${packageAddress}::storage_accounting::FutureAccountingRingBuffer`,
-      "u32"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_accounting",
-      function: "ring_lookup_mut",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function ring_pop_expand(options) {
-    const argumentsTypes = [`${packageAddress}::storage_accounting::FutureAccountingRingBuffer`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_accounting",
-      function: "ring_pop_expand",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function max_epochs_ahead(options) {
-    const argumentsTypes = [`${packageAddress}::storage_accounting::FutureAccountingRingBuffer`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_accounting",
-      function: "max_epochs_ahead",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    new_future_accounting,
-    epoch,
-    used_capacity,
-    increase_used_capacity,
-    rewards_balance,
-    delete_empty_future_accounting,
-    unwrap_balance,
-    ring_new,
-    ring_lookup_mut,
-    ring_pop_expand,
-    max_epochs_ahead
-  };
+function maxEpochsAhead(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::storage_accounting::FutureAccountingRingBuffer`
+  ];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_accounting",
+    function: "max_epochs_ahead",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function ringLookup(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::storage_accounting::FutureAccountingRingBuffer`,
+    "u32"
+  ];
+  const parameterNames = ["self", "epochsInFuture"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_accounting",
+    function: "ring_lookup",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function epoch(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::storage_accounting::FutureAccounting`
+  ];
+  const parameterNames = ["accounting"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_accounting",
+    function: "epoch",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function usedCapacity(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::storage_accounting::FutureAccounting`
+  ];
+  const parameterNames = ["accounting"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_accounting",
+    function: "used_capacity",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function rewards(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::storage_accounting::FutureAccounting`
+  ];
+  const parameterNames = ["accounting"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_accounting",
+    function: "rewards",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
 }
 //# sourceMappingURL=storage_accounting.js.map
 
 
 /***/ }),
 
-/***/ 18268:
+/***/ 21721:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -81541,15 +82757,20 @@ var storage_node_exports = {};
 __export(storage_node_exports, {
   StorageNodeCap: () => StorageNodeCap,
   StorageNodeInfo: () => StorageNodeInfo,
-  init: () => init
+  denyListRoot: () => denyListRoot,
+  denyListSequence: () => denyListSequence,
+  id: () => id,
+  lastEpochSyncDone: () => lastEpochSyncDone,
+  lastEventBlobAttestation: () => lastEventBlobAttestation,
+  nodeId: () => nodeId
 });
 module.exports = __toCommonJS(storage_node_exports);
 var import_bcs = __nccwpck_require__(56244);
-var group_ops = __toESM(__nccwpck_require__(90702));
-var object = __toESM(__nccwpck_require__(64371));
-var event_blob = __toESM(__nccwpck_require__(41732));
-var extended_field = __toESM(__nccwpck_require__(49016));
 var import_utils = __nccwpck_require__(13822);
+var group_ops = __toESM(__nccwpck_require__(97126));
+var extended_field = __toESM(__nccwpck_require__(50521));
+var object = __toESM(__nccwpck_require__(62731));
+var event_blob = __toESM(__nccwpck_require__(71917));
 function StorageNodeInfo() {
   return import_bcs.bcs.struct("StorageNodeInfo", {
     name: import_bcs.bcs.string(),
@@ -81567,257 +82788,86 @@ function StorageNodeCap() {
     node_id: import_bcs.bcs.Address,
     last_epoch_sync_done: import_bcs.bcs.u32(),
     last_event_blob_attestation: import_bcs.bcs.option(event_blob.EventBlobAttestation()),
+    /** Stores the Merkle root of the deny list for the storage node. */
     deny_list_root: import_bcs.bcs.u256(),
+    /** Stores the sequence number of the deny list for the storage node. */
     deny_list_sequence: import_bcs.bcs.u64(),
+    /** Stores the size of the deny list for the storage node. */
     deny_list_size: import_bcs.bcs.u64()
   });
 }
-function init(packageAddress) {
-  function _new(options) {
-    const argumentsTypes = [
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String",
-      "vector<u8>",
-      "vector<u8>",
-      `${packageAddress}::node_metadata::NodeMetadata`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "new",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function new_cap(options) {
-    const argumentsTypes = [
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "new_cap",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function public_key(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeInfo`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "public_key",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function metadata(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeInfo`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "metadata",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function next_epoch_public_key(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeInfo`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "next_epoch_public_key",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function id(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeInfo`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function node_id(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeCap`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "node_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function last_epoch_sync_done(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeCap`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "last_epoch_sync_done",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function last_event_blob_attestation(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeCap`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "last_event_blob_attestation",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function deny_list_root(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeCap`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "deny_list_root",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function deny_list_sequence(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeCap`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "deny_list_sequence",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_last_epoch_sync_done(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeCap`, "u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "set_last_epoch_sync_done",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_last_event_blob_attestation(options) {
-    const argumentsTypes = [
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      `${packageAddress}::event_blob::EventBlobAttestation`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "set_last_event_blob_attestation",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_next_public_key(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeInfo`, "vector<u8>"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "set_next_public_key",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_name(options) {
-    const argumentsTypes = [
-      `${packageAddress}::storage_node::StorageNodeInfo`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "set_name",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_network_address(options) {
-    const argumentsTypes = [
-      `${packageAddress}::storage_node::StorageNodeInfo`,
-      "0x0000000000000000000000000000000000000000000000000000000000000001::string::String"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "set_network_address",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_network_public_key(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeInfo`, "vector<u8>"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "set_network_public_key",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_node_metadata(options) {
-    const argumentsTypes = [
-      `${packageAddress}::storage_node::StorageNodeInfo`,
-      `${packageAddress}::node_metadata::NodeMetadata`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "set_node_metadata",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function rotate_public_key(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeInfo`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "rotate_public_key",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function destroy(options) {
-    const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeInfo`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "destroy",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_deny_list_properties(options) {
-    const argumentsTypes = [
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u256",
-      "u64",
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_node",
-      function: "set_deny_list_properties",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    _new,
-    new_cap,
-    public_key,
-    metadata,
-    next_epoch_public_key,
-    id,
-    node_id,
-    last_epoch_sync_done,
-    last_event_blob_attestation,
-    deny_list_root,
-    deny_list_sequence,
-    set_last_epoch_sync_done,
-    set_last_event_blob_attestation,
-    set_next_public_key,
-    set_name,
-    set_network_address,
-    set_network_public_key,
-    set_node_metadata,
-    rotate_public_key,
-    destroy,
-    set_deny_list_properties
-  };
+function id(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeInfo`];
+  const parameterNames = ["cap"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_node",
+    function: "id",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function nodeId(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeCap`];
+  const parameterNames = ["cap"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_node",
+    function: "node_id",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function lastEpochSyncDone(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeCap`];
+  const parameterNames = ["cap"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_node",
+    function: "last_epoch_sync_done",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function lastEventBlobAttestation(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeCap`];
+  const parameterNames = ["cap"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_node",
+    function: "last_event_blob_attestation",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function denyListRoot(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeCap`];
+  const parameterNames = ["cap"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_node",
+    function: "deny_list_root",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function denyListSequence(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_node::StorageNodeCap`];
+  const parameterNames = ["cap"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_node",
+    function: "deny_list_sequence",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
 }
 //# sourceMappingURL=storage_node.js.map
 
 
 /***/ }),
 
-/***/ 89104:
+/***/ 16925:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -81852,12 +82902,20 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var storage_resource_exports = {};
 __export(storage_resource_exports, {
   Storage: () => Storage,
-  init: () => init
+  destroy: () => destroy,
+  endEpoch: () => endEpoch,
+  fuse: () => fuse,
+  fuseAmount: () => fuseAmount,
+  fusePeriods: () => fusePeriods,
+  size: () => size,
+  splitByEpoch: () => splitByEpoch,
+  splitBySize: () => splitBySize,
+  startEpoch: () => startEpoch
 });
 module.exports = __toCommonJS(storage_resource_exports);
 var import_bcs = __nccwpck_require__(56244);
-var object = __toESM(__nccwpck_require__(64371));
 var import_utils = __nccwpck_require__(13822);
+var object = __toESM(__nccwpck_require__(62731));
 function Storage() {
   return import_bcs.bcs.struct("Storage", {
     id: object.UID(),
@@ -81866,396 +82924,120 @@ function Storage() {
     storage_size: import_bcs.bcs.u64()
   });
 }
-function init(packageAddress) {
-  function start_epoch(options) {
-    const argumentsTypes = [`${packageAddress}::storage_resource::Storage`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_resource",
-      function: "start_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function end_epoch(options) {
-    const argumentsTypes = [`${packageAddress}::storage_resource::Storage`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_resource",
-      function: "end_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function size(options) {
-    const argumentsTypes = [`${packageAddress}::storage_resource::Storage`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_resource",
-      function: "size",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function create_storage(options) {
-    const argumentsTypes = ["u32", "u32", "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_resource",
-      function: "create_storage",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function extend_end_epoch(options) {
-    const argumentsTypes = [`${packageAddress}::storage_resource::Storage`, "u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_resource",
-      function: "extend_end_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function split_by_epoch(options) {
-    const argumentsTypes = [`${packageAddress}::storage_resource::Storage`, "u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_resource",
-      function: "split_by_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function split_by_size(options) {
-    const argumentsTypes = [`${packageAddress}::storage_resource::Storage`, "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_resource",
-      function: "split_by_size",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function fuse_periods(options) {
-    const argumentsTypes = [
-      `${packageAddress}::storage_resource::Storage`,
-      `${packageAddress}::storage_resource::Storage`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_resource",
-      function: "fuse_periods",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function fuse_amount(options) {
-    const argumentsTypes = [
-      `${packageAddress}::storage_resource::Storage`,
-      `${packageAddress}::storage_resource::Storage`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_resource",
-      function: "fuse_amount",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function fuse(options) {
-    const argumentsTypes = [
-      `${packageAddress}::storage_resource::Storage`,
-      `${packageAddress}::storage_resource::Storage`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_resource",
-      function: "fuse",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function destroy(options) {
-    const argumentsTypes = [`${packageAddress}::storage_resource::Storage`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "storage_resource",
-      function: "destroy",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    start_epoch,
-    end_epoch,
-    size,
-    create_storage,
-    extend_end_epoch,
-    split_by_epoch,
-    split_by_size,
-    fuse_periods,
-    fuse_amount,
-    fuse,
-    destroy
-  };
+function startEpoch(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_resource::Storage`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_resource",
+    function: "start_epoch",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function endEpoch(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_resource::Storage`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_resource",
+    function: "end_epoch",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function size(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_resource::Storage`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_resource",
+    function: "size",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function splitByEpoch(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_resource::Storage`, "u32"];
+  const parameterNames = ["storage", "splitEpoch"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_resource",
+    function: "split_by_epoch",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function splitBySize(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_resource::Storage`, "u64"];
+  const parameterNames = ["storage", "splitSize"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_resource",
+    function: "split_by_size",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function fusePeriods(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::storage_resource::Storage`,
+    `${packageAddress}::storage_resource::Storage`
+  ];
+  const parameterNames = ["first", "second"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_resource",
+    function: "fuse_periods",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function fuseAmount(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::storage_resource::Storage`,
+    `${packageAddress}::storage_resource::Storage`
+  ];
+  const parameterNames = ["first", "second"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_resource",
+    function: "fuse_amount",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function fuse(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::storage_resource::Storage`,
+    `${packageAddress}::storage_resource::Storage`
+  ];
+  const parameterNames = ["first", "second"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_resource",
+    function: "fuse",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function destroy(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::storage_resource::Storage`];
+  const parameterNames = ["storage"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "storage_resource",
+    function: "destroy",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
 }
 //# sourceMappingURL=storage_resource.js.map
 
 
 /***/ }),
 
-/***/ 8641:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var subsidies_exports = {};
-__export(subsidies_exports, {
-  AdminCap: () => AdminCap,
-  Subsidies: () => Subsidies,
-  init: () => init
-});
-module.exports = __toCommonJS(subsidies_exports);
-var import_bcs = __nccwpck_require__(56244);
-var balance = __toESM(__nccwpck_require__(12774));
-var object = __toESM(__nccwpck_require__(64371));
-var import_utils = __nccwpck_require__(13822);
-function AdminCap() {
-  return import_bcs.bcs.struct("AdminCap", {
-    id: object.UID(),
-    subsidies_id: import_bcs.bcs.Address
-  });
-}
-function Subsidies() {
-  return import_bcs.bcs.struct("Subsidies", {
-    id: object.UID(),
-    buyer_subsidy_rate: import_bcs.bcs.u16(),
-    system_subsidy_rate: import_bcs.bcs.u16(),
-    subsidy_pool: balance.Balance(),
-    package_id: import_bcs.bcs.Address,
-    version: import_bcs.bcs.u64()
-  });
-}
-function init(packageAddress) {
-  function _new(options) {
-    const argumentsTypes = [
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "new",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function new_with_initial_rates_and_funds(options) {
-    const argumentsTypes = [
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID",
-      "u16",
-      "u16",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "new_with_initial_rates_and_funds",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function add_funds(options) {
-    const argumentsTypes = [
-      `${packageAddress}::subsidies::Subsidies`,
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "add_funds",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function check_admin(options) {
-    const argumentsTypes = [
-      `${packageAddress}::subsidies::Subsidies`,
-      `${packageAddress}::subsidies::AdminCap`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "check_admin",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function check_version_upgrade(options) {
-    const argumentsTypes = [`${packageAddress}::subsidies::Subsidies`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "check_version_upgrade",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_buyer_subsidy_rate(options) {
-    const argumentsTypes = [
-      `${packageAddress}::subsidies::Subsidies`,
-      `${packageAddress}::subsidies::AdminCap`,
-      "u16"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "set_buyer_subsidy_rate",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_system_subsidy_rate(options) {
-    const argumentsTypes = [
-      `${packageAddress}::subsidies::Subsidies`,
-      `${packageAddress}::subsidies::AdminCap`,
-      "u16"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "set_system_subsidy_rate",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function apply_subsidies(options) {
-    const argumentsTypes = [
-      `${packageAddress}::subsidies::Subsidies`,
-      "u64",
-      "u32",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`,
-      `${packageAddress}::system::System`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "apply_subsidies",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function extend_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::subsidies::Subsidies`,
-      `${packageAddress}::system::System`,
-      `${packageAddress}::blob::Blob`,
-      "u32",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "extend_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function reserve_space(options) {
-    const argumentsTypes = [
-      `${packageAddress}::subsidies::Subsidies`,
-      `${packageAddress}::system::System`,
-      "u64",
-      "u32",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "reserve_space",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function migrate(options) {
-    const argumentsTypes = [
-      `${packageAddress}::subsidies::Subsidies`,
-      `${packageAddress}::subsidies::AdminCap`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "migrate",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function admin_cap_subsidies_id(options) {
-    const argumentsTypes = [`${packageAddress}::subsidies::AdminCap`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "admin_cap_subsidies_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function subsidy_pool_value(options) {
-    const argumentsTypes = [`${packageAddress}::subsidies::Subsidies`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "subsidy_pool_value",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function buyer_subsidy_rate(options) {
-    const argumentsTypes = [`${packageAddress}::subsidies::Subsidies`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "buyer_subsidy_rate",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function system_subsidy_rate(options) {
-    const argumentsTypes = [`${packageAddress}::subsidies::Subsidies`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "subsidies",
-      function: "system_subsidy_rate",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    _new,
-    new_with_initial_rates_and_funds,
-    add_funds,
-    check_admin,
-    check_version_upgrade,
-    set_buyer_subsidy_rate,
-    set_system_subsidy_rate,
-    apply_subsidies,
-    extend_blob,
-    reserve_space,
-    migrate,
-    admin_cap_subsidies_id,
-    subsidy_pool_value,
-    buyer_subsidy_rate,
-    system_subsidy_rate
-  };
-}
-//# sourceMappingURL=subsidies.js.map
-
-
-/***/ }),
-
-/***/ 63999:
+/***/ 10946:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -82290,12 +83072,30 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var system_exports = {};
 __export(system_exports, {
   System: () => System,
-  init: () => init
+  addPerEpochSubsidies: () => addPerEpochSubsidies,
+  addSubsidy: () => addSubsidy,
+  certifyBlob: () => certifyBlob,
+  certifyEventBlob: () => certifyEventBlob,
+  deleteBlob: () => deleteBlob,
+  deleteDenyListedBlob: () => deleteDenyListedBlob,
+  epoch: () => epoch,
+  extendBlob: () => extendBlob,
+  extendBlobWithResource: () => extendBlobWithResource,
+  futureAccounting: () => futureAccounting,
+  invalidateBlobId: () => invalidateBlobId,
+  nShards: () => nShards,
+  registerBlob: () => registerBlob,
+  registerDenyListUpdate: () => registerDenyListUpdate,
+  reserveSpace: () => reserveSpace,
+  reserveSpaceForEpochs: () => reserveSpaceForEpochs,
+  totalCapacitySize: () => totalCapacitySize,
+  updateDenyList: () => updateDenyList,
+  usedCapacitySize: () => usedCapacitySize
 });
 module.exports = __toCommonJS(system_exports);
 var import_bcs = __nccwpck_require__(56244);
-var object = __toESM(__nccwpck_require__(64371));
 var import_utils = __nccwpck_require__(13822);
+var object = __toESM(__nccwpck_require__(62731));
 function System() {
   return import_bcs.bcs.struct("System", {
     id: object.UID(),
@@ -82304,329 +83104,314 @@ function System() {
     new_package_id: import_bcs.bcs.option(import_bcs.bcs.Address)
   });
 }
-function init(packageAddress) {
-  function create_empty(options) {
-    const argumentsTypes = [
-      "u32",
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "create_empty",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function invalidate_blob_id(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "invalidate_blob_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function certify_event_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u256",
-      "u256",
-      "u64",
-      "u8",
-      "u64",
-      "u32"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "certify_event_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function reserve_space(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      "u64",
-      "u32",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "reserve_space",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function register_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      `${packageAddress}::storage_resource::Storage`,
-      "u256",
-      "u256",
-      "u64",
-      "u8",
-      "bool",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "register_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function certify_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      `${packageAddress}::blob::Blob`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "certify_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function delete_blob(options) {
-    const argumentsTypes = [`${packageAddress}::system::System`, `${packageAddress}::blob::Blob`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "delete_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function extend_blob_with_resource(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      `${packageAddress}::blob::Blob`,
-      `${packageAddress}::storage_resource::Storage`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "extend_blob_with_resource",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function extend_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      `${packageAddress}::blob::Blob`,
-      "u32",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "extend_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function add_subsidy(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`,
-      "u32"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "add_subsidy",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function register_deny_list_update(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u256",
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "register_deny_list_update",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function update_deny_list(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "update_deny_list",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function delete_deny_listed_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "delete_deny_listed_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function epoch(options) {
-    const argumentsTypes = [`${packageAddress}::system::System`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function total_capacity_size(options) {
-    const argumentsTypes = [`${packageAddress}::system::System`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "total_capacity_size",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function used_capacity_size(options) {
-    const argumentsTypes = [`${packageAddress}::system::System`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "used_capacity_size",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function n_shards(options) {
-    const argumentsTypes = [`${packageAddress}::system::System`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "n_shards",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function advance_epoch(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      `${packageAddress}::bls_aggregate::BlsCommittee`,
-      `${packageAddress}::epoch_parameters::EpochParams`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "advance_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function package_id(options) {
-    const argumentsTypes = [`${packageAddress}::system::System`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "package_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function version(options) {
-    const argumentsTypes = [`${packageAddress}::system::System`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "version",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function set_new_package_id(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system::System`,
-      "0x0000000000000000000000000000000000000000000000000000000000000002::object::ID"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "set_new_package_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function migrate(options) {
-    const argumentsTypes = [`${packageAddress}::system::System`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "migrate",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function inner_mut(options) {
-    const argumentsTypes = [`${packageAddress}::system::System`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "inner_mut",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function inner(options) {
-    const argumentsTypes = [`${packageAddress}::system::System`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system",
-      function: "inner",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    create_empty,
-    invalidate_blob_id,
-    certify_event_blob,
-    reserve_space,
-    register_blob,
-    certify_blob,
-    delete_blob,
-    extend_blob_with_resource,
-    extend_blob,
-    add_subsidy,
-    register_deny_list_update,
-    update_deny_list,
-    delete_deny_listed_blob,
-    epoch,
-    total_capacity_size,
-    used_capacity_size,
-    n_shards,
-    advance_epoch,
-    package_id,
-    version,
-    set_new_package_id,
-    migrate,
-    inner_mut,
-    inner
-  };
+function invalidateBlobId(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    "vector<u8>",
+    "vector<u8>",
+    "vector<u8>"
+  ];
+  const parameterNames = ["system", "signature", "membersBitmap", "message"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "invalidate_blob_id",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function certifyEventBlob(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "u256",
+    "u256",
+    "u64",
+    "u8",
+    "u64",
+    "u32"
+  ];
+  const parameterNames = [
+    "system",
+    "cap",
+    "blobId",
+    "rootHash",
+    "size",
+    "encodingType",
+    "endingCheckpointSequenceNum",
+    "epoch"
+  ];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "certify_event_blob",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function reserveSpace(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    "u64",
+    "u32",
+    `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
+  ];
+  const parameterNames = ["self", "storageAmount", "epochsAhead", "payment"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "reserve_space",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function reserveSpaceForEpochs(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    "u64",
+    "u32",
+    "u32",
+    `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
+  ];
+  const parameterNames = ["self", "storageAmount", "startEpoch", "endEpoch", "payment"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "reserve_space_for_epochs",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function registerBlob(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    `${packageAddress}::storage_resource::Storage`,
+    "u256",
+    "u256",
+    "u64",
+    "u8",
+    "bool",
+    `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
+  ];
+  const parameterNames = [
+    "self",
+    "storage",
+    "blobId",
+    "rootHash",
+    "size",
+    "encodingType",
+    "deletable",
+    "writePayment"
+  ];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "register_blob",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function certifyBlob(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    `${packageAddress}::blob::Blob`,
+    "vector<u8>",
+    "vector<u8>",
+    "vector<u8>"
+  ];
+  const parameterNames = ["self", "blob", "signature", "signersBitmap", "message"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "certify_blob",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function deleteBlob(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    `${packageAddress}::blob::Blob`
+  ];
+  const parameterNames = ["self", "blob"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "delete_blob",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function extendBlobWithResource(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    `${packageAddress}::blob::Blob`,
+    `${packageAddress}::storage_resource::Storage`
+  ];
+  const parameterNames = ["self", "blob", "extension"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "extend_blob_with_resource",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function extendBlob(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    `${packageAddress}::blob::Blob`,
+    "u32",
+    `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
+  ];
+  const parameterNames = ["self", "blob", "extendedEpochs", "payment"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "extend_blob",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function addSubsidy(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`,
+    "u32"
+  ];
+  const parameterNames = ["system", "subsidy", "epochsAhead"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "add_subsidy",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function addPerEpochSubsidies(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    `vector<0x0000000000000000000000000000000000000000000000000000000000000002::balance::Balance<${packageAddress}::wal::WAL>>`
+  ];
+  const parameterNames = ["system", "subsidies"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "add_per_epoch_subsidies",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function registerDenyListUpdate(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "u256",
+    "u64"
+  ];
+  const parameterNames = ["self", "cap", "denyListRoot", "denyListSequence"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "register_deny_list_update",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function updateDenyList(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    `${packageAddress}::storage_node::StorageNodeCap`,
+    "vector<u8>",
+    "vector<u8>",
+    "vector<u8>"
+  ];
+  const parameterNames = ["self", "cap", "signature", "membersBitmap", "message"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "update_deny_list",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function deleteDenyListedBlob(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [
+    `${packageAddress}::system::System`,
+    "vector<u8>",
+    "vector<u8>",
+    "vector<u8>"
+  ];
+  const parameterNames = ["self", "signature", "membersBitmap", "message"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "delete_deny_listed_blob",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function epoch(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::system::System`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "epoch",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function totalCapacitySize(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::system::System`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "total_capacity_size",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function usedCapacitySize(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::system::System`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "used_capacity_size",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function nShards(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::system::System`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "n_shards",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
+}
+function futureAccounting(options) {
+  const packageAddress = options.package ?? "@local-pkg/walrus";
+  const argumentsTypes = [`${packageAddress}::system::System`];
+  const parameterNames = ["self"];
+  return (tx) => tx.moveCall({
+    package: packageAddress,
+    module: "system",
+    function: "future_accounting",
+    arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes, parameterNames)
+  });
 }
 //# sourceMappingURL=system.js.map
 
 
 /***/ }),
 
-/***/ 66494:
+/***/ 3399:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -82660,435 +83445,45 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var system_state_inner_exports = {};
 __export(system_state_inner_exports, {
-  SystemStateInnerV1: () => SystemStateInnerV1,
-  init: () => init
+  SystemStateInnerV1: () => SystemStateInnerV1
 });
 module.exports = __toCommonJS(system_state_inner_exports);
 var import_bcs = __nccwpck_require__(56244);
-var bls_aggregate = __toESM(__nccwpck_require__(46595));
-var event_blob = __toESM(__nccwpck_require__(41732));
-var extended_field = __toESM(__nccwpck_require__(49016));
-var storage_accounting = __toESM(__nccwpck_require__(41921));
-var import_utils = __nccwpck_require__(13822);
+var bls_aggregate = __toESM(__nccwpck_require__(27608));
+var storage_accounting = __toESM(__nccwpck_require__(52296));
+var event_blob = __toESM(__nccwpck_require__(71917));
+var extended_field = __toESM(__nccwpck_require__(50521));
 function SystemStateInnerV1() {
   return import_bcs.bcs.struct("SystemStateInnerV1", {
+    /** The current committee, with the current epoch. */
     committee: bls_aggregate.BlsCommittee(),
+    /**
+     * Maximum capacity size for the current and future epochs. Changed by voting on
+     * the epoch parameters.
+     */
     total_capacity_size: import_bcs.bcs.u64(),
+    /** Contains the used capacity size for the current epoch. */
     used_capacity_size: import_bcs.bcs.u64(),
+    /** The price per unit size of storage. */
     storage_price_per_unit_size: import_bcs.bcs.u64(),
+    /** The write price per unit size. */
     write_price_per_unit_size: import_bcs.bcs.u64(),
+    /** Accounting ring buffer for future epochs. */
     future_accounting: storage_accounting.FutureAccountingRingBuffer(),
+    /** Event blob certification state */
     event_blob_certification_state: event_blob.EventBlobCertificationState(),
+    /**
+     * Sizes of deny lists for storage nodes. Only current committee members can
+     * register their updates in this map. Hence, we don't expect it to bloat.
+     *
+     * Max number of stored entries is ~6500. If there's any concern about the
+     * performance of the map, it can be cleaned up as a side effect of the updates /
+     * registrations.
+     */
     deny_list_sizes: extended_field.ExtendedField()
   });
 }
-function init(packageAddress) {
-  function create_empty(options) {
-    const argumentsTypes = ["u32"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "create_empty",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function advance_epoch(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      `${packageAddress}::bls_aggregate::BlsCommittee`,
-      `${packageAddress}::epoch_parameters::EpochParams`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "advance_epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function reserve_space(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      "u64",
-      "u32",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "reserve_space",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function reserve_space_without_payment(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      "u64",
-      "u32",
-      "bool"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "reserve_space_without_payment",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function invalidate_blob_id(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "invalidate_blob_id",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function register_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      `${packageAddress}::storage_resource::Storage`,
-      "u256",
-      "u256",
-      "u64",
-      "u8",
-      "bool",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "register_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function certify_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      `${packageAddress}::blob::Blob`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "certify_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function delete_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      `${packageAddress}::blob::Blob`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "delete_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function extend_blob_with_resource(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      `${packageAddress}::blob::Blob`,
-      `${packageAddress}::storage_resource::Storage`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "extend_blob_with_resource",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function extend_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      `${packageAddress}::blob::Blob`,
-      "u32",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "extend_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function process_storage_payments(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      "u64",
-      "u32",
-      "u32",
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "process_storage_payments",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function certify_event_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u256",
-      "u256",
-      "u64",
-      "u8",
-      "u64",
-      "u32"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "certify_event_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function add_subsidy(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      `0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<${packageAddress}::wal::WAL>`,
-      "u32"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "add_subsidy",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function epoch(options) {
-    const argumentsTypes = [`${packageAddress}::system_state_inner::SystemStateInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "epoch",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function total_capacity_size(options) {
-    const argumentsTypes = [`${packageAddress}::system_state_inner::SystemStateInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "total_capacity_size",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function used_capacity_size(options) {
-    const argumentsTypes = [`${packageAddress}::system_state_inner::SystemStateInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "used_capacity_size",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function committee(options) {
-    const argumentsTypes = [`${packageAddress}::system_state_inner::SystemStateInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "committee",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function n_shards(options) {
-    const argumentsTypes = [`${packageAddress}::system_state_inner::SystemStateInnerV1`];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "n_shards",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function write_price(options) {
-    const argumentsTypes = [`${packageAddress}::system_state_inner::SystemStateInnerV1`, "u64"];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "write_price",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function register_deny_list_update(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "u256",
-      "u64"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "register_deny_list_update",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function update_deny_list(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      `${packageAddress}::storage_node::StorageNodeCap`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "update_deny_list",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  function delete_deny_listed_blob(options) {
-    const argumentsTypes = [
-      `${packageAddress}::system_state_inner::SystemStateInnerV1`,
-      "vector<u8>",
-      "vector<u8>",
-      "vector<u8>"
-    ];
-    return (tx) => tx.moveCall({
-      package: packageAddress,
-      module: "system_state_inner",
-      function: "delete_deny_listed_blob",
-      arguments: (0, import_utils.normalizeMoveArguments)(options.arguments, argumentsTypes)
-    });
-  }
-  return {
-    create_empty,
-    advance_epoch,
-    reserve_space,
-    reserve_space_without_payment,
-    invalidate_blob_id,
-    register_blob,
-    certify_blob,
-    delete_blob,
-    extend_blob_with_resource,
-    extend_blob,
-    process_storage_payments,
-    certify_event_blob,
-    add_subsidy,
-    epoch,
-    total_capacity_size,
-    used_capacity_size,
-    committee,
-    n_shards,
-    write_price,
-    register_deny_list_update,
-    update_deny_list,
-    delete_deny_listed_blob
-  };
-}
 //# sourceMappingURL=system_state_inner.js.map
-
-
-/***/ }),
-
-/***/ 13822:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var utils_exports = {};
-__export(utils_exports, {
-  getPureBcsSchema: () => getPureBcsSchema,
-  normalizeMoveArguments: () => normalizeMoveArguments
-});
-module.exports = __toCommonJS(utils_exports);
-var import_bcs = __nccwpck_require__(56244);
-var import_transactions = __nccwpck_require__(59417);
-var import_utils = __nccwpck_require__(33973);
-const MOVE_STDLIB_ADDRESS = (0, import_utils.normalizeSuiAddress)("0x1");
-const SUI_FRAMEWORK_ADDRESS = (0, import_utils.normalizeSuiAddress)("0x2");
-function getPureBcsSchema(typeTag) {
-  const parsedTag = typeof typeTag === "string" ? import_bcs.TypeTagSerializer.parseFromStr(typeTag) : typeTag;
-  if ("u8" in parsedTag) {
-    return import_bcs.bcs.U8;
-  } else if ("u16" in parsedTag) {
-    return import_bcs.bcs.U16;
-  } else if ("u32" in parsedTag) {
-    return import_bcs.bcs.U32;
-  } else if ("u64" in parsedTag) {
-    return import_bcs.bcs.U64;
-  } else if ("u128" in parsedTag) {
-    return import_bcs.bcs.U128;
-  } else if ("u256" in parsedTag) {
-    return import_bcs.bcs.U256;
-  } else if ("address" in parsedTag) {
-    return import_bcs.bcs.Address;
-  } else if ("bool" in parsedTag) {
-    return import_bcs.bcs.Bool;
-  } else if ("vector" in parsedTag) {
-    const type = getPureBcsSchema(parsedTag.vector);
-    return type ? import_bcs.bcs.vector(type) : null;
-  } else if ("struct" in parsedTag) {
-    const structTag = parsedTag.struct;
-    const pkg = (0, import_utils.normalizeSuiAddress)(parsedTag.struct.address);
-    if (pkg === MOVE_STDLIB_ADDRESS) {
-      if ((structTag.module === "ascii" || structTag.module === "string") && structTag.name === "String") {
-        return import_bcs.bcs.String;
-      }
-      if (structTag.module === "option" && structTag.name === "Option") {
-        const type = getPureBcsSchema(structTag.typeParams[0]);
-        return type ? import_bcs.bcs.vector(type) : null;
-      }
-    }
-    if (pkg === SUI_FRAMEWORK_ADDRESS && structTag.module === "Object" && structTag.name === "ID") {
-      return import_bcs.bcs.Address;
-    }
-  }
-  return null;
-}
-function normalizeMoveArguments(args, argTypes) {
-  if (args.length !== argTypes.length) {
-    throw new Error(`Invalid number of arguments, expected ${argTypes.length}, got ${args.length}`);
-  }
-  const normalizedArgs = [];
-  for (const [i, arg] of args.entries()) {
-    if (typeof arg === "function" || (0, import_transactions.isArgument)(arg)) {
-      normalizedArgs.push(arg);
-      continue;
-    }
-    const type = argTypes[i];
-    const bcsType = getPureBcsSchema(type);
-    if (bcsType) {
-      const bytes = bcsType.serialize(arg);
-      normalizedArgs.push((tx) => tx.pure(bytes));
-      continue;
-    } else if (typeof arg === "string") {
-      normalizedArgs.push((tx) => tx.object(arg));
-      continue;
-    }
-    throw new Error(`Invalid argument ${JSON.stringify(arg)} for type ${type}`);
-  }
-  return normalizedArgs;
-}
-//# sourceMappingURL=index.js.map
 
 
 /***/ }),
@@ -83157,6 +83552,697 @@ class BlobBlockedError extends Error {
 
 /***/ }),
 
+/***/ 1641:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
+var blob_exports = {};
+__export(blob_exports, {
+  WalrusBlob: () => WalrusBlob
+});
+module.exports = __toCommonJS(blob_exports);
+var import_file = __nccwpck_require__(37300);
+var import_experimental = __nccwpck_require__(20234);
+var _reader, _client, _cache, _WalrusBlob_instances, blobStatus_fn;
+class WalrusBlob {
+  constructor({ reader, client }) {
+    __privateAdd(this, _WalrusBlob_instances);
+    __privateAdd(this, _reader);
+    __privateAdd(this, _client);
+    __privateAdd(this, _cache, new import_experimental.ClientCache());
+    __privateSet(this, _reader, reader);
+    __privateSet(this, _client, client);
+  }
+  // Get the blob as a file (i.e. do not use Quilt encoding)
+  asFile() {
+    return new import_file.WalrusFile({ reader: __privateGet(this, _reader) });
+  }
+  async blobId() {
+    return __privateGet(this, _reader).blobId;
+  }
+  // Gets quilt-based files associated with this blob.
+  async files(filters = {}) {
+    const quiltReader = await __privateGet(this, _reader).getQuiltReader();
+    const index = await quiltReader.readIndex();
+    const files = [];
+    for (const patch of index) {
+      if (filters.ids && !filters.ids.includes(patch.patchId)) {
+        continue;
+      }
+      if (filters.identifiers && !filters.identifiers.includes(patch.identifier)) {
+        continue;
+      }
+      if (filters.tags && !filters.tags.some(
+        (tags) => Object.entries(tags).every(([tagName, tagValue]) => patch.tags[tagName] === tagValue)
+      )) {
+        continue;
+      }
+      files.push(new import_file.WalrusFile({ reader: quiltReader.readerForPatchId(patch.patchId) }));
+    }
+    return files;
+  }
+  async exists() {
+    const status = await __privateMethod(this, _WalrusBlob_instances, blobStatus_fn).call(this);
+    return status.type === "permanent" || status.type === "deletable";
+  }
+  async storedUntil() {
+    const status = await __privateMethod(this, _WalrusBlob_instances, blobStatus_fn).call(this);
+    if (status.type === "permanent") {
+      return status.endEpoch;
+    }
+    return null;
+  }
+}
+_reader = new WeakMap();
+_client = new WeakMap();
+_cache = new WeakMap();
+_WalrusBlob_instances = new WeakSet();
+blobStatus_fn = async function() {
+  return __privateGet(this, _cache).read(
+    ["blobStatus", __privateGet(this, _reader).blobId],
+    () => __privateGet(this, _client).getVerifiedBlobStatus({ blobId: __privateGet(this, _reader).blobId })
+  );
+};
+//# sourceMappingURL=blob.js.map
+
+
+/***/ }),
+
+/***/ 37300:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var file_exports = {};
+__export(file_exports, {
+  WalrusFile: () => WalrusFile
+});
+module.exports = __toCommonJS(file_exports);
+var import_local = __nccwpck_require__(7004);
+var _reader;
+const _WalrusFile = class _WalrusFile {
+  constructor({ reader }) {
+    __privateAdd(this, _reader);
+    __privateSet(this, _reader, reader);
+  }
+  static from(options) {
+    return new _WalrusFile({
+      reader: new import_local.LocalReader(options)
+    });
+  }
+  getIdentifier() {
+    return __privateGet(this, _reader).getIdentifier();
+  }
+  getTags() {
+    return __privateGet(this, _reader).getTags();
+  }
+  bytes() {
+    return __privateGet(this, _reader).getBytes();
+  }
+  async text() {
+    const bytes = await this.bytes();
+    return new TextDecoder().decode(bytes);
+  }
+  async json() {
+    return JSON.parse(await this.text());
+  }
+};
+_reader = new WeakMap();
+let WalrusFile = _WalrusFile;
+//# sourceMappingURL=file.js.map
+
+
+/***/ }),
+
+/***/ 19124:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var blob_exports = {};
+__export(blob_exports, {
+  BlobReader: () => BlobReader
+});
+module.exports = __toCommonJS(blob_exports);
+var import_experimental = __nccwpck_require__(20234);
+var import_utils = __nccwpck_require__(7062);
+var import_quilt = __nccwpck_require__(95630);
+var _cache, _client, _secondarySlivers, _numShards;
+class BlobReader {
+  constructor({ client, blobId, numShards }) {
+    __privateAdd(this, _cache, new import_experimental.ClientCache());
+    __privateAdd(this, _client);
+    __privateAdd(this, _secondarySlivers, /* @__PURE__ */ new Map());
+    this.hasStartedLoadingFullBlob = false;
+    __privateAdd(this, _numShards);
+    __privateSet(this, _client, client);
+    this.blobId = blobId;
+    __privateSet(this, _numShards, numShards);
+  }
+  async getIdentifier() {
+    return null;
+  }
+  async getTags() {
+    return {};
+  }
+  getQuiltReader() {
+    return new import_quilt.QuiltReader({ blob: this });
+  }
+  async getBytes() {
+    return __privateGet(this, _cache).read(["getBytes"], async () => {
+      this.hasStartedLoadingFullBlob = true;
+      try {
+        const blob = await __privateGet(this, _client).readBlob({ blobId: this.blobId });
+        return blob;
+      } catch (error) {
+        this.hasStartedLoadingFullBlob = false;
+        throw error;
+      }
+    });
+  }
+  getMetadata() {
+    return __privateGet(this, _cache).read(
+      ["getMetadata"],
+      () => __privateGet(this, _client).getBlobMetadata({ blobId: this.blobId })
+    );
+  }
+  async getColumnSize() {
+    return __privateGet(this, _cache).read(["getColumnSize"], async () => {
+      const loadingSlivers = [...__privateGet(this, _secondarySlivers).values()];
+      if (loadingSlivers.length > 0) {
+        const sliver = await Promise.any(loadingSlivers).catch(() => null);
+        if (sliver) {
+          return sliver.length;
+        }
+      }
+      if (this.hasStartedLoadingFullBlob) {
+        const blob = await this.getBytes();
+        const { columnSize: columnSize2 } = (0, import_utils.getSizes)(blob.length, __privateGet(this, _numShards));
+        return columnSize2;
+      }
+      const metadata = await this.getMetadata();
+      const { columnSize } = (0, import_utils.getSizes)(
+        Number(metadata.metadata.V1.unencoded_length),
+        __privateGet(this, _numShards)
+      );
+      return columnSize;
+    });
+  }
+  async getSymbolSize() {
+    const columnSize = await this.getColumnSize();
+    const { primarySymbols } = (0, import_utils.getSourceSymbols)(__privateGet(this, _numShards));
+    if (columnSize % primarySymbols !== 0) {
+      throw new Error("column size should be divisible by primary symbols");
+    }
+    return columnSize / primarySymbols;
+  }
+  async getRowSize() {
+    const symbolSize = await this.getSymbolSize();
+    const { secondarySymbols } = (0, import_utils.getSourceSymbols)(__privateGet(this, _numShards));
+    return symbolSize * secondarySymbols;
+  }
+  async getSecondarySliver({ sliverIndex, signal }) {
+    if (__privateGet(this, _secondarySlivers).has(sliverIndex)) {
+      return __privateGet(this, _secondarySlivers).get(sliverIndex);
+    }
+    const sliverPromise = __privateGet(this, _client).getSecondarySliver({
+      blobId: this.blobId,
+      index: sliverIndex,
+      signal
+    }).then((sliver) => new Uint8Array(sliver.symbols.data));
+    __privateGet(this, _secondarySlivers).set(sliverIndex, sliverPromise);
+    try {
+      const sliver = await sliverPromise;
+      __privateGet(this, _secondarySlivers).set(sliverIndex, sliver);
+      return sliver;
+    } catch (error) {
+      __privateGet(this, _secondarySlivers).delete(sliverIndex);
+      throw error;
+    }
+  }
+}
+_cache = new WeakMap();
+_client = new WeakMap();
+_secondarySlivers = new WeakMap();
+_numShards = new WeakMap();
+//# sourceMappingURL=blob.js.map
+
+
+/***/ }),
+
+/***/ 7004:
+/***/ ((module) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var local_exports = {};
+__export(local_exports, {
+  LocalReader: () => LocalReader
+});
+module.exports = __toCommonJS(local_exports);
+var _contents, _identifier, _tags;
+class LocalReader {
+  constructor({
+    contents,
+    identifier,
+    tags
+  }) {
+    __privateAdd(this, _contents);
+    __privateAdd(this, _identifier);
+    __privateAdd(this, _tags);
+    __privateSet(this, _contents, contents);
+    __privateSet(this, _identifier, identifier ?? null);
+    __privateSet(this, _tags, tags ?? {});
+  }
+  async getBytes() {
+    if ("arrayBuffer" in __privateGet(this, _contents)) {
+      return new Uint8Array(await __privateGet(this, _contents).arrayBuffer());
+    }
+    return __privateGet(this, _contents);
+  }
+  async getIdentifier() {
+    return __privateGet(this, _identifier);
+  }
+  async getTags() {
+    return __privateGet(this, _tags);
+  }
+}
+_contents = new WeakMap();
+_identifier = new WeakMap();
+_tags = new WeakMap();
+//# sourceMappingURL=local.js.map
+
+
+/***/ }),
+
+/***/ 76681:
+/***/ ((module) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var quilt_file_exports = {};
+__export(quilt_file_exports, {
+  QuiltFileReader: () => QuiltFileReader
+});
+module.exports = __toCommonJS(quilt_file_exports);
+var _quilt, _sliverIndex, _identifier, _tags;
+class QuiltFileReader {
+  constructor({
+    quilt,
+    sliverIndex,
+    identifier,
+    tags
+  }) {
+    __privateAdd(this, _quilt);
+    __privateAdd(this, _sliverIndex);
+    __privateAdd(this, _identifier);
+    __privateAdd(this, _tags);
+    __privateSet(this, _quilt, quilt);
+    __privateSet(this, _sliverIndex, sliverIndex);
+    __privateSet(this, _identifier, identifier ?? null);
+    __privateSet(this, _tags, tags);
+  }
+  async getBytes() {
+    const { blobContents, identifier, tags } = await __privateGet(this, _quilt).readBlob(__privateGet(this, _sliverIndex));
+    __privateSet(this, _identifier, identifier);
+    __privateSet(this, _tags, tags ?? {});
+    return blobContents;
+  }
+  async getIdentifier() {
+    if (__privateGet(this, _identifier) !== null) {
+      return __privateGet(this, _identifier);
+    }
+    const header = await __privateGet(this, _quilt).getBlobHeader(__privateGet(this, _sliverIndex));
+    __privateSet(this, _identifier, header.identifier);
+    return __privateGet(this, _identifier);
+  }
+  async getTags() {
+    if (__privateGet(this, _tags) !== void 0) {
+      return __privateGet(this, _tags);
+    }
+    const header = await __privateGet(this, _quilt).getBlobHeader(__privateGet(this, _sliverIndex));
+    __privateSet(this, _tags, header.tags ?? {});
+    return __privateGet(this, _tags);
+  }
+}
+_quilt = new WeakMap();
+_sliverIndex = new WeakMap();
+_identifier = new WeakMap();
+_tags = new WeakMap();
+//# sourceMappingURL=quilt-file.js.map
+
+
+/***/ }),
+
+/***/ 95630:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
+var quilt_exports = {};
+__export(quilt_exports, {
+  QuiltReader: () => QuiltReader
+});
+module.exports = __toCommonJS(quilt_exports);
+var import_experimental = __nccwpck_require__(20234);
+var import_bcs = __nccwpck_require__(2246);
+var import_quilts = __nccwpck_require__(10854);
+var import_bcs2 = __nccwpck_require__(88830);
+var import_bcs3 = __nccwpck_require__(2246);
+var import_bcs4 = __nccwpck_require__(2246);
+var import_utils = __nccwpck_require__(7062);
+var import_quilt_file = __nccwpck_require__(76681);
+var _blob, _cache, _QuiltReader_instances, readBytesFromSlivers_fn, readBytesFromBlob_fn, readBytes_fn;
+class QuiltReader {
+  constructor({ blob }) {
+    __privateAdd(this, _QuiltReader_instances);
+    __privateAdd(this, _blob);
+    __privateAdd(this, _cache, new import_experimental.ClientCache());
+    __privateSet(this, _blob, blob);
+  }
+  async getBlobHeader(sliverIndex) {
+    return __privateGet(this, _cache).read(["getBlobHeader", sliverIndex.toString()], async () => {
+      const blobHeader = import_bcs.QuiltPatchBlobHeader.parse(
+        await __privateMethod(this, _QuiltReader_instances, readBytes_fn).call(this, sliverIndex, import_quilts.QUILT_PATCH_BLOB_HEADER_SIZE)
+      );
+      let offset = import_quilts.QUILT_PATCH_BLOB_HEADER_SIZE;
+      let blobSize = blobHeader.length;
+      const identifierLength = new DataView(
+        (await __privateMethod(this, _QuiltReader_instances, readBytes_fn).call(this, sliverIndex, 2, offset)).buffer
+      ).getUint16(0, true);
+      blobSize -= 2 + identifierLength;
+      offset += 2;
+      const identifier = import_bcs2.bcs.string().parse(await __privateMethod(this, _QuiltReader_instances, readBytes_fn).call(this, sliverIndex, identifierLength, offset));
+      offset += identifierLength;
+      let tags = null;
+      if (blobHeader.mask & import_quilts.HAS_TAGS_FLAG) {
+        const tagsSize = new DataView(
+          (await __privateMethod(this, _QuiltReader_instances, readBytes_fn).call(this, sliverIndex, 2, offset)).buffer
+        ).getUint16(0, true);
+        offset += 2;
+        tags = import_bcs3.QuiltPatchTags.parse(await __privateMethod(this, _QuiltReader_instances, readBytes_fn).call(this, sliverIndex, tagsSize, offset));
+        blobSize -= tagsSize + 2;
+        offset += tagsSize;
+      }
+      return {
+        identifier,
+        tags,
+        blobSize,
+        contentOffset: offset
+      };
+    });
+  }
+  async readBlob(sliverIndex) {
+    const { identifier, tags, blobSize, contentOffset } = await this.getBlobHeader(sliverIndex);
+    const blobContents = await __privateMethod(this, _QuiltReader_instances, readBytes_fn).call(this, sliverIndex, blobSize, contentOffset);
+    return {
+      identifier,
+      tags,
+      blobContents
+    };
+  }
+  readerForPatchId(id) {
+    const { quiltId, patchId } = (0, import_quilts.parseQuiltPatchId)(id);
+    if (quiltId !== __privateGet(this, _blob).blobId) {
+      throw new Error(
+        `The requested patch ${patchId} is not part of the quilt ${__privateGet(this, _blob).blobId}`
+      );
+    }
+    return new import_quilt_file.QuiltFileReader({ quilt: this, sliverIndex: patchId.startIndex });
+  }
+  async readIndex() {
+    const header = new DataView((await __privateMethod(this, _QuiltReader_instances, readBytes_fn).call(this, 0, 5)).buffer);
+    const version = header.getUint8(0);
+    if (version !== 1) {
+      throw new Error(`Unsupported quilt version ${version}`);
+    }
+    const indexSize = header.getUint32(1, true);
+    const indexBytes = await __privateMethod(this, _QuiltReader_instances, readBytes_fn).call(this, 0, indexSize, 5);
+    const columnSize = await __privateGet(this, _blob).getColumnSize();
+    const indexSlivers = Math.ceil(indexSize / columnSize);
+    const index = import_bcs4.QuiltIndexV1.parse(indexBytes);
+    return index.patches.map((patch, i) => {
+      const startIndex = i === 0 ? indexSlivers : index.patches[i - 1].endIndex;
+      const reader = new import_quilt_file.QuiltFileReader({
+        quilt: this,
+        sliverIndex: startIndex,
+        identifier: patch.identifier,
+        tags: patch.tags
+      });
+      return {
+        identifier: patch.identifier,
+        patchId: (0, import_utils.urlSafeBase64)(
+          import_bcs.QuiltPatchId.serialize({
+            quiltId: __privateGet(this, _blob).blobId,
+            patchId: {
+              version: 1,
+              startIndex,
+              endIndex: patch.endIndex
+            }
+          }).toBytes()
+        ),
+        tags: patch.tags,
+        reader
+      };
+    });
+  }
+}
+_blob = new WeakMap();
+_cache = new WeakMap();
+_QuiltReader_instances = new WeakSet();
+readBytesFromSlivers_fn = async function(sliver, length, offset = 0, columnSize) {
+  if (!length) {
+    return new Uint8Array(0);
+  }
+  __privateGet(this, _blob).getSecondarySliver({ sliverIndex: sliver }).catch(() => {
+  });
+  columnSize = columnSize ?? await __privateGet(this, _blob).getColumnSize();
+  const columnOffset = Math.floor(offset / columnSize);
+  let remainingOffset = offset % columnSize;
+  const bytes = new Uint8Array(length);
+  let bytesRead = 0;
+  const nSlivers = Math.ceil(length / columnSize);
+  const slivers = new Array(nSlivers).fill(0).map((_, i) => __privateGet(this, _blob).getSecondarySliver({ sliverIndex: sliver + columnOffset + i }));
+  slivers.forEach((p) => p.catch(() => {
+  }));
+  for (const sliverPromise of slivers) {
+    const sliver2 = await sliverPromise;
+    let chunk = remainingOffset > 0 ? sliver2.subarray(remainingOffset) : sliver2;
+    remainingOffset -= chunk.length;
+    if (chunk.length > length - bytesRead) {
+      chunk = chunk.subarray(0, length - bytesRead);
+    }
+    bytes.set(chunk, bytesRead);
+    bytesRead += chunk.length;
+    if (bytesRead >= length) {
+      break;
+    }
+  }
+  return bytes;
+};
+readBytesFromBlob_fn = async function(startColumn, length, offset = 0) {
+  const result = new Uint8Array(length);
+  if (!length) {
+    return result;
+  }
+  const blob = await __privateGet(this, _blob).getBytes();
+  const [rowSize, symbolSize] = await Promise.all([
+    __privateGet(this, _blob).getRowSize(),
+    __privateGet(this, _blob).getSymbolSize()
+  ]);
+  const nRows = blob.length / rowSize;
+  const symbolsToSkip = Math.floor(offset / symbolSize);
+  let remainingOffset = offset % symbolSize;
+  let currentCol = startColumn + Math.floor(symbolsToSkip / nRows);
+  let currentRow = symbolsToSkip % nRows;
+  let bytesRead = 0;
+  while (bytesRead < length) {
+    const baseIndex = currentRow * rowSize + currentCol * symbolSize;
+    const startIndex = baseIndex + remainingOffset;
+    const endIndex = Math.min(
+      baseIndex + symbolSize,
+      startIndex + length - bytesRead,
+      blob.length
+    );
+    if (startIndex >= blob.length) {
+      throw new Error("Index out of bounds");
+    }
+    const size = endIndex - startIndex;
+    for (let i = 0; i < size; i++) {
+      result[bytesRead + i] = blob[startIndex + i];
+    }
+    bytesRead += size;
+    remainingOffset = 0;
+    currentRow = (currentRow + 1) % nRows;
+    if (currentRow === 0) {
+      currentCol += 1;
+    }
+  }
+  return result;
+};
+readBytes_fn = async function(sliver, length, offset = 0, columnSize) {
+  if (__privateGet(this, _blob).hasStartedLoadingFullBlob) {
+    return __privateMethod(this, _QuiltReader_instances, readBytesFromBlob_fn).call(this, sliver, length, offset);
+  }
+  try {
+    const bytes = await __privateMethod(this, _QuiltReader_instances, readBytesFromSlivers_fn).call(this, sliver, length, offset, columnSize);
+    return bytes;
+  } catch (_error) {
+    return __privateMethod(this, _QuiltReader_instances, readBytesFromBlob_fn).call(this, sliver, length, offset);
+  }
+};
+//# sourceMappingURL=quilt.js.map
+
+
+/***/ }),
+
 /***/ 19044:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -83184,16 +84270,22 @@ var index_exports = {};
 __export(index_exports, {
   MAINNET_WALRUS_PACKAGE_CONFIG: () => import_constants.MAINNET_WALRUS_PACKAGE_CONFIG,
   TESTNET_WALRUS_PACKAGE_CONFIG: () => import_constants.TESTNET_WALRUS_PACKAGE_CONFIG,
+  WalrusBlob: () => import_blob.WalrusBlob,
   WalrusClient: () => import_client.WalrusClient,
+  WalrusFile: () => import_file.WalrusFile,
   blobIdFromInt: () => import_bcs.blobIdFromInt,
-  blobIdToInt: () => import_bcs.blobIdToInt
+  blobIdToInt: () => import_bcs.blobIdToInt,
+  encodeQuilt: () => import_quilts.encodeQuilt
 });
 module.exports = __toCommonJS(index_exports);
 var import_client = __nccwpck_require__(31037);
 var import_constants = __nccwpck_require__(3401);
 __reExport(index_exports, __nccwpck_require__(98831), module.exports);
 __reExport(index_exports, __nccwpck_require__(1166), module.exports);
+var import_quilts = __nccwpck_require__(10854);
 var import_bcs = __nccwpck_require__(2246);
+var import_file = __nccwpck_require__(37300);
+var import_blob = __nccwpck_require__(1641);
 //# sourceMappingURL=index.js.map
 
 
@@ -83606,6 +84698,172 @@ function mergeHeaders(...headers) {
 
 /***/ }),
 
+/***/ 68013:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
+var client_exports = {};
+__export(client_exports, {
+  UploadRelayClient: () => UploadRelayClient
+});
+module.exports = __toCommonJS(client_exports);
+var import_error = __nccwpck_require__(98831);
+var import_error2 = __nccwpck_require__(98831);
+var import_utils = __nccwpck_require__(7062);
+var _fetch, _timeout, _onError, _UploadRelayClient_instances, request_fn;
+class UploadRelayClient {
+  constructor({ host, fetch: overriddenFetch, timeout, onError }) {
+    __privateAdd(this, _UploadRelayClient_instances);
+    __privateAdd(this, _fetch);
+    __privateAdd(this, _timeout);
+    __privateAdd(this, _onError);
+    this.host = host;
+    __privateSet(this, _fetch, overriddenFetch ?? globalThis.fetch);
+    __privateSet(this, _timeout, timeout ?? 3e4);
+    __privateSet(this, _onError, onError);
+  }
+  async tipConfig() {
+    const response = await __privateMethod(this, _UploadRelayClient_instances, request_fn).call(this, {
+      method: "GET",
+      path: "/v1/tip-config"
+    });
+    const data = await response.json();
+    if ("const" in data.send_tip.kind) {
+      return {
+        address: data.send_tip.address,
+        kind: {
+          const: data.send_tip.kind.const
+        }
+      };
+    }
+    return {
+      address: data.send_tip.address,
+      kind: {
+        linear: {
+          base: data.send_tip.kind.base,
+          perEncodedKib: data.send_tip.kind.encoded_size_mul_per_kib
+        }
+      }
+    };
+  }
+  async writeBlob({
+    blobId,
+    nonce,
+    txDigest,
+    blob,
+    deletable,
+    blobObjectId,
+    requiresTip,
+    encodingType,
+    ...options
+  }) {
+    const query = new URLSearchParams({
+      blob_id: blobId
+    });
+    if (requiresTip) {
+      query.set("nonce", (0, import_utils.urlSafeBase64)(nonce));
+      query.set("tx_id", txDigest);
+    }
+    if (deletable) {
+      query.set("deletable_blob_object", blobObjectId);
+    }
+    if (encodingType) {
+      query.set("encoding_type", encodingType);
+    }
+    const response = await __privateMethod(this, _UploadRelayClient_instances, request_fn).call(this, {
+      method: "POST",
+      path: `/v1/blob-upload-relay?${query.toString()}`,
+      body: blob,
+      ...options
+    });
+    const data = await response.json();
+    return {
+      blobId,
+      certificate: {
+        signers: data.confirmation_certificate.signers,
+        serializedMessage: new Uint8Array(data.confirmation_certificate.serialized_message),
+        signature: (0, import_utils.fromUrlSafeBase64)(data.confirmation_certificate.signature)
+      }
+    };
+  }
+}
+_fetch = new WeakMap();
+_timeout = new WeakMap();
+_onError = new WeakMap();
+_UploadRelayClient_instances = new WeakSet();
+request_fn = async function(options) {
+  var _a, _b, _c;
+  const { signal, timeout, ...init } = options;
+  if (signal?.aborted) {
+    throw new import_error2.UserAbortError();
+  }
+  const timeoutSignal = AbortSignal.timeout(timeout ?? __privateGet(this, _timeout));
+  let response;
+  try {
+    response = await (0, __privateGet(this, _fetch))(`${this.host}${options.path}`, {
+      ...init,
+      signal: signal ? AbortSignal.any([timeoutSignal, signal]) : timeoutSignal
+    });
+  } catch (error) {
+    if (signal?.aborted) {
+      throw new import_error2.UserAbortError();
+    }
+    if (error instanceof Error && error.name === "AbortError") {
+      const error2 = new import_error.ConnectionTimeoutError();
+      (_a = __privateGet(this, _onError)) == null ? void 0 : _a.call(this, error2);
+      throw error2;
+    }
+    (_b = __privateGet(this, _onError)) == null ? void 0 : _b.call(this, error);
+    throw error;
+  }
+  if (!response.ok) {
+    const errorText = await response.text().catch((reason) => reason);
+    const errorJSON = safeParseJSON(errorText);
+    const errorMessage = errorJSON ? void 0 : errorText;
+    const error = import_error.StorageNodeAPIError.generate(response.status, errorJSON, errorMessage);
+    (_c = __privateGet(this, _onError)) == null ? void 0 : _c.call(this, error);
+    throw error;
+  }
+  return response;
+};
+function safeParseJSON(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return void 0;
+  }
+}
+//# sourceMappingURL=client.js.map
+
+
+/***/ }),
+
 /***/ 2246:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -83636,9 +84894,15 @@ __export(bcs_exports, {
   BlobMetadataWithId: () => BlobMetadataWithId,
   BlobPersistenceType: () => BlobPersistenceType,
   EncodingType: () => EncodingType,
+  Field: () => Field,
   Intent: () => Intent,
   IntentType: () => IntentType,
   ProtocolMessage: () => ProtocolMessage,
+  QuiltIndexV1: () => QuiltIndexV1,
+  QuiltPatchBlobHeader: () => QuiltPatchBlobHeader,
+  QuiltPatchId: () => QuiltPatchId,
+  QuiltPatchTags: () => QuiltPatchTags,
+  QuiltPatchV1: () => QuiltPatchV1,
   Sliver: () => Sliver,
   SliverData: () => SliverData,
   SliverPair: () => SliverPair,
@@ -83687,7 +84951,7 @@ function blobIdToInt(blobId) {
   return BigInt(import_bcs.bcs.u256().fromBase64(blobId.replaceAll("-", "+").replaceAll("_", "/")));
 }
 const BlobMetadataWithId = import_bcs.bcs.struct("BlobMetadataWithId", {
-  blob_id: BlobId,
+  blobId: BlobId,
   metadata: BlobMetadata
 });
 const Symbols = import_bcs.bcs.struct("Symbols", {
@@ -83746,6 +85010,57 @@ const StorageConfirmationBody = import_bcs.bcs.struct("StorageConfirmationBody",
   blobType: BlobPersistenceType
 });
 const StorageConfirmation = ProtocolMessage(StorageConfirmationBody);
+function Field(...typeParameters) {
+  return import_bcs.bcs.struct("Field", {
+    id: import_bcs.bcs.Address,
+    name: typeParameters[0],
+    value: typeParameters[1]
+  });
+}
+const QuiltPatchTags = import_bcs.bcs.map(import_bcs.bcs.string(), import_bcs.bcs.string()).transform({
+  // tags is a BTreeMap, so we need to sort entries before serializing
+  input: (tags) => new Map(
+    [...tags instanceof Map ? tags : Object.entries(tags)].sort(
+      ([a], [b]) => (
+        // TODO: sorting for map keys should be moved into @mysten/bcs
+        compareBcsBytes(import_bcs.bcs.string().serialize(a).toBytes(), import_bcs.bcs.string().serialize(b).toBytes())
+      )
+    )
+  ),
+  output: (tags) => Object.fromEntries(tags)
+});
+const QuiltPatchV1 = import_bcs.bcs.struct("QuiltPatchV1", {
+  endIndex: import_bcs.bcs.u16(),
+  identifier: import_bcs.bcs.string(),
+  tags: QuiltPatchTags
+});
+function compareBcsBytes(a, b) {
+  if (a.length !== b.length) {
+    return a.length - b.length;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return a[i] - b[i];
+    }
+  }
+  return 0;
+}
+const QuiltIndexV1 = import_bcs.bcs.struct("QuiltIndexV1", {
+  patches: import_bcs.bcs.vector(QuiltPatchV1)
+});
+const QuiltPatchId = import_bcs.bcs.struct("QuiltPatchId", {
+  quiltId: BlobId,
+  patchId: import_bcs.bcs.struct("InternalQuiltPatchId", {
+    version: import_bcs.bcs.u8(),
+    startIndex: import_bcs.bcs.u16(),
+    endIndex: import_bcs.bcs.u16()
+  })
+});
+const QuiltPatchBlobHeader = import_bcs.bcs.struct("QuiltPatchBlobHeader", {
+  version: import_bcs.bcs.u8(),
+  length: import_bcs.bcs.u32(),
+  mask: import_bcs.bcs.u8()
+});
 //# sourceMappingURL=bcs.js.map
 
 
@@ -83775,32 +85090,53 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var utils_exports = {};
 __export(utils_exports, {
+  MAX_SYMBOL_SIZE_BY_ENCODING_TYPE: () => MAX_SYMBOL_SIZE_BY_ENCODING_TYPE,
+  REQUIRED_ALIGNMENT_BY_ENCODING_TYPE: () => REQUIRED_ALIGNMENT_BY_ENCODING_TYPE,
   encodedBlobLength: () => encodedBlobLength,
+  encodedSliverSize: () => encodedSliverSize,
+  fromUrlSafeBase64: () => fromUrlSafeBase64,
   getMaxFaultyNodes: () => getMaxFaultyNodes,
   getShardIndicesByNodeId: () => getShardIndicesByNodeId,
+  getSizes: () => getSizes,
   getSourceSymbols: () => getSourceSymbols,
   isAboveValidity: () => isAboveValidity,
   isQuorum: () => isQuorum,
   nodesByShardIndex: () => nodesByShardIndex,
+  shardIndexFromSecondarySliverIndex: () => shardIndexFromSecondarySliverIndex,
   signersToBitmap: () => signersToBitmap,
+  sliverPairIndexFromSecondarySliverIndex: () => sliverPairIndexFromSecondarySliverIndex,
   storageUnitsFromSize: () => storageUnitsFromSize,
   toPairIndex: () => toPairIndex,
   toShardIndex: () => toShardIndex,
-  toTypeString: () => toTypeString
+  toTypeString: () => toTypeString,
+  urlSafeBase64: () => urlSafeBase64
 });
 module.exports = __toCommonJS(utils_exports);
-var import_bcs = __nccwpck_require__(2246);
+var import_bcs = __nccwpck_require__(88830);
+var import_bcs2 = __nccwpck_require__(2246);
 const DIGEST_LEN = 32;
 const BLOB_ID_LEN = 32;
+const REQUIRED_ALIGNMENT_BY_ENCODING_TYPE = {
+  RS2: 2,
+  RedStuff: 2
+};
+const MAX_SYMBOL_SIZE_BY_ENCODING_TYPE = {
+  RS2: 2 ** 16 - 1,
+  RedStuff: 2 ** 16 - 1
+};
 function encodedBlobLength(unencodedLength, nShards, encodingType = "RS2") {
-  const { primarySymbols, secondarySymbols } = getSourceSymbols(nShards, encodingType);
-  let size = Math.floor((Math.max(unencodedLength, 1) - 1) / (primarySymbols * secondarySymbols)) + 1;
-  if (encodingType === "RS2" && size % 2 === 1) {
-    size = size + 1;
-  }
-  const sliversSize = (primarySymbols + secondarySymbols) * size * nShards;
+  const sliverSize = encodedSliverSize(unencodedLength, nShards, encodingType);
   const metadata = nShards * DIGEST_LEN * 2 + BLOB_ID_LEN;
-  return nShards * metadata + sliversSize;
+  return nShards * metadata + sliverSize;
+}
+function encodedSliverSize(unencodedLength, nShards, encodingType = "RS2") {
+  const { primarySymbols, secondarySymbols } = getSourceSymbols(nShards, encodingType);
+  let symbolSize = Math.floor((Math.max(unencodedLength, 1) - 1) / (primarySymbols * secondarySymbols)) + 1;
+  if (encodingType === "RS2" && symbolSize % 2 === 1) {
+    symbolSize = symbolSize + 1;
+  }
+  const singleShardSize = (primarySymbols + secondarySymbols) * symbolSize;
+  return singleShardSize * nShards;
 }
 function getSourceSymbols(nShards, encodingType = "RS2") {
   const safetyLimit = decodingSafetyLimit(nShards, encodingType);
@@ -83840,11 +85176,18 @@ function rotationOffset(bytes, modulus) {
   return bytes.reduce((acc, byte) => (acc * 256 + byte) % modulus, 0);
 }
 function toShardIndex(sliverPairIndex, blobId, numShards) {
-  const offset = rotationOffset(import_bcs.BlobId.serialize(blobId).toBytes(), numShards);
+  const offset = rotationOffset(import_bcs2.BlobId.serialize(blobId).toBytes(), numShards);
   return (sliverPairIndex + offset) % numShards;
 }
+function sliverPairIndexFromSecondarySliverIndex(sliverIndex, numShards) {
+  return numShards - sliverIndex - 1;
+}
+function shardIndexFromSecondarySliverIndex(sliverIndex, blobId, numShards) {
+  const sliverPairIndex = sliverPairIndexFromSecondarySliverIndex(sliverIndex, numShards);
+  return toShardIndex(sliverPairIndex, blobId, numShards);
+}
 function toPairIndex(shardIndex, blobId, numShards) {
-  const offset = rotationOffset(import_bcs.BlobId.serialize(blobId).toBytes(), numShards);
+  const offset = rotationOffset(import_bcs2.BlobId.serialize(blobId).toBytes(), numShards);
   return (numShards + shardIndex - offset) % numShards;
 }
 function signersToBitmap(signers, committeeSize) {
@@ -83859,7 +85202,7 @@ function signersToBitmap(signers, committeeSize) {
 }
 function getShardIndicesByNodeId(committee) {
   const shardIndicesByNodeId = /* @__PURE__ */ new Map();
-  for (const node of committee.pos0.contents) {
+  for (const node of committee[0].contents) {
     if (!shardIndicesByNodeId.has(node.key)) {
       shardIndicesByNodeId.set(node.key, []);
     }
@@ -83869,7 +85212,7 @@ function getShardIndicesByNodeId(committee) {
 }
 function nodesByShardIndex(committee) {
   const nodesByShardIndex2 = /* @__PURE__ */ new Map();
-  for (const node of committee.pos0.contents) {
+  for (const node of committee[0].contents) {
     for (const shardIndex of node.value) {
       nodesByShardIndex2.set(shardIndex, node.key);
     }
@@ -83919,6 +85262,32 @@ function toTypeString(type) {
     return toTypeString(type.MutableReference);
   }
   throw new Error(`Unexpected type ${JSON.stringify(type)}`);
+}
+function urlSafeBase64(bytes) {
+  return (0, import_bcs.toBase64)(bytes).replace(/=*$/, "").replaceAll("+", "-").replaceAll("/", "_");
+}
+function fromUrlSafeBase64(base64) {
+  return (0, import_bcs.fromBase64)(base64.replaceAll("-", "+").replaceAll("_", "/"));
+}
+function getSizes(blobSize, numShards) {
+  const encodedBlobSize = encodedSliverSize(blobSize, numShards);
+  const { primarySymbols, secondarySymbols } = getSourceSymbols(numShards);
+  const totalSymbols = (primarySymbols + secondarySymbols) * numShards;
+  if (encodedBlobSize % totalSymbols !== 0) {
+    throw new Error("encoded blob size should be divisible by total symbols");
+  }
+  const symbolSize = encodedBlobSize / totalSymbols;
+  if (encodedBlobSize % totalSymbols !== 0) {
+    throw new Error("blob length should be divisible by total symbols");
+  }
+  const rowSize = symbolSize * secondarySymbols;
+  const columnSize = symbolSize * primarySymbols;
+  return {
+    symbolSize,
+    rowSize,
+    columnSize,
+    blobSize
+  };
 }
 //# sourceMappingURL=index.js.map
 
@@ -83971,7 +85340,7 @@ module.exports = __toCommonJS(object_loader_exports);
 var import_bcs = __nccwpck_require__(56244);
 var import_utils = __nccwpck_require__(33973);
 var import_dataloader = __toESM(__nccwpck_require__(52139));
-var import_dynamic_field = __nccwpck_require__(99200);
+var import_bcs2 = __nccwpck_require__(2246);
 var _dynamicFieldCache;
 class SuiObjectDataLoader extends import_dataloader.default {
   constructor(suiClient) {
@@ -83986,7 +85355,7 @@ class SuiObjectDataLoader extends import_dataloader.default {
   async load(id, schema) {
     const data = await super.load(id);
     if (schema) {
-      return schema.parse(data.content);
+      return schema.parse(await data.content);
     }
     return data;
   }
@@ -83995,12 +85364,14 @@ class SuiObjectDataLoader extends import_dataloader.default {
     if (!schema) {
       return data;
     }
-    return data.map((d) => {
-      if (d instanceof Error) {
-        return d;
-      }
-      return schema.parse(d.content);
-    });
+    return Promise.all(
+      data.map(async (d) => {
+        if (d instanceof Error) {
+          return d;
+        }
+        return schema.parse(await d.content);
+      })
+    );
   }
   async loadManyOrThrow(ids, schema) {
     const data = await this.loadMany(ids, schema);
@@ -84022,11 +85393,262 @@ class SuiObjectDataLoader extends import_dataloader.default {
   async loadFieldObject(parent, name, type) {
     const schema = (0, import_bcs.pureBcsSchemaFromTypeName)(name.type);
     const id = (0, import_utils.deriveDynamicFieldID)(parent, "u64", schema.serialize(name.value).toBytes());
-    return (await this.load(id, (0, import_dynamic_field.Field)(schema, type))).value;
+    return (await this.load(id, (0, import_bcs2.Field)(schema, type))).value;
   }
 }
 _dynamicFieldCache = new WeakMap();
 //# sourceMappingURL=object-loader.js.map
+
+
+/***/ }),
+
+/***/ 10854:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var quilts_exports = {};
+__export(quilts_exports, {
+  BLOB_IDENTIFIER_SIZE_BYTES_LENGTH: () => BLOB_IDENTIFIER_SIZE_BYTES_LENGTH,
+  HAS_TAGS_FLAG: () => HAS_TAGS_FLAG,
+  MAX_BLOB_IDENTIFIER_BYTES_LENGTH: () => MAX_BLOB_IDENTIFIER_BYTES_LENGTH,
+  MAX_NUM_SLIVERS_FOR_QUILT_INDEX: () => MAX_NUM_SLIVERS_FOR_QUILT_INDEX,
+  QUILT_INDEX_PREFIX_SIZE: () => QUILT_INDEX_PREFIX_SIZE,
+  QUILT_INDEX_SIZE_BYTES_LENGTH: () => QUILT_INDEX_SIZE_BYTES_LENGTH,
+  QUILT_PATCH_BLOB_HEADER_SIZE: () => QUILT_PATCH_BLOB_HEADER_SIZE,
+  QUILT_VERSION_BYTES_LENGTH: () => QUILT_VERSION_BYTES_LENGTH,
+  TAGS_SIZE_BYTES_LENGTH: () => TAGS_SIZE_BYTES_LENGTH,
+  computeSymbolSize: () => computeSymbolSize,
+  encodeQuilt: () => encodeQuilt,
+  encodeQuiltPatchId: () => encodeQuiltPatchId,
+  parseQuiltPatchId: () => parseQuiltPatchId,
+  parseWalrusId: () => parseWalrusId
+});
+module.exports = __toCommonJS(quilts_exports);
+var import_bcs = __nccwpck_require__(88830);
+var import_bcs2 = __nccwpck_require__(2246);
+var import_index = __nccwpck_require__(7062);
+const QUILT_INDEX_SIZE_BYTES_LENGTH = 4;
+const QUILT_VERSION_BYTES_LENGTH = 1;
+const QUILT_INDEX_PREFIX_SIZE = QUILT_VERSION_BYTES_LENGTH + QUILT_INDEX_SIZE_BYTES_LENGTH;
+const QUILT_PATCH_BLOB_HEADER_SIZE = 1 + 4 + 1;
+const BLOB_IDENTIFIER_SIZE_BYTES_LENGTH = 2;
+const TAGS_SIZE_BYTES_LENGTH = 2;
+const MAX_BLOB_IDENTIFIER_BYTES_LENGTH = (1 << 8 * BLOB_IDENTIFIER_SIZE_BYTES_LENGTH) - 1;
+const MAX_NUM_SLIVERS_FOR_QUILT_INDEX = 10;
+const HAS_TAGS_FLAG = 1 << 0;
+function computeSymbolSize(blobsSizes, nColumns, nRows, maxNumColumnsForQuiltIndex, encodingType = "RS2") {
+  if (blobsSizes.length > nColumns) {
+    throw new Error("Too many blobs, the number of blobs must be less than the number of columns");
+  }
+  if (blobsSizes.length === 0) {
+    throw new Error("No blobs provided");
+  }
+  let minVal = Math.max(
+    blobsSizes.reduce((acc, size) => acc + size, 0) / (nColumns * nRows),
+    blobsSizes[0] / (nRows * maxNumColumnsForQuiltIndex),
+    Math.ceil(QUILT_INDEX_PREFIX_SIZE / nRows)
+  );
+  let maxVal = Math.ceil(Math.max(...blobsSizes) / (nColumns / blobsSizes.length) * nRows);
+  while (minVal < maxVal) {
+    const mid = (minVal + maxVal) / 2;
+    if (canBlobsFitIntoMatrix(blobsSizes, nColumns, mid * nRows)) {
+      maxVal = mid;
+    } else {
+      minVal = mid + 1;
+    }
+  }
+  const symbolSize = Math.ceil(minVal / import_index.REQUIRED_ALIGNMENT_BY_ENCODING_TYPE[encodingType]) * import_index.REQUIRED_ALIGNMENT_BY_ENCODING_TYPE[encodingType];
+  if (!canBlobsFitIntoMatrix(blobsSizes, nColumns, symbolSize * nRows)) {
+    throw new Error("Quilt oversize");
+  }
+  if (symbolSize > import_index.MAX_SYMBOL_SIZE_BY_ENCODING_TYPE[encodingType]) {
+    throw new Error(
+      `Quilt oversize: the resulting symbol size ${symbolSize} is larger than the maximum symbol size ${import_index.MAX_SYMBOL_SIZE_BY_ENCODING_TYPE[encodingType]}; remove some blobs`
+    );
+  }
+  return symbolSize;
+}
+function canBlobsFitIntoMatrix(blobsSizes, nColumns, columnSize) {
+  return blobsSizes.reduce((acc, size) => acc + Math.ceil(size / columnSize), 0) <= nColumns;
+}
+function parseQuiltPatchId(id) {
+  return import_bcs2.QuiltPatchId.parse((0, import_index.fromUrlSafeBase64)(id));
+}
+function encodeQuiltPatchId(id) {
+  return (0, import_index.urlSafeBase64)(import_bcs2.QuiltPatchId.serialize(id).toBytes());
+}
+function parseWalrusId(id) {
+  const bytes = (0, import_index.fromUrlSafeBase64)(id);
+  if (bytes.length === 32) {
+    return {
+      kind: "blob",
+      id
+    };
+  }
+  return {
+    kind: "quiltPatch",
+    id: parseQuiltPatchId(id)
+  };
+}
+function encodeQuilt({ blobs, numShards, encodingType }) {
+  const { primarySymbols: nRows, secondarySymbols: nCols } = (0, import_index.getSourceSymbols)(
+    numShards,
+    encodingType
+  );
+  const sortedBlobs = blobs.sort((a, b) => a.identifier < b.identifier ? -1 : 1);
+  const identifiers = /* @__PURE__ */ new Set();
+  const index = {
+    patches: []
+  };
+  const tags = sortedBlobs.map(
+    (blob) => blob.tags && Object.keys(blob.tags).length > 0 ? import_bcs2.QuiltPatchTags.serialize(blob.tags).toBytes() : null
+  );
+  for (const blob of sortedBlobs) {
+    if (identifiers.has(blob.identifier)) {
+      throw new Error(`Duplicate blob identifier: ${blob.identifier}`);
+    }
+    identifiers.add(blob.identifier);
+    index.patches.push({
+      startIndex: 0,
+      endIndex: 0,
+      identifier: blob.identifier,
+      tags: blob.tags ?? {}
+    });
+  }
+  const indexSize = QUILT_INDEX_PREFIX_SIZE + import_bcs2.QuiltIndexV1.serialize(index).toBytes().length;
+  const blobMetadata = sortedBlobs.map((blob, i) => {
+    const identifierBytes = import_bcs.bcs.string().serialize(blob.identifier).toBytes();
+    let metadataSize = QUILT_PATCH_BLOB_HEADER_SIZE + BLOB_IDENTIFIER_SIZE_BYTES_LENGTH + identifierBytes.length;
+    let mask = 0;
+    let offset = 0;
+    if (tags[i]) {
+      metadataSize += TAGS_SIZE_BYTES_LENGTH + tags[i].length;
+      mask |= HAS_TAGS_FLAG << 0;
+    }
+    const metadata = new Uint8Array(metadataSize);
+    const metadataView = new DataView(metadata.buffer);
+    const header = import_bcs2.QuiltPatchBlobHeader.serialize({
+      version: 1,
+      length: metadataSize - QUILT_PATCH_BLOB_HEADER_SIZE + blob.contents.length,
+      mask
+    }).toBytes();
+    metadata.set(header, offset);
+    offset += header.length;
+    metadataView.setUint16(offset, identifierBytes.length, true);
+    offset += BLOB_IDENTIFIER_SIZE_BYTES_LENGTH;
+    metadata.set(identifierBytes, offset);
+    offset += identifierBytes.length;
+    if (tags[i]) {
+      metadataView.setUint16(offset, tags[i].length, true);
+      offset += TAGS_SIZE_BYTES_LENGTH;
+      metadata.set(tags[i], offset);
+      offset += tags[i].length;
+    }
+    return metadata;
+  });
+  const blobSizes = [
+    indexSize,
+    ...sortedBlobs.map((blob, i) => {
+      if (blob.identifier.length > MAX_BLOB_IDENTIFIER_BYTES_LENGTH) {
+        throw new Error(`Blob identifier too long: ${blob.identifier}`);
+      }
+      return blobMetadata[i].length + blob.contents.length;
+    })
+  ];
+  const symbolSize = computeSymbolSize(
+    blobSizes,
+    nCols,
+    nRows,
+    MAX_NUM_SLIVERS_FOR_QUILT_INDEX,
+    encodingType
+  );
+  const rowSize = symbolSize * nCols;
+  const columnSize = symbolSize * nRows;
+  const indexColumnsNeeded = Math.ceil(indexSize / columnSize);
+  if (indexColumnsNeeded > MAX_NUM_SLIVERS_FOR_QUILT_INDEX) {
+    throw new Error("Index too large");
+  }
+  const quilt = new Uint8Array(rowSize * nRows);
+  let currentColumn = indexColumnsNeeded;
+  for (let i = 0; i < sortedBlobs.length; i++) {
+    const blob = sortedBlobs[i];
+    index.patches[i].startIndex = currentColumn;
+    currentColumn += writeBlobToQuilt(
+      quilt,
+      blob.contents,
+      rowSize,
+      columnSize,
+      symbolSize,
+      currentColumn,
+      blobMetadata[i]
+    );
+    index.patches[i].endIndex = currentColumn;
+  }
+  const indexBytes = import_bcs2.QuiltIndexV1.serialize(index).toBytes();
+  const quiltIndex = new Uint8Array(QUILT_INDEX_PREFIX_SIZE + indexBytes.length);
+  quiltIndex.set([1], 0);
+  quiltIndex.set(new Uint32Array([indexBytes.length]), 1);
+  quiltIndex.set(indexBytes, QUILT_INDEX_PREFIX_SIZE);
+  writeBlobToQuilt(quilt, quiltIndex, rowSize, columnSize, symbolSize, 0);
+  return { quilt, index };
+}
+function writeBlobToQuilt(quilt, blob, rowSize, columnSize, symbolSize, startColumn, prefix) {
+  const nRows = columnSize / symbolSize;
+  let bytesWritten = 0;
+  if (rowSize % symbolSize !== 0) {
+    throw new Error("Row size must be divisible by symbol size");
+  }
+  if (columnSize % symbolSize !== 0) {
+    throw new Error("Column size must be divisible by symbol size");
+  }
+  if (prefix) {
+    writeBytes(prefix);
+  }
+  writeBytes(blob);
+  return Math.ceil(bytesWritten / columnSize);
+  function writeBytes(bytes) {
+    const offset = bytesWritten;
+    const symbolsToSkip = Math.floor(offset / symbolSize);
+    let remainingOffset = offset % symbolSize;
+    let currentCol = startColumn + Math.floor(symbolsToSkip / nRows);
+    let currentRow = symbolsToSkip % nRows;
+    let index = 0;
+    while (index < bytes.length) {
+      const baseIndex = currentRow * rowSize + currentCol * symbolSize;
+      const startIndex = baseIndex + remainingOffset;
+      const len = Math.min(symbolSize - remainingOffset, bytes.length - index);
+      for (let i = 0; i < len; i++) {
+        quilt[startIndex + i] = bytes[index + i];
+      }
+      index += len;
+      remainingOffset = 0;
+      currentRow = (currentRow + 1) % nRows;
+      if (currentRow === 0) {
+        currentCol++;
+      }
+    }
+    bytesWritten += bytes.length;
+  }
+}
+//# sourceMappingURL=quilts.js.map
 
 
 /***/ }),
@@ -84167,13 +85789,14 @@ async function getWasmBindings(url) {
   }
   function computeMetadata(nShards, bytes, encodingType = "RS2") {
     const encoder = new import_walrus_wasm.BlobEncoder(nShards);
-    const metadata = encoder.compute_metadata(bytes);
+    const [metadata, rootHash] = encoder.compute_metadata(bytes);
     if (encodingType !== "RS2") {
       throw new Error(`Unsupported encoding type: ${encodingType}`);
     }
     return {
       ...metadata,
-      blob_id: (0, import_bcs2.blobIdFromBytes)(new Uint8Array(metadata.blob_id))
+      blobId: (0, import_bcs2.blobIdFromBytes)(new Uint8Array(metadata.blob_id)),
+      rootHash: new Uint8Array(rootHash.Digest)
     };
   }
   return {
