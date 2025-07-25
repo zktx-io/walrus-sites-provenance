@@ -110,7 +110,7 @@ export const loadWalrusSystem = async (
         network === 'testnet'
           ? TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId
           : MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
-      options: { showType: true },
+      options: { showContent: true },
     });
     subsidiesPackageId = (subsidiesObject.data?.content as any).fields.package_id;
   }
