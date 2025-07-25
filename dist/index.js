@@ -61714,7 +61714,7 @@ const loadWalrusSystem = async (network, suiClient, walrusClient) => {
             id: network === 'testnet'
                 ? walrus_1.TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId
                 : walrus_1.MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
-            options: { showType: true },
+            options: { showContent: true },
         });
         subsidiesPackageId = (subsidiesObject.data?.content).fields.package_id;
     }
