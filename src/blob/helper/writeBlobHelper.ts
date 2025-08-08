@@ -1,20 +1,29 @@
 import * as core from '@actions/core';
-import { CommitteeInfo, WalrusClient, WriteEncodedBlobToNodesOptions } from '@mysten/walrus';
+import { SuiClient } from '@mysten/sui/client';
+import { WalrusClient, WriteEncodedBlobToNodesOptions } from '@mysten/walrus';
 
 import { StorageConfirmation } from '../../types';
 import { failWithMessage } from '../../utils/failWithMessage';
+
+import { getCommittee } from './walrus/getCommittee';
 
 const batchSize = 10;
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const writeBlobHelper = async (
+  suiClient: SuiClient,
   walrusClient: WalrusClient,
   retryLimit: number,
-  quorum: number,
-  committee: CommitteeInfo,
   { blobId, metadata, sliversByNode, signal, ...options }: WriteEncodedBlobToNodesOptions,
 ): Promise<(StorageConfirmation | null)[]> => {
+  const systemState = await walrusClient.systemState();
+  const stakingState = await walrusClient.stakingState();
+  const committee = await getCommittee(suiClient, stakingState.committee);
+
+  const n = systemState.committee.n_shards;
+  const quorum = Math.ceil((3 * n) / 4);
+
   let successfulShardCount = 0;
   const confirmations: (StorageConfirmation | null)[] = new Array(sliversByNode.length).fill(null);
   const pending = Array.from({ length: sliversByNode.length }, (_, i) => i);

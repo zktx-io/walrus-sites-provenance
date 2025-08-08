@@ -59419,7 +59419,7 @@ const cleanupBlobs = async ({ signer, suiClient, config, walrusSystem, blobObjec
     const transaction = new transactions_1.Transaction();
     transaction.add((0, deleteBlobs_1.deleteBlobs)({
         owner: config.owner,
-        packageId: walrusSystem.blobPackageId,
+        packageId: walrusSystem.systemPackageId,
         blobObjectsIds,
         systemObjectId: walrusSystem.systemObjectId,
     }));
@@ -59813,10 +59813,16 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.writeBlobHelper = exports.sleep = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const failWithMessage_1 = __nccwpck_require__(60210);
+const getCommittee_1 = __nccwpck_require__(27026);
 const batchSize = 10;
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 exports.sleep = sleep;
-const writeBlobHelper = async (walrusClient, retryLimit, quorum, committee, { blobId, metadata, sliversByNode, signal, ...options }) => {
+const writeBlobHelper = async (suiClient, walrusClient, retryLimit, { blobId, metadata, sliversByNode, signal, ...options }) => {
+    const systemState = await walrusClient.systemState();
+    const stakingState = await walrusClient.stakingState();
+    const committee = await (0, getCommittee_1.getCommittee)(suiClient, stakingState.committee);
+    const n = systemState.committee.n_shards;
+    const quorum = Math.ceil((3 * n) / 4);
     let successfulShardCount = 0;
     const confirmations = new Array(sliversByNode.length).fill(null);
     const pending = Array.from({ length: sliversByNode.length }, (_, i) => i);
@@ -60022,7 +60028,7 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walrusSystem, gr
                     ],
                 });
             regisered.push(transaction.moveCall({
-                target: `${walrusSystem.blobPackageId}::system::register_blob`,
+                target: `${walrusSystem.systemPackageId}::system::register_blob`,
                 arguments: [
                     systemObject,
                     storage,
@@ -60089,18 +60095,12 @@ exports.registerBlobs = registerBlobs;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.writeBlobs = void 0;
 const cleanupBlobs_1 = __nccwpck_require__(49754);
-const getCommittee_1 = __nccwpck_require__(27026);
 const writeBlobHelper_1 = __nccwpck_require__(42452);
 const writeBlobs = async ({ retryLimit, config, signer, suiClient, walrusClient, walrusSystem, blobs, }) => {
     try {
-        const systemState = await walrusClient.systemState();
-        const stakingState = await walrusClient.stakingState();
-        const committee = await (0, getCommittee_1.getCommittee)(suiClient, stakingState.committee);
-        const n = systemState.committee.n_shards;
-        const quorum = Math.ceil((3 * n) / 4);
         for (const blobId of Object.keys(blobs)) {
             const blob = blobs[blobId];
-            const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(walrusClient, retryLimit + 1, quorum, committee, {
+            const confirmations = await (0, writeBlobHelper_1.writeBlobHelper)(suiClient, walrusClient, retryLimit + 1, {
                 blobId,
                 metadata: blob.metadata,
                 sliversByNode: blob.sliversByNode,
@@ -61706,6 +61706,7 @@ const getWalCoinType = async (suiClient, packageId) => {
 };
 const loadWalrusSystem = async (network, suiClient, walrusClient) => {
     const system = await walrusClient.systemObject();
+    const blobPackageId = (await walrusClient.getBlobType()).split('::')[0];
     const walCoinType = await getWalCoinType(suiClient, system.package_id);
     let subsidiesPackageId = undefined;
     if ((network === 'testnet' && walrus_1.TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId) ||
@@ -61723,7 +61724,7 @@ const loadWalrusSystem = async (network, suiClient, walrusClient) => {
             walCoinType,
             systemObjectId: system.id.id,
             systemPackageId: system.package_id,
-            blobPackageId: system.package_id,
+            blobPackageId,
             subsidiesObjectId: walrus_1.TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
             subsidiesPackageId,
             sitePackageId: '0xf99aee9f21493e1590e7e5a9aea6f343a1f381031a04a732724871fc294be799',
@@ -61732,7 +61733,7 @@ const loadWalrusSystem = async (network, suiClient, walrusClient) => {
             walCoinType,
             systemObjectId: system.id.id,
             systemPackageId: system.package_id,
-            blobPackageId: system.package_id,
+            blobPackageId,
             subsidiesObjectId: walrus_1.MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
             subsidiesPackageId,
             sitePackageId: '0x26eb7ee8688da02c5f671679524e379f0b837a12f1d1d799f255b7eea260ad27',

@@ -26,7 +26,7 @@ export const cleanupBlobs = async ({
   transaction.add(
     deleteBlobs({
       owner: config.owner,
-      packageId: walrusSystem.blobPackageId,
+      packageId: walrusSystem.systemPackageId,
       blobObjectsIds,
       systemObjectId: walrusSystem.systemObjectId,
     }),
