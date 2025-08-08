@@ -98,6 +98,7 @@ export const loadWalrusSystem = async (
   walrusClient: WalrusClient,
 ): Promise<WalrusSystem> => {
   const system = await walrusClient.systemObject();
+  const blobPackageId = (await walrusClient.getBlobType()).split('::')[0];
   const walCoinType = await getWalCoinType(suiClient, system.package_id);
   let subsidiesPackageId: string | undefined = undefined;
 
@@ -120,7 +121,7 @@ export const loadWalrusSystem = async (
         walCoinType,
         systemObjectId: system.id.id,
         systemPackageId: system.package_id,
-        blobPackageId: system.package_id,
+        blobPackageId,
         subsidiesObjectId: TESTNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
         subsidiesPackageId,
         sitePackageId: '0xf99aee9f21493e1590e7e5a9aea6f343a1f381031a04a732724871fc294be799',
@@ -129,7 +130,7 @@ export const loadWalrusSystem = async (
         walCoinType,
         systemObjectId: system.id.id,
         systemPackageId: system.package_id,
-        blobPackageId: system.package_id,
+        blobPackageId,
         subsidiesObjectId: MAINNET_WALRUS_PACKAGE_CONFIG.subsidiesObjectId,
         subsidiesPackageId,
         sitePackageId: '0x26eb7ee8688da02c5f671679524e379f0b837a12f1d1d799f255b7eea260ad27',

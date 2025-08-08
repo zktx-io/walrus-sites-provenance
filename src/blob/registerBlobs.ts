@@ -180,7 +180,7 @@ export const registerBlobs = async ({
           });
       regisered.push(
         transaction.moveCall({
-          target: `${walrusSystem.blobPackageId}::system::register_blob`,
+          target: `${walrusSystem.systemPackageId}::system::register_blob`,
           arguments: [
             systemObject,
             storage,
