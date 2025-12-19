@@ -6,6 +6,7 @@ import { Transaction } from '@mysten/sui/transactions';
 import { SiteConfig } from '../../types';
 import { failWithMessage } from '../../utils/failWithMessage';
 import { WalrusSystem } from '../../utils/loadWalrusSystem';
+import { signAndExecuteTransactionWithRetry, withSuiRpcRetry } from '../../utils/suiRpcRetry';
 
 import { deleteBlobs } from './walrus/deleteBlobs';
 
@@ -34,20 +35,28 @@ export const cleanupBlobs = async ({
 
   // dry run transaction to estimate gas
   transaction.setSender(signer.toSuiAddress());
-  const { input } = await suiClient.dryRunTransactionBlock({
-    transactionBlock: await transaction.build({ client: suiClient }),
-  });
+  const { input } = await withSuiRpcRetry(
+    async () =>
+      suiClient.dryRunTransactionBlock({
+        transactionBlock: await transaction.build({ client: suiClient }),
+      }),
+    { operation: 'cleanupBlobs:dryRunTransactionBlock', logger: core },
+  );
   transaction.setGasBudget(parseInt(input.gasData.budget));
 
-  const { digest } = await suiClient.signAndExecuteTransaction({
-    signer,
-    transaction,
+  const { digest } = await signAndExecuteTransactionWithRetry(suiClient, signer, transaction, {
+    operation: 'cleanupBlobs:tx',
+    logger: core,
   });
 
-  const { effects } = await suiClient.waitForTransaction({
-    digest,
-    options: { showEffects: true },
-  });
+  const { effects } = await withSuiRpcRetry(
+    async () =>
+      suiClient.waitForTransaction({
+        digest,
+        options: { showEffects: true },
+      }),
+    { operation: 'cleanupBlobs:waitForTransaction', logger: core },
+  );
 
   if (effects!.status.status !== 'success') {
     failWithMessage(

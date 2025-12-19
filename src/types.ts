@@ -81,4 +81,6 @@ export interface SiteConfig {
   path: string;
   write_retry_limit?: number;
   site_obj_id?: string;
+  sui_rpc_url?: string;
+  sui_rpc_timeout_ms?: number;
 }

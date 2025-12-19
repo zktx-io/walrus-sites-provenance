@@ -12,6 +12,7 @@ import { MAX_CMD_REGISTRATIONS } from '../utils/constants';
 import { convert } from '../utils/convert';
 import { getAllObjects } from '../utils/getAllObjects';
 import { WalrusSystem } from '../utils/loadWalrusSystem';
+import { signAndExecuteTransactionWithRetry, withSuiRpcRetry } from '../utils/suiRpcRetry';
 
 import { encodedBlobLength } from './helper/encodedBlobLength';
 import { getAllTokens } from './helper/getAllTokens';
@@ -199,20 +200,28 @@ export const registerBlobs = async ({
 
     // dry run transaction to estimate gas
     transaction.setSender(signer.toSuiAddress());
-    const { input } = await suiClient.dryRunTransactionBlock({
-      transactionBlock: await transaction.build({ client: suiClient }),
-    });
+    const { input } = await withSuiRpcRetry(
+      async () =>
+        suiClient.dryRunTransactionBlock({
+          transactionBlock: await transaction.build({ client: suiClient }),
+        }),
+      { operation: 'registerBlobs:dryRunTransactionBlock', logger: core },
+    );
     transaction.setGasBudget(parseInt(input.gasData.budget));
 
-    const { digest } = await suiClient.signAndExecuteTransaction({
-      signer,
-      transaction,
+    const { digest } = await signAndExecuteTransactionWithRetry(suiClient, signer, transaction, {
+      operation: 'registerBlobs:tx',
+      logger: core,
     });
 
-    const { effects } = await suiClient.waitForTransaction({
-      digest,
-      options: { showEffects: true },
-    });
+    const { effects } = await withSuiRpcRetry(
+      async () =>
+        suiClient.waitForTransaction({
+          digest,
+          options: { showEffects: true },
+        }),
+      { operation: 'registerBlobs:waitForTransaction', logger: core },
+    );
 
     if (effects!.status.status !== 'success') {
       core.setFailed(

@@ -19,6 +19,8 @@ import { verifyPersonalMessageSignature, verifyTransactionSignature } from '@mys
 import { sleep } from '../blob/helper/writeBlobHelper';
 import { Network } from '../types';
 
+import { signAndExecuteTransactionWithRetry, withSuiRpcRetry } from './suiRpcRetry';
+
 const NETWORK = 'devnet';
 const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
@@ -135,13 +137,17 @@ export class GitSigner extends Keypair {
 
     for (let i = 0; i < maxRetries; i++) {
       await sleep(retryDelay);
-      coinPage = await client.getOwnedObjects({
-        owner: ephemeralAddress,
-        filter: {
-          StructType: '0x2::coin::Coin<0x2::sui::SUI>',
-        },
-        options: { showType: true, showBcs: true, showContent: true },
-      });
+      coinPage = await withSuiRpcRetry(
+        async () =>
+          client.getOwnedObjects({
+            owner: ephemeralAddress,
+            filter: {
+              StructType: '0x2::coin::Coin<0x2::sui::SUI>',
+            },
+            options: { showType: true, showBcs: true, showContent: true },
+          }),
+        { operation: 'GitSigner.CreateSigner:getOwnedObjects', logger: core },
+      );
 
       if (coinPage.data.length > 0) break;
     }
@@ -233,11 +239,17 @@ export class GitSigner extends Keypair {
       tx.pure.vector('u8', chunk);
     });
     tx.transferObjects([tx.gas], ephemeralAddress);
-    const { digest: request } = await this.#client.signAndExecuteTransaction({
-      transaction: tx,
-      signer: this.#ephemeralKeypair,
-    });
-    await this.#client.waitForTransaction({ digest: request, options: { showInput: true } });
+    const { digest: request } = await signAndExecuteTransactionWithRetry(
+      this.#client,
+      this.#ephemeralKeypair,
+      tx,
+      { operation: 'GitSigner:requestTx', logger: core, retries: 6 },
+    );
+    await withSuiRpcRetry(
+      async () =>
+        this.#client.waitForTransaction({ digest: request, options: { showInput: true } }),
+      { operation: 'GitSigner:waitForRequestTx', logger: core, retries: 6 },
+    );
 
     if (isEnd) {
       return {
@@ -250,11 +262,15 @@ export class GitSigner extends Keypair {
     const sleepTime = RETRY_DELAY;
     while (retry-- > 0) {
       core.info(`⏳ Waiting for response... (${retry} retries left)`);
-      const { data } = await this.#client.queryTransactionBlocks({
-        filter: { FromAddress: ephemeralAddress },
-        order: 'descending',
-        options: { showInput: true },
-      });
+      const { data } = await withSuiRpcRetry(
+        async () =>
+          this.#client.queryTransactionBlocks({
+            filter: { FromAddress: ephemeralAddress },
+            order: 'descending',
+            options: { showInput: true },
+          }),
+        { operation: 'GitSigner:queryTransactionBlocks', logger: core, retries: 6 },
+      );
       if (data.length > 0 && data[0].digest !== request && data[0].transaction) {
         const tx = data[0].transaction.data.transaction;
         if (

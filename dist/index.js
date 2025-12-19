@@ -59103,6 +59103,7 @@ const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
 const constants_1 = __nccwpck_require__(56156);
 const failWithMessage_1 = __nccwpck_require__(60210);
+const suiRpcRetry_1 = __nccwpck_require__(60937);
 const cleanupBlobs_1 = __nccwpck_require__(49754);
 const certifyBlobs = async ({ config, suiClient, walrusClient, walrusSystem, blobs, signer, }) => {
     try {
@@ -59119,18 +59120,18 @@ const certifyBlobs = async ({ config, suiClient, walrusClient, walrusSystem, blo
             }
             // dry run transaction to estimate gas
             transaction.setSender(signer.toSuiAddress());
-            const { input } = await suiClient.dryRunTransactionBlock({
+            const { input } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.dryRunTransactionBlock({
                 transactionBlock: await transaction.build({ client: suiClient }),
-            });
+            }), { operation: 'certifyBlobs:dryRunTransactionBlock', logger: core });
             transaction.setGasBudget(parseInt(input.gasData.budget));
-            const { digest } = await suiClient.signAndExecuteTransaction({
-                signer,
-                transaction,
+            const { digest } = await (0, suiRpcRetry_1.signAndExecuteTransactionWithRetry)(suiClient, signer, transaction, {
+                operation: 'certifyBlobs:tx',
+                logger: core,
             });
-            const { effects } = await suiClient.waitForTransaction({
+            const { effects } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.waitForTransaction({
                 digest,
                 options: { showEffects: true },
-            });
+            }), { operation: 'certifyBlobs:waitForTransaction', logger: core });
             if (effects.status.status !== 'success') {
                 await (0, cleanupBlobs_1.cleanupBlobs)({
                     signer,
@@ -59414,6 +59415,7 @@ exports.cleanupBlobs = void 0;
 const core = __importStar(__nccwpck_require__(37484));
 const transactions_1 = __nccwpck_require__(59417);
 const failWithMessage_1 = __nccwpck_require__(60210);
+const suiRpcRetry_1 = __nccwpck_require__(60937);
 const deleteBlobs_1 = __nccwpck_require__(16758);
 const cleanupBlobs = async ({ signer, suiClient, config, walrusSystem, blobObjectsIds, }) => {
     const transaction = new transactions_1.Transaction();
@@ -59425,18 +59427,18 @@ const cleanupBlobs = async ({ signer, suiClient, config, walrusSystem, blobObjec
     }));
     // dry run transaction to estimate gas
     transaction.setSender(signer.toSuiAddress());
-    const { input } = await suiClient.dryRunTransactionBlock({
+    const { input } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.dryRunTransactionBlock({
         transactionBlock: await transaction.build({ client: suiClient }),
-    });
+    }), { operation: 'cleanupBlobs:dryRunTransactionBlock', logger: core });
     transaction.setGasBudget(parseInt(input.gasData.budget));
-    const { digest } = await suiClient.signAndExecuteTransaction({
-        signer,
-        transaction,
+    const { digest } = await (0, suiRpcRetry_1.signAndExecuteTransactionWithRetry)(suiClient, signer, transaction, {
+        operation: 'cleanupBlobs:tx',
+        logger: core,
     });
-    const { effects } = await suiClient.waitForTransaction({
+    const { effects } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.waitForTransaction({
         digest,
         options: { showEffects: true },
-    });
+    }), { operation: 'cleanupBlobs:waitForTransaction', logger: core });
     if (effects.status.status !== 'success') {
         (0, failWithMessage_1.failWithMessage)(`Transaction ${digest} is ${effects.status.status}: ${JSON.stringify(effects.status.error)}`);
     }
@@ -59930,6 +59932,7 @@ const blob_1 = __nccwpck_require__(42458);
 const constants_1 = __nccwpck_require__(56156);
 const convert_1 = __nccwpck_require__(31190);
 const getAllObjects_1 = __nccwpck_require__(20108);
+const suiRpcRetry_1 = __nccwpck_require__(60937);
 const encodedBlobLength_1 = __nccwpck_require__(12717);
 const getAllTokens_1 = __nccwpck_require__(18351);
 [] = [];
@@ -60044,18 +60047,18 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walrusSystem, gr
         transaction.transferObjects([...regisered, ...storageCoins, ...writeCoins], config.owner);
         // dry run transaction to estimate gas
         transaction.setSender(signer.toSuiAddress());
-        const { input } = await suiClient.dryRunTransactionBlock({
+        const { input } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.dryRunTransactionBlock({
             transactionBlock: await transaction.build({ client: suiClient }),
-        });
+        }), { operation: 'registerBlobs:dryRunTransactionBlock', logger: core });
         transaction.setGasBudget(parseInt(input.gasData.budget));
-        const { digest } = await suiClient.signAndExecuteTransaction({
-            signer,
-            transaction,
+        const { digest } = await (0, suiRpcRetry_1.signAndExecuteTransactionWithRetry)(suiClient, signer, transaction, {
+            operation: 'registerBlobs:tx',
+            logger: core,
         });
-        const { effects } = await suiClient.waitForTransaction({
+        const { effects } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.waitForTransaction({
             digest,
             options: { showEffects: true },
-        });
+        }), { operation: 'registerBlobs:waitForTransaction', logger: core });
         if (effects.status.status !== 'success') {
             core.setFailed(`Transaction ${digest} is ${effects.status.status}: ${JSON.stringify(effects.status.error)}`);
             throw new Error('Transaction failed');
@@ -60167,7 +60170,6 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(37484));
-const client_1 = __nccwpck_require__(70827);
 const walrus_1 = __nccwpck_require__(19044);
 const certifyBlobs_1 = __nccwpck_require__(21219);
 const groupFilesBySize_1 = __nccwpck_require__(77685);
@@ -60177,6 +60179,7 @@ const writeBlobs_1 = __nccwpck_require__(59338);
 const createSite_1 = __nccwpck_require__(10308);
 const updateSite_1 = __nccwpck_require__(38713);
 const accountState_1 = __nccwpck_require__(26417);
+const createSuiClient_1 = __nccwpck_require__(37469);
 const failWithMessage_1 = __nccwpck_require__(60210);
 const getSigner_1 = __nccwpck_require__(73207);
 const loadConfig_1 = __nccwpck_require__(75523);
@@ -60186,7 +60189,7 @@ const main = async () => {
     const config = (0, loadConfig_1.loadConfig)();
     const { signer, isGitSigner } = await (0, getSigner_1.getSigner)(config);
     // Initialize Sui and Walrus clients
-    const suiClient = new client_1.SuiClient({ url: (0, client_1.getFullnodeUrl)(config.network) });
+    const suiClient = (0, createSuiClient_1.createSuiClient)(config);
     const walrusClient = new walrus_1.WalrusClient({
         network: config.network,
         suiClient,
@@ -60311,6 +60314,7 @@ const transactions_1 = __nccwpck_require__(59417);
 const failWithMessage_1 = __nccwpck_require__(60210);
 const getAllObjects_1 = __nccwpck_require__(20108);
 const hexToBase36_1 = __nccwpck_require__(88793);
+const suiRpcRetry_1 = __nccwpck_require__(60937);
 const addRoutes_1 = __nccwpck_require__(97989);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const registerResources_1 = __nccwpck_require__(12318);
@@ -60347,19 +60351,19 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
     transaction.transferObjects([site], config.owner);
     // dry run transaction to estimate gas
     transaction.setSender(signer.toSuiAddress());
-    const { input } = await suiClient.dryRunTransactionBlock({
+    const { input } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.dryRunTransactionBlock({
         transactionBlock: await transaction.build({ client: suiClient }),
-    });
+    }), { operation: 'createSite:dryRunTransactionBlock', logger: core });
     transaction.setGasBudget(parseInt(input.gasData.budget));
     // Execute transaction
-    const { digest } = await suiClient.signAndExecuteTransaction({
-        signer,
-        transaction,
+    const { digest } = await (0, suiRpcRetry_1.signAndExecuteTransactionWithRetry)(suiClient, signer, transaction, {
+        operation: 'createSite:tx1',
+        logger: core,
     });
-    const { effects } = await suiClient.waitForTransaction({
+    const { effects } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.waitForTransaction({
         digest,
         options: { showEffects: true },
-    });
+    }), { operation: 'createSite:waitForTransaction:tx1', logger: core });
     const txCreatedIds = effects.created?.map(e => e.reference.objectId) ?? [];
     const createdObjects = await (0, getAllObjects_1.getAllObjects)(suiClient, {
         ids: txCreatedIds,
@@ -60383,18 +60387,18 @@ const createSite = async ({ config, suiClient, walrusSystem, blobs, signer, isGi
             .forEach(batch => batch.forEach(option => tx.add((0, registerResources_1.registerResources)({ ...option, site: siteObjectId }))));
         // dry run transaction to estimate gas
         tx.setSender(signer.toSuiAddress());
-        const { input: input2 } = await suiClient.dryRunTransactionBlock({
+        const { input: input2 } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.dryRunTransactionBlock({
             transactionBlock: await tx.build({ client: suiClient }),
-        });
+        }), { operation: 'createSite:dryRunTransactionBlock:tx2', logger: core });
         tx.setGasBudget(parseInt(input2.gasData.budget));
-        const { digest: digest2 } = await suiClient.signAndExecuteTransaction({
-            signer,
-            transaction: tx,
+        const { digest: digest2 } = await (0, suiRpcRetry_1.signAndExecuteTransactionWithRetry)(suiClient, signer, tx, {
+            operation: 'createSite:tx2',
+            logger: core,
         });
-        const { effects: effects2 } = await suiClient.waitForTransaction({
+        const { effects: effects2 } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.waitForTransaction({
             digest: digest2,
             options: { showEffects: true },
-        });
+        }), { operation: 'createSite:waitForTransaction:tx2', logger: core });
         if (effects2.status.status !== 'success' || suiSiteObjects.length === 0) {
             (0, failWithMessage_1.failWithMessage)(`Transaction ${digest2} is ${effects2.status.status}: ${JSON.stringify(effects2.status.error)}`);
         }
@@ -60742,6 +60746,7 @@ const transactions_1 = __nccwpck_require__(59417);
 const cleanupBlobs_1 = __nccwpck_require__(49754);
 const failWithMessage_1 = __nccwpck_require__(60210);
 const hexToBase36_1 = __nccwpck_require__(88793);
+const suiRpcRetry_1 = __nccwpck_require__(60937);
 const addRoutes_1 = __nccwpck_require__(97989);
 const generateBatchedResourceCommands_1 = __nccwpck_require__(2314);
 const getOldBlobObjects_1 = __nccwpck_require__(76178);
@@ -60786,19 +60791,19 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
     }));
     // dry run transaction to estimate gas
     transaction.setSender(signer.toSuiAddress());
-    const { input } = await suiClient.dryRunTransactionBlock({
+    const { input } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.dryRunTransactionBlock({
         transactionBlock: await transaction.build({ client: suiClient }),
-    });
+    }), { operation: 'updateSite:dryRunTransactionBlock', logger: core });
     transaction.setGasBudget(parseInt(input.gasData.budget));
     // Execute transaction
-    const { digest } = await suiClient.signAndExecuteTransaction({
-        signer,
-        transaction,
+    const { digest } = await (0, suiRpcRetry_1.signAndExecuteTransactionWithRetry)(suiClient, signer, transaction, {
+        operation: 'updateSite:tx1',
+        logger: core,
     });
-    const { effects } = await suiClient.waitForTransaction({
+    const { effects } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.waitForTransaction({
         digest,
         options: { showEffects: true },
-    });
+    }), { operation: 'updateSite:waitForTransaction:tx1', logger: core });
     if (effects.status.status !== 'success') {
         core.setFailed(`Transaction ${digest} is ${effects.status.status}: ${JSON.stringify(effects.status.error)}`);
         throw new Error('Update site failed');
@@ -60811,19 +60816,19 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
         batchedCommands
             .slice(1)
             .forEach(batch => batch.forEach(option => tx.add((0, registerResources_1.registerResources)({ ...option, site: siteObjectId }))));
-        const { input: input2 } = await suiClient.dryRunTransactionBlock({
+        const { input: input2 } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.dryRunTransactionBlock({
             transactionBlock: await tx.build({ client: suiClient }),
-        });
+        }), { operation: 'updateSite:dryRunTransactionBlock:tx2', logger: core });
         tx.setSender(signer.toSuiAddress());
         tx.setGasBudget(parseInt(input2.gasData.budget));
-        const { digest: digest2 } = await suiClient.signAndExecuteTransaction({
-            signer,
-            transaction: tx,
+        const { digest: digest2 } = await (0, suiRpcRetry_1.signAndExecuteTransactionWithRetry)(suiClient, signer, tx, {
+            operation: 'updateSite:tx2',
+            logger: core,
         });
-        const { effects: effects2 } = await suiClient.waitForTransaction({
+        const { effects: effects2 } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => suiClient.waitForTransaction({
             digest: digest2,
             options: { showEffects: true, showEvents: true },
-        });
+        }), { operation: 'updateSite:waitForTransaction:tx2', logger: core });
         if (effects2.status.status !== 'success') {
             (0, failWithMessage_1.failWithMessage)(`Transaction ${digest2} is ${effects2.status.status}: ${JSON.stringify(effects2.status.error)}`);
         }
@@ -61090,6 +61095,47 @@ exports.convert = convert;
 
 /***/ }),
 
+/***/ 37469:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSuiClient = void 0;
+const client_1 = __nccwpck_require__(70827);
+const withTimeoutFetch = (timeoutMs) => async (input, init) => {
+    const controller = new AbortController();
+    const signal = init?.signal;
+    const onAbort = () => controller.abort();
+    signal?.addEventListener('abort', onAbort);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(input, { ...init, signal: controller.signal });
+    }
+    finally {
+        clearTimeout(timeoutId);
+        signal?.removeEventListener('abort', onAbort);
+    }
+};
+const createSuiClient = (config) => {
+    const url = config.sui_rpc_url?.trim() || process.env.SUI_RPC_URL?.trim() || (0, client_1.getFullnodeUrl)(config.network);
+    const timeoutMs = config.sui_rpc_timeout_ms ??
+        (process.env.SUI_RPC_TIMEOUT_MS ? Number(process.env.SUI_RPC_TIMEOUT_MS) : undefined);
+    if (timeoutMs && Number.isFinite(timeoutMs) && timeoutMs > 0) {
+        return new client_1.SuiClient({
+            transport: new client_1.SuiHTTPTransport({
+                url,
+                fetch: withTimeoutFetch(timeoutMs),
+            }),
+        });
+    }
+    return new client_1.SuiClient({ url });
+};
+exports.createSuiClient = createSuiClient;
+
+
+/***/ }),
+
 /***/ 60210:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -61296,6 +61342,7 @@ const transactions_1 = __nccwpck_require__(59417);
 const utils_1 = __nccwpck_require__(33973);
 const verify_1 = __nccwpck_require__(75693);
 const writeBlobHelper_1 = __nccwpck_require__(42452);
+const suiRpcRetry_1 = __nccwpck_require__(60937);
 const NETWORK = 'devnet';
 const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
@@ -61367,13 +61414,13 @@ class GitSigner extends cryptography_1.Keypair {
         let coinPage;
         for (let i = 0; i < maxRetries; i++) {
             await (0, writeBlobHelper_1.sleep)(retryDelay);
-            coinPage = await client.getOwnedObjects({
+            coinPage = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => client.getOwnedObjects({
                 owner: ephemeralAddress,
                 filter: {
                     StructType: '0x2::coin::Coin<0x2::sui::SUI>',
                 },
                 options: { showType: true, showBcs: true, showContent: true },
-            });
+            }), { operation: 'GitSigner.CreateSigner:getOwnedObjects', logger: core });
             if (coinPage.data.length > 0)
                 break;
         }
@@ -61441,11 +61488,8 @@ class GitSigner extends cryptography_1.Keypair {
             tx.pure.vector('u8', chunk);
         });
         tx.transferObjects([tx.gas], ephemeralAddress);
-        const { digest: request } = await this.#client.signAndExecuteTransaction({
-            transaction: tx,
-            signer: this.#ephemeralKeypair,
-        });
-        await this.#client.waitForTransaction({ digest: request, options: { showInput: true } });
+        const { digest: request } = await (0, suiRpcRetry_1.signAndExecuteTransactionWithRetry)(this.#client, this.#ephemeralKeypair, tx, { operation: 'GitSigner:requestTx', logger: core, retries: 6 });
+        await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => this.#client.waitForTransaction({ digest: request, options: { showInput: true } }), { operation: 'GitSigner:waitForRequestTx', logger: core, retries: 6 });
         if (isEnd) {
             return {
                 bytes: '',
@@ -61456,11 +61500,11 @@ class GitSigner extends cryptography_1.Keypair {
         const sleepTime = RETRY_DELAY;
         while (retry-- > 0) {
             core.info(`⏳ Waiting for response... (${retry} retries left)`);
-            const { data } = await this.#client.queryTransactionBlocks({
+            const { data } = await (0, suiRpcRetry_1.withSuiRpcRetry)(async () => this.#client.queryTransactionBlocks({
                 filter: { FromAddress: ephemeralAddress },
                 order: 'descending',
                 options: { showInput: true },
-            });
+            }), { operation: 'GitSigner:queryTransactionBlocks', logger: core, retries: 6 });
             if (data.length > 0 && data[0].digest !== request && data[0].transaction) {
                 const tx = data[0].transaction.data.transaction;
                 if (tx &&
@@ -61740,6 +61784,99 @@ const loadWalrusSystem = async (network, suiClient, walrusClient) => {
         };
 };
 exports.loadWalrusSystem = loadWalrusSystem;
+
+
+/***/ }),
+
+/***/ 60937:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.signAndExecuteTransactionWithRetry = exports.withSuiRpcRetry = exports.isRetryableSuiRpcError = void 0;
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const jitter = (ms) => Math.floor(Math.random() * ms);
+const getErrorMessage = (error) => {
+    if (error instanceof Error)
+        return error.message;
+    try {
+        return JSON.stringify(error);
+    }
+    catch {
+        return String(error);
+    }
+};
+const getErrorStatus = (error) => {
+    if (error && typeof error === 'object' && 'status' in error) {
+        const status = error.status;
+        if (typeof status === 'number')
+            return status;
+    }
+    return undefined;
+};
+const isRetryableSuiRpcError = (error) => {
+    const status = getErrorStatus(error);
+    if (status != null) {
+        return [408, 425, 429, 500, 502, 503, 504].includes(status);
+    }
+    const message = getErrorMessage(error).toLowerCase();
+    return (message.includes('fetch failed') ||
+        message.includes('socket hang up') ||
+        message.includes('timed out') ||
+        message.includes('timeout') ||
+        message.includes('econnreset') ||
+        message.includes('eai_again') ||
+        message.includes('enotfound') ||
+        message.includes('networkerror'));
+};
+exports.isRetryableSuiRpcError = isRetryableSuiRpcError;
+const withSuiRpcRetry = async (fn, { operation, retries = 5, minDelayMs = 1000, maxDelayMs = 15000, logger }) => {
+    let attempt = 0;
+    while (true) {
+        try {
+            return await fn();
+        }
+        catch (error) {
+            const retryable = (0, exports.isRetryableSuiRpcError)(error);
+            const status = getErrorStatus(error);
+            const message = getErrorMessage(error);
+            if (!retryable || attempt >= retries) {
+                const meta = status != null
+                    ? ` (status=${status}, attempt=${attempt}/${retries})`
+                    : ` (attempt=${attempt}/${retries})`;
+                throw new Error(`[sui] ${operation} failed${meta}: ${message}`);
+            }
+            const baseDelay = Math.min(maxDelayMs, minDelayMs * 2 ** attempt);
+            const delayMs = Math.min(maxDelayMs, baseDelay + jitter(Math.min(1000, baseDelay)));
+            logger?.warning?.(`[sui] ${operation} transient failure${status != null ? ` (status=${status})` : ''}; retrying in ${delayMs}ms (${attempt + 1}/${retries})`);
+            attempt += 1;
+            await sleep(delayMs);
+        }
+    }
+};
+exports.withSuiRpcRetry = withSuiRpcRetry;
+const signAndExecuteTransactionWithRetry = async (suiClient, signer, transaction, { operation, logger, retries, minDelayMs, maxDelayMs, }) => {
+    const txBytes = await (0, exports.withSuiRpcRetry)(async () => transaction.build({ client: suiClient }), {
+        operation: `${operation}:build`,
+        logger,
+        retries,
+        minDelayMs,
+        maxDelayMs,
+    });
+    const signature = await (0, exports.withSuiRpcRetry)(async () => signer.signTransaction(txBytes), {
+        operation: `${operation}:sign`,
+        logger,
+        retries,
+        minDelayMs,
+        maxDelayMs,
+    });
+    return (0, exports.withSuiRpcRetry)(async () => suiClient.executeTransactionBlock({
+        transactionBlock: txBytes,
+        signature: signature.signature,
+    }), { operation: `${operation}:execute`, logger, retries, minDelayMs, maxDelayMs });
+};
+exports.signAndExecuteTransactionWithRetry = signAndExecuteTransactionWithRetry;
 
 
 /***/ }),

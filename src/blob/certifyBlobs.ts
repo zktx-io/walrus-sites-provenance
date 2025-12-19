@@ -8,6 +8,7 @@ import { BlobDictionary, SiteConfig } from '../types';
 import { MAX_CMD_CERTIFICATIONS } from '../utils/constants';
 import { failWithMessage } from '../utils/failWithMessage';
 import { WalrusSystem } from '../utils/loadWalrusSystem';
+import { signAndExecuteTransactionWithRetry, withSuiRpcRetry } from '../utils/suiRpcRetry';
 
 import { cleanupBlobs } from './helper/cleanupBlobs';
 
@@ -45,20 +46,28 @@ export const certifyBlobs = async ({
 
       // dry run transaction to estimate gas
       transaction.setSender(signer.toSuiAddress());
-      const { input } = await suiClient.dryRunTransactionBlock({
-        transactionBlock: await transaction.build({ client: suiClient }),
-      });
+      const { input } = await withSuiRpcRetry(
+        async () =>
+          suiClient.dryRunTransactionBlock({
+            transactionBlock: await transaction.build({ client: suiClient }),
+          }),
+        { operation: 'certifyBlobs:dryRunTransactionBlock', logger: core },
+      );
       transaction.setGasBudget(parseInt(input.gasData.budget));
 
-      const { digest } = await suiClient.signAndExecuteTransaction({
-        signer,
-        transaction,
+      const { digest } = await signAndExecuteTransactionWithRetry(suiClient, signer, transaction, {
+        operation: 'certifyBlobs:tx',
+        logger: core,
       });
 
-      const { effects } = await suiClient.waitForTransaction({
-        digest,
-        options: { showEffects: true },
-      });
+      const { effects } = await withSuiRpcRetry(
+        async () =>
+          suiClient.waitForTransaction({
+            digest,
+            options: { showEffects: true },
+          }),
+        { operation: 'certifyBlobs:waitForTransaction', logger: core },
+      );
 
       if (effects!.status.status !== 'success') {
         await cleanupBlobs({

@@ -1,5 +1,4 @@
 import * as core from '@actions/core';
-import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 import { WalrusClient } from '@mysten/walrus';
 
 import { certifyBlobs } from './blob/certifyBlobs';
@@ -10,6 +9,7 @@ import { writeBlobs } from './blob/writeBlobs';
 import { createSite } from './site/createSite';
 import { updateSite } from './site/updateSite';
 import { accountState } from './utils/accountState';
+import { createSuiClient } from './utils/createSuiClient';
 import { failWithMessage } from './utils/failWithMessage';
 import { getSigner } from './utils/getSigner';
 import { loadConfig } from './utils/loadConfig';
@@ -21,7 +21,7 @@ const main = async (): Promise<void> => {
   const { signer, isGitSigner } = await getSigner(config);
 
   // Initialize Sui and Walrus clients
-  const suiClient = new SuiClient({ url: getFullnodeUrl(config.network) });
+  const suiClient = createSuiClient(config);
   const walrusClient = new WalrusClient({
     network: config.network,
     suiClient,

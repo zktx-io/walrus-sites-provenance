@@ -9,6 +9,7 @@ import { getAllObjects } from '../utils/getAllObjects';
 import { GitSigner } from '../utils/gitSigner';
 import { hexToBase36 } from '../utils/hexToBase36';
 import { WalrusSystem } from '../utils/loadWalrusSystem';
+import { signAndExecuteTransactionWithRetry, withSuiRpcRetry } from '../utils/suiRpcRetry';
 
 import { addRoutes } from './helper/addRoutes';
 import { generateBatchedResourceCommands } from './helper/generateBatchedResourceCommands';
@@ -71,21 +72,29 @@ export const createSite = async ({
 
   // dry run transaction to estimate gas
   transaction.setSender(signer.toSuiAddress());
-  const { input } = await suiClient.dryRunTransactionBlock({
-    transactionBlock: await transaction.build({ client: suiClient }),
-  });
+  const { input } = await withSuiRpcRetry(
+    async () =>
+      suiClient.dryRunTransactionBlock({
+        transactionBlock: await transaction.build({ client: suiClient }),
+      }),
+    { operation: 'createSite:dryRunTransactionBlock', logger: core },
+  );
   transaction.setGasBudget(parseInt(input.gasData.budget));
 
   // Execute transaction
-  const { digest } = await suiClient.signAndExecuteTransaction({
-    signer,
-    transaction,
+  const { digest } = await signAndExecuteTransactionWithRetry(suiClient, signer, transaction, {
+    operation: 'createSite:tx1',
+    logger: core,
   });
 
-  const { effects } = await suiClient.waitForTransaction({
-    digest,
-    options: { showEffects: true },
-  });
+  const { effects } = await withSuiRpcRetry(
+    async () =>
+      suiClient.waitForTransaction({
+        digest,
+        options: { showEffects: true },
+      }),
+    { operation: 'createSite:waitForTransaction:tx1', logger: core },
+  );
 
   const txCreatedIds = effects!.created?.map(e => e.reference.objectId) ?? [];
 
@@ -121,19 +130,27 @@ export const createSite = async ({
 
     // dry run transaction to estimate gas
     tx.setSender(signer.toSuiAddress());
-    const { input: input2 } = await suiClient.dryRunTransactionBlock({
-      transactionBlock: await tx.build({ client: suiClient }),
-    });
+    const { input: input2 } = await withSuiRpcRetry(
+      async () =>
+        suiClient.dryRunTransactionBlock({
+          transactionBlock: await tx.build({ client: suiClient }),
+        }),
+      { operation: 'createSite:dryRunTransactionBlock:tx2', logger: core },
+    );
     tx.setGasBudget(parseInt(input2.gasData.budget));
 
-    const { digest: digest2 } = await suiClient.signAndExecuteTransaction({
-      signer,
-      transaction: tx,
+    const { digest: digest2 } = await signAndExecuteTransactionWithRetry(suiClient, signer, tx, {
+      operation: 'createSite:tx2',
+      logger: core,
     });
-    const { effects: effects2 } = await suiClient.waitForTransaction({
-      digest: digest2,
-      options: { showEffects: true },
-    });
+    const { effects: effects2 } = await withSuiRpcRetry(
+      async () =>
+        suiClient.waitForTransaction({
+          digest: digest2,
+          options: { showEffects: true },
+        }),
+      { operation: 'createSite:waitForTransaction:tx2', logger: core },
+    );
     if (effects2!.status.status !== 'success' || suiSiteObjects.length === 0) {
       failWithMessage(
         `Transaction ${digest2} is ${effects2!.status.status}: ${JSON.stringify(effects2!.status.error)}`,
