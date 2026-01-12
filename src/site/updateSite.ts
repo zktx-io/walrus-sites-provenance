@@ -158,14 +158,29 @@ export const updateSite = async ({
   }
 
   // Cleanup old blobs
-  if (oldBlobObjects.length > 0) {
+  const currentBlobObjectIds = new Set(
+    Object.values(blobs)
+      .map(blob => blob.objectId)
+      .filter((id): id is string => Boolean(id)),
+  );
+  const deletableBlobObjects = oldBlobObjects.filter(
+    objectId => !currentBlobObjectIds.has(objectId),
+  );
+
+  if (deletableBlobObjects.length > 0) {
     await cleanupBlobs({
       signer,
       suiClient,
       config,
       walrusSystem,
-      blobObjectsIds: oldBlobObjects,
+      blobObjectsIds: deletableBlobObjects,
     });
+    const skipped = oldBlobObjects.length - deletableBlobObjects.length;
+    if (skipped > 0) {
+      core.info(`🛡️ Skipped deleting ${skipped} newly registered blob object(s).`);
+    }
+  } else if (oldBlobObjects.length > 0) {
+    core.info(`🛡️ Skipped deleting ${oldBlobObjects.length} newly registered blob object(s).`);
   } else {
     core.info(`🗑️  No old blobs to delete.`);
   }

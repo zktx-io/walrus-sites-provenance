@@ -241,17 +241,18 @@ export const registerBlobs = async ({
           obj.data?.type === `${walrusSystem.blobPackageId}::blob::Blob` &&
           obj.data?.bcs?.dataType === 'moveObject',
       );
-
-      core.info(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
-      txIndex++;
       for (const obj of suiBlobObjects) {
         const parsed = Blob().fromBase64((obj.data as any).bcs.bcsBytes);
         const blobId = base64url.fromNumber(parsed.blob_id);
         blobs[blobId].objectId = parsed.id.id;
       }
 
-      for (const { blobId, groupId } of registrations) {
-        core.info(` + Blob ID: ${blobId} (Group ${groupId})`);
+      core.info(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
+      txIndex++;
+      for (const { blobId, groupId } of chunk) {
+        const objectId = blobs[blobId]?.objectId;
+        const objectSuffix = objectId ? ` -> Object ID: ${objectId}` : ' -> Object ID: (not found)';
+        core.info(` + Blob ID: ${blobId} (Group ${groupId})${objectSuffix}`);
       }
     }
   }
