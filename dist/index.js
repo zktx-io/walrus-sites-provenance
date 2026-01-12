@@ -60071,15 +60071,17 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walrusSystem, gr
             });
             const suiBlobObjects = createdObjects.filter(obj => obj.data?.type === `${walrusSystem.blobPackageId}::blob::Blob` &&
                 obj.data?.bcs?.dataType === 'moveObject');
-            core.info(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
-            txIndex++;
             for (const obj of suiBlobObjects) {
                 const parsed = (0, blob_1.Blob)().fromBase64(obj.data.bcs.bcsBytes);
                 const blobId = base64url_1.base64url.fromNumber(parsed.blob_id);
                 blobs[blobId].objectId = parsed.id.id;
             }
-            for (const { blobId, groupId } of registrations) {
-                core.info(` + Blob ID: ${blobId} (Group ${groupId})`);
+            core.info(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
+            txIndex++;
+            for (const { blobId, groupId } of chunk) {
+                const objectId = blobs[blobId]?.objectId;
+                const objectSuffix = objectId ? ` -> Object ID: ${objectId}` : ' -> Object ID: (not found)';
+                core.info(` + Blob ID: ${blobId} (Group ${groupId})${objectSuffix}`);
             }
         }
     }
@@ -60837,14 +60839,25 @@ const updateSite = async ({ config, suiClient, walrusClient, walrusSystem, blobs
         }
     }
     // Cleanup old blobs
-    if (oldBlobObjects.length > 0) {
+    const currentBlobObjectIds = new Set(Object.values(blobs)
+        .map(blob => blob.objectId)
+        .filter((id) => Boolean(id)));
+    const deletableBlobObjects = oldBlobObjects.filter(objectId => !currentBlobObjectIds.has(objectId));
+    if (deletableBlobObjects.length > 0) {
         await (0, cleanupBlobs_1.cleanupBlobs)({
             signer,
             suiClient,
             config,
             walrusSystem,
-            blobObjectsIds: oldBlobObjects,
+            blobObjectsIds: deletableBlobObjects,
         });
+        const skipped = oldBlobObjects.length - deletableBlobObjects.length;
+        if (skipped > 0) {
+            core.info(`🛡️ Skipped deleting ${skipped} newly registered blob object(s).`);
+        }
+    }
+    else if (oldBlobObjects.length > 0) {
+        core.info(`🛡️ Skipped deleting ${oldBlobObjects.length} newly registered blob object(s).`);
     }
     else {
         core.info(`🗑️  No old blobs to delete.`);
@@ -61402,12 +61415,35 @@ class GitSigner extends cryptography_1.Keypair {
         const ephemeralKeypair = ed25519_1.Ed25519Keypair.generate();
         const ephemeralAddress = ephemeralKeypair.getPublicKey().toSuiAddress();
         const host = (0, faucet_1.getFaucetHost)(NETWORK);
-        const res = await (0, faucet_1.requestSuiFromFaucetV2)({
-            host,
-            recipient: ephemeralAddress,
-        });
-        if (res.status !== 'Success')
-            throw JSON.stringify(res.status);
+        const maxFaucetRetries = 5;
+        let faucetResponse;
+        let lastFaucetError;
+        for (let attempt = 1; attempt <= maxFaucetRetries; attempt++) {
+            try {
+                faucetResponse = await (0, faucet_1.requestSuiFromFaucetV2)({
+                    host,
+                    recipient: ephemeralAddress,
+                });
+                if (faucetResponse.status === 'Success') {
+                    break;
+                }
+                lastFaucetError = faucetResponse.status;
+                core.error(`⚠️ Devnet faucet attempt ${attempt}/${maxFaucetRetries} failed: ${JSON.stringify(faucetResponse.status)}`);
+            }
+            catch (error) {
+                lastFaucetError = error;
+                core.error(`⚠️ Devnet faucet attempt ${attempt}/${maxFaucetRetries} threw: ${String(error)}`);
+            }
+            if (attempt < maxFaucetRetries) {
+                await (0, writeBlobHelper_1.sleep)(2000);
+            }
+        }
+        if (!faucetResponse || faucetResponse.status !== 'Success') {
+            const reason = String(lastFaucetError ?? 'unknown');
+            core.error(`❌ Devnet faucet request failed after ${maxFaucetRetries} attempts: ${reason}`);
+            core.error('👉 Please try again in a moment.');
+            throw new Error(`Failed to request devnet SUI from faucet: ${reason}`);
+        }
         const client = new client_1.SuiClient({ url: (0, client_1.getFullnodeUrl)(NETWORK) });
         const maxRetries = 5;
         const retryDelay = 1500;
