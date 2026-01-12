@@ -6,8 +6,6 @@
 Deploy [Walrus Sites](https://docs.wal.app/walrus-sites/intro.html) using this GitHub Action.  
 Every deployment is cryptographically verifiable, tamper-proof, and easy to manage — all on the [Sui blockchain](https://sui.io).
 
-현재 버전: v0.5.7 (이전: v0.5.6)
-
 ## 🌐 What is Walrus?
 
 [Walrus](https://github.com/MystenLabs/walrus) is a decentralized storage protocol built on the [Sui blockchain](https://sui.io).  
@@ -35,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.5.7
+        uses: zktx-io/walrus-sites-provenance@v0.5.8
         env:
           ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
 ```
