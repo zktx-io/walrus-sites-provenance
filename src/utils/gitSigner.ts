@@ -122,12 +122,43 @@ export class GitSigner extends Keypair {
     const ephemeralKeypair = Ed25519Keypair.generate();
     const ephemeralAddress = ephemeralKeypair.getPublicKey().toSuiAddress();
     const host = getFaucetHost(NETWORK);
-    const res = await requestSuiFromFaucetV2({
-      host,
-      recipient: ephemeralAddress,
-    });
+    const maxFaucetRetries = 5;
+    let faucetResponse: Awaited<ReturnType<typeof requestSuiFromFaucetV2>> | undefined;
+    let lastFaucetError: unknown;
 
-    if (res.status !== 'Success') throw JSON.stringify(res.status);
+    for (let attempt = 1; attempt <= maxFaucetRetries; attempt++) {
+      try {
+        faucetResponse = await requestSuiFromFaucetV2({
+          host,
+          recipient: ephemeralAddress,
+        });
+
+        if (faucetResponse.status === 'Success') {
+          break;
+        }
+
+        lastFaucetError = faucetResponse.status;
+        core.error(
+          `⚠️ Devnet faucet attempt ${attempt}/${maxFaucetRetries} failed: ${JSON.stringify(faucetResponse.status)}`,
+        );
+      } catch (error) {
+        lastFaucetError = error;
+        core.error(
+          `⚠️ Devnet faucet attempt ${attempt}/${maxFaucetRetries} threw: ${String(error)}`,
+        );
+      }
+
+      if (attempt < maxFaucetRetries) {
+        await sleep(2000);
+      }
+    }
+
+    if (!faucetResponse || faucetResponse.status !== 'Success') {
+      const reason = String(lastFaucetError ?? 'unknown');
+      core.error(`❌ Devnet faucet request failed after ${maxFaucetRetries} attempts: ${reason}`);
+      core.error('👉 Please try again in a moment.');
+      throw new Error(`Failed to request devnet SUI from faucet: ${reason}`);
+    }
 
     const client = new SuiClient({ url: getFullnodeUrl(NETWORK) });
 
