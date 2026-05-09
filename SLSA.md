@@ -124,7 +124,7 @@ permissions:
 
 jobs:
   deploy-with-provenance:
-    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.5.8
+    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.5.9
     with:
       working-directory: './my-site-folder'
       # Optional. Use only after accepting the ED25519 v1.0.0 removal plan.
