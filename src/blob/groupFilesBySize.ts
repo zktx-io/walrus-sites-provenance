@@ -87,9 +87,12 @@ const contentTypeMap: Record<string, string> = {
   '7z': 'application/x-7z-compressed',
 };
 
-const getContentTypeFromExtension = (ext: string): string | undefined => {
-  return contentTypeMap[ext.toLowerCase()];
-};
+const deployIgnorePatterns = [
+  '**/.{git,hg,svn}{,/**}',
+  '**/node_modules{,/**}',
+  '**/.DS_Store',
+  '**/Thumbs.db',
+];
 
 const sha256ToU256LE = (buffer: Buffer): string => {
   const hash = createHash('sha256').update(buffer).digest();
@@ -106,8 +109,9 @@ export const groupFilesBySize = (outputDir: string): FileGroup[] => {
   }
 
   const wellKnown = ['.well-known/walrus-sites.intoto.jsonl', '.well-known/site.config.json'];
-  const allFiles = glob.sync(['**/*.*', ...wellKnown], { cwd: siteRoot });
-  const isSpecialFile = (relativePath: string) => wellKnown.includes(relativePath);
+  const allFiles = glob
+    .sync('**/*', { cwd: siteRoot, dot: true, ignore: deployIgnorePatterns, nodir: true })
+    .sort();
 
   const normalFiles: FileInfo[] = [];
   const specialFiles: FileInfo[] = [];
@@ -117,7 +121,7 @@ export const groupFilesBySize = (outputDir: string): FileGroup[] => {
     const fullPath = path.join(siteRoot, relativePath);
     const fileBuffer = fs.readFileSync(fullPath);
     const ext = path.extname(relativePath).slice(1);
-    const contentType = getContentTypeFromExtension(ext) ?? 'application/octet-stream';
+    const contentType = contentTypeMap[ext.toLowerCase()] ?? 'application/octet-stream';
 
     const fileInfo: FileInfo = {
       path: fullPath,
@@ -131,7 +135,7 @@ export const groupFilesBySize = (outputDir: string): FileGroup[] => {
       },
     };
 
-    if (isSpecialFile(relativePath)) {
+    if (wellKnown.includes(relativePath)) {
       specialFiles.push(fileInfo);
       specialFilesSize += fileInfo.size;
     } else {
@@ -164,16 +168,11 @@ export const groupFilesBySize = (outputDir: string): FileGroup[] => {
     groups.push(currentGroup);
   }
 
-  let totalSize = 0;
-  let totalFiles = 0;
-
   for (const group of groups) {
     core.info(`✅ Group ${group.groupId} (${group.size} bytes)`);
     for (const file of group.files) {
       core.info(` + ${file.name} (${file.size} bytes)`);
     }
-    totalSize += group.size;
-    totalFiles += group.files.length;
   }
 
   return groups;

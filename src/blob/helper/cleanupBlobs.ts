@@ -1,71 +1,84 @@
 import * as core from '@actions/core';
-import { SuiClient } from '@mysten/sui/client';
-import { Signer } from '@mysten/sui/cryptography';
 import { Transaction } from '@mysten/sui/transactions';
+import { WalrusClient } from '@mysten/walrus';
 
 import { SiteConfig } from '../../types';
-import { failWithMessage } from '../../utils/failWithMessage';
-import { WalrusSystem } from '../../utils/loadWalrusSystem';
-import { signAndExecuteTransactionWithRetry, withSuiRpcRetry } from '../../utils/suiRpcRetry';
+import { MAX_BLOB_CLEANUPS_PER_TX } from '../../utils/constants';
+import { DeploymentSigner } from '../../utils/signingContext';
+import { SuiClient } from '../../utils/suiClient';
+import { runTx } from '../../utils/suiRetry';
 
-import { deleteBlobs } from './walrus/deleteBlobs';
+const MAX_CLEANUP_FAILURE_MESSAGE_LENGTH = 240;
+
+const truncateFailureMessage = (message: string): string =>
+  message.length <= MAX_CLEANUP_FAILURE_MESSAGE_LENGTH
+    ? message
+    : `${message.slice(0, MAX_CLEANUP_FAILURE_MESSAGE_LENGTH)}...`;
 
 export const cleanupBlobs = async ({
   signer,
   suiClient,
   config,
-  walrusSystem,
+  walrusClient,
   blobObjectsIds,
 }: {
-  signer: Signer;
+  signer: DeploymentSigner;
   suiClient: SuiClient;
   config: SiteConfig;
-  walrusSystem: WalrusSystem;
+  walrusClient: WalrusClient;
   blobObjectsIds: string[];
 }) => {
-  const transaction = new Transaction();
-  transaction.add(
-    deleteBlobs({
-      owner: config.owner,
-      packageId: walrusSystem.systemPackageId,
-      blobObjectsIds,
-      systemObjectId: walrusSystem.systemObjectId,
-    }),
+  const validBlobObjectIds = Array.from(
+    new Set(blobObjectsIds.filter(blobObjectId => blobObjectId)),
   );
+  const skipped = blobObjectsIds.length - validBlobObjectIds.length;
 
-  // dry run transaction to estimate gas
-  transaction.setSender(signer.toSuiAddress());
-  const { input } = await withSuiRpcRetry(
-    async () =>
-      suiClient.dryRunTransactionBlock({
-        transactionBlock: await transaction.build({ client: suiClient }),
-      }),
-    { operation: 'cleanupBlobs:dryRunTransactionBlock', logger: core },
-  );
-  transaction.setGasBudget(parseInt(input.gasData.budget));
-
-  const { digest } = await signAndExecuteTransactionWithRetry(suiClient, signer, transaction, {
-    operation: 'cleanupBlobs:tx',
-    logger: core,
-  });
-
-  const { effects } = await withSuiRpcRetry(
-    async () =>
-      suiClient.waitForTransaction({
-        digest,
-        options: { showEffects: true },
-      }),
-    { operation: 'cleanupBlobs:waitForTransaction', logger: core },
-  );
-
-  if (effects!.status.status !== 'success') {
-    failWithMessage(
-      `Transaction ${digest} is ${effects!.status.status}: ${JSON.stringify(effects!.status.error)}`,
+  if (validBlobObjectIds.length === 0) {
+    core.info(
+      `🗑️  No blob object IDs to delete. Requested ${blobObjectsIds.length}, skipped ${skipped}.`,
     );
-  } else {
-    core.info(`🗑️  blobs deleted successfully, tx digest: ${digest}`);
-    blobObjectsIds.forEach(blobObjectId => {
-      core.info(` - Removed blob object ID: ${blobObjectId}`);
-    });
+    return;
+  }
+
+  let deleted = 0;
+  let failed = 0;
+  const failures: string[] = [];
+  for (let i = 0; i < validBlobObjectIds.length; i += MAX_BLOB_CLEANUPS_PER_TX) {
+    const chunk = validBlobObjectIds.slice(i, i + MAX_BLOB_CLEANUPS_PER_TX);
+    const transaction = new Transaction();
+    const storageObjects = chunk.map(blobObjectId =>
+      transaction.add(walrusClient.deleteBlob({ blobObjectId })),
+    );
+    transaction.transferObjects(storageObjects, config.owner);
+
+    const txNumber = Math.floor(i / MAX_BLOB_CLEANUPS_PER_TX) + 1;
+    try {
+      const { digest } = await runTx({
+        suiClient,
+        signer,
+        transaction,
+        operation: `cleanupBlobs:tx${txNumber}`,
+        logger: core,
+      });
+      deleted += chunk.length;
+      core.info(
+        `🗑️  Deleted ${chunk.length} blob object(s) in cleanup batch ${txNumber}, tx digest: ${digest}`,
+      );
+    } catch (error) {
+      failed += chunk.length;
+      const message = truncateFailureMessage((error as Error).message);
+      failures.push(`tx${txNumber}: ${message}`);
+      core.warning(
+        `Cleanup batch ${txNumber} failed for ${chunk.length} blob object(s): ${message}`,
+      );
+    }
+  }
+  core.info(
+    `🗑️  Cleanup complete. Requested ${blobObjectsIds.length}, deleted ${deleted}, skipped ${skipped}, failed ${failed}.`,
+  );
+  if (failures.length > 0) {
+    const summary = failures.slice(0, 5).join('; ');
+    const suffix = failures.length > 5 ? `; and ${failures.length - 5} more` : '';
+    throw new Error(`Cleanup failed for ${failed} blob object(s): ${summary}${suffix}`);
   }
 };

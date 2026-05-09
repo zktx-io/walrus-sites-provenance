@@ -1,9 +1,9 @@
 import { bcs } from '@mysten/sui/bcs';
-import { SuiClient } from '@mysten/sui/client';
-import { fromBase64, fromHex, toHex } from '@mysten/sui/utils';
+import { fromHex, toHex } from '@mysten/sui/utils';
+import { blobIdFromInt } from '@mysten/walrus';
 
-import { base64url } from '../../utils/base64url';
 import { getAllObjects } from '../../utils/getAllObjects';
+import { SuiClient } from '../../utils/suiClient';
 
 import { getResourceObjects } from './getResourceObjects';
 
@@ -32,7 +32,7 @@ const ResourceStruct = bcs.struct('Resource', {
 });
 
 const DynamicFieldStruct = bcs.struct('Field<ResourcePath, Resource>', {
-  Id: Address,
+  parentId: Address,
   name: ResourcePathStruct,
   value: ResourceStruct,
 });
@@ -51,16 +51,15 @@ export const getUsedBlobIdsFromSite = async ({
 
   const resourceObjects = await getAllObjects(suiClient, {
     ids: resourceIds.map(obj => obj.objectId),
-    options: { showType: true, showBcs: true },
+    include: { content: true },
   });
 
   const blobIdSet = new Set<string>();
 
   for (const obj of resourceObjects) {
-    const bcsBytes = (obj.data as any)?.bcs?.bcsBytes;
-    if (!bcsBytes) continue;
-    const blobId = DynamicFieldStruct.parse(fromBase64(bcsBytes)).value.blob_id;
+    if (!obj.content) continue;
+    const blobId = DynamicFieldStruct.parse(obj.content).value.blob_id;
     blobIdSet.add(blobId);
   }
-  return Array.from(blobIdSet).map(blobId => base64url.fromNumber(blobId));
+  return Array.from(blobIdSet).map(blobId => blobIdFromInt(blobId));
 };

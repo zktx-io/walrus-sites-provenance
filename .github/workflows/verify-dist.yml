@@ -14,8 +14,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Reject committed upstream diff notes
+        run: |
+          if [ -e upstream-diff.md ]; then
+            echo '❌ upstream-diff.md is not a tracked project document. Keep upstream comparison files under .walrus/ and summarize evidence in the PR body.'
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify release tag references
+        run: npm run check:release-tags
+
+      - name: Cache upstream references
+        uses: actions/cache@v4
+        with:
+          path: .walrus
+          key: walrus-upstream-${{ hashFiles('upstream-lock.json') }}
+
+      - name: Sync upstream references
+        run: npm run sync:upstream
+
+      - name: Verify upstream references
+        run: npm run check:upstream
+
+      - name: Run tests
+        run: npm test -- --runInBand
+
+      - name: Run lint
+        run: npm run lint
 
       - name: Save current dist/
         run: mv dist dist_committed
@@ -27,7 +60,7 @@ jobs:
         run: |
           echo "🔍 Verifying dist consistency..."
           if ! diff -qr dist dist_committed; then
-            echo '❌ dist is not up to date. Please run "npm run package" and commit the updated dist.'
+            echo '❌ dist is not up to date. Please run "npm run build" and commit the updated dist.'
             exit 1
           else
             echo '✅ dist is up to date.'

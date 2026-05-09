@@ -1,0 +1,159 @@
+name: Release Smoke Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      owner:
+        description: 'Sui address that owns the smoke Walrus Site. Must match ED25519_PRIVATE_KEY when that signer is used.'
+        required: true
+        type: string
+      network:
+        description: 'Target Sui network for the smoke deploy.'
+        required: true
+        default: 'testnet'
+        type: choice
+        options:
+          - testnet
+          - mainnet
+      epochs:
+        description: 'Storage epochs for the smoke deploy.'
+        required: true
+        default: '1'
+        type: string
+      signer-mode:
+        description: 'Signing credential to use. Only the selected secret is injected.'
+        required: true
+        default: 'git-signer'
+        type: choice
+        options:
+          - git-signer
+          - ed25519
+      verify-site:
+        description: 'Verify the deployed site and provenance file through a portal after deployment.'
+        required: true
+        default: true
+        type: boolean
+      testnet-portal-host:
+        description: 'Optional public testnet portal host. wal.app only supports mainnet.'
+        required: false
+        default: ''
+        type: string
+      testnet-portal-scheme:
+        description: 'Scheme for the optional testnet portal host.'
+        required: true
+        default: 'https'
+        type: choice
+        options:
+          - https
+          - http
+      verify-timeout-minutes:
+        description: 'Maximum minutes to wait for public portal propagation.'
+        required: true
+        default: '5'
+        type: string
+
+jobs:
+  smoke-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout action source
+        uses: actions/checkout@v4
+
+      - name: Create smoke site fixture
+        run: |
+          mkdir -p smoke-dist/.well-known smoke-dist/assets
+          cat > smoke-dist/index.html <<'HTML'
+          <!doctype html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <title>Walrus smoke deploy</title>
+              <link rel="stylesheet" href="/style.css">
+            </head>
+            <body>
+              <img src="/assets/logo.svg" alt="Walrus smoke asset" width="48" height="48">
+              <main>Walrus release smoke deploy</main>
+            </body>
+          </html>
+          HTML
+          cat > smoke-dist/style.css <<'CSS'
+          body { font-family: system-ui, sans-serif; margin: 2rem; }
+          main { color: #17324d; }
+          CSS
+          cat > smoke-dist/assets/logo.svg <<'SVG'
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+            <rect width="48" height="48" rx="6" fill="#2d6cdf"/>
+            <circle cx="24" cy="24" r="12" fill="#ffffff"/>
+          </svg>
+          SVG
+          cat > smoke-dist/.well-known/walrus-sites.intoto.jsonl <<'JSONL'
+          {"_type":"https://in-toto.io/Statement/v0.1","subject":[],"predicateType":"https://slsa.dev/provenance/v1","predicate":{"buildType":"release-smoke"}}
+          JSONL
+          cat > site.config.json <<JSON
+          {
+            "network": "${{ inputs.network }}",
+            "owner": "${{ inputs.owner }}",
+            "site_name": "walrus-sites-provenance-smoke",
+            "metadata": {
+              "description": "Release smoke deploy for walrus-sites-provenance",
+              "project_url": "https://github.com/${{ github.repository }}",
+              "creator": "${{ github.repository_owner }}"
+            },
+            "epochs": ${{ inputs.epochs }},
+            "path": "./smoke-dist"
+          }
+          JSON
+
+      - name: Run local action
+        id: deploy
+        uses: ./
+        with:
+          walrus-deprecation-ack: '1'
+        env:
+          GIT_SIGNER_PIN: ${{ inputs.signer-mode == 'git-signer' && secrets.GIT_SIGNER_PIN || '' }}
+          ED25519_PRIVATE_KEY: ${{ inputs.signer-mode == 'ed25519' && secrets.ED25519_PRIVATE_KEY || '' }}
+
+      - name: Verify deployed site resolves
+        if: ${{ inputs.verify-site }}
+        shell: bash
+        env:
+          NETWORK: ${{ inputs.network }}
+          SITE_BASE36: ${{ steps.deploy.outputs['site-base36'] }}
+          TESTNET_PORTAL_HOST: ${{ inputs.testnet-portal-host }}
+          TESTNET_PORTAL_SCHEME: ${{ inputs.testnet-portal-scheme }}
+          VERIFY_TIMEOUT_MINUTES: ${{ inputs.verify-timeout-minutes }}
+        run: |
+          if [ -z "$SITE_BASE36" ]; then
+            echo "::error::Action did not emit site-base36 output."
+            exit 1
+          fi
+
+          if ! [[ "$VERIFY_TIMEOUT_MINUTES" =~ ^[0-9]+$ ]] || [ "$VERIFY_TIMEOUT_MINUTES" -lt 1 ]; then
+            echo "::error::verify-timeout-minutes must be a positive integer."
+            exit 1
+          fi
+
+          if [ "$NETWORK" = "mainnet" ]; then
+            SITE_URL="https://${SITE_BASE36}.wal.app"
+          elif [ -n "$TESTNET_PORTAL_HOST" ]; then
+            SITE_URL="${TESTNET_PORTAL_SCHEME}://${SITE_BASE36}.${TESTNET_PORTAL_HOST}"
+          else
+            echo "Skipping public resolve check: wal.app supports mainnet only and no testnet portal host was provided."
+            exit 0
+          fi
+
+          attempts=$((VERIFY_TIMEOUT_MINUTES * 4))
+          for attempt in $(seq 1 "$attempts"); do
+            if curl -fsS "$SITE_URL" > /dev/null && \
+               curl -fsS "$SITE_URL/style.css" > /dev/null && \
+               curl -fsS "$SITE_URL/assets/logo.svg" > /dev/null && \
+               curl -fsS "$SITE_URL/.well-known/walrus-sites.intoto.jsonl" > /dev/null; then
+              echo "Resolved $SITE_URL, multi-file assets, and provenance file."
+              exit 0
+            fi
+            echo "Waiting for portal propagation ($attempt/$attempts): $SITE_URL"
+            sleep 15
+          done
+
+          echo "::error::Failed to resolve $SITE_URL, multi-file assets, and .well-known/walrus-sites.intoto.jsonl"
+          exit 1

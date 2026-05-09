@@ -12,12 +12,27 @@ on:
         required: false
         type: string
         default: '.'
+      walrus-deprecation-ack:
+        required: false
+        type: string
+        default: ''
 
     secrets:
       GIT_SIGNER_PIN:
         required: false
       ED25519_PRIVATE_KEY:
-        required: true
+        required: false
+
+    outputs:
+      site-object-id:
+        description: 'Sui object ID of the created or updated Walrus Site.'
+        value: ${{ jobs['deploy-sign'].outputs.site_object_id }}
+      site-base36:
+        description: 'Base36 Walrus Site identifier derived from the site object ID.'
+        value: ${{ jobs['deploy-sign'].outputs.site_base36 }}
+      site-url:
+        description: 'Portal URL emitted for the target network.'
+        value: ${{ jobs['deploy-sign'].outputs.site_url }}
 
 jobs:
   preprocess:
@@ -175,6 +190,10 @@ jobs:
   deploy-sign:
     needs: [build-site, provenance, verification]
     runs-on: ubuntu-latest
+    outputs:
+      site_object_id: ${{ steps.deploy.outputs['site-object-id'] }}
+      site_base36: ${{ steps.deploy.outputs['site-base36'] }}
+      site_url: ${{ steps.deploy.outputs['site-url'] }}
     steps:
       - name: Download site config
         uses: actions/download-artifact@v4
@@ -198,7 +217,11 @@ jobs:
           cp ./site.config.json ${{ needs.build-site.outputs.output_dir }}/.well-known
 
       - name: Deploy to Walrus Sites
+        id: deploy
+        # Release checklist: update this self-reference tag atomically with README.md and SLSA.md.
         uses: zktx-io/walrus-sites-provenance@v0.5.8
+        with:
+          walrus-deprecation-ack: ${{ inputs.walrus-deprecation-ack }}
         env:
           GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
           ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}

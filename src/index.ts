@@ -1,13 +1,12 @@
 import * as core from '@actions/core';
-import { WalrusClient } from '@mysten/walrus';
+import { walrus } from '@mysten/walrus';
 
-import { certifyBlobs } from './blob/certifyBlobs';
 import { groupFilesBySize } from './blob/groupFilesBySize';
 import { sleep } from './blob/helper/writeBlobHelper';
 import { registerBlobs } from './blob/registerBlobs';
 import { writeBlobs } from './blob/writeBlobs';
-import { createSite } from './site/createSite';
-import { updateSite } from './site/updateSite';
+import { deploySite } from './site/deploySite';
+import { getUsedBlobIdsFromSite } from './site/helper/getUsedBlobIdsFromSite';
 import { accountState } from './utils/accountState';
 import { createSuiClient } from './utils/createSuiClient';
 import { failWithMessage } from './utils/failWithMessage';
@@ -16,20 +15,14 @@ import { loadConfig } from './utils/loadConfig';
 import { loadWalrusSystem } from './utils/loadWalrusSystem';
 
 const main = async (): Promise<void> => {
-  // Load configuration
   const config = loadConfig();
-  const { signer, isGitSigner } = await getSigner(config);
+  const signingContext = await getSigner(config);
 
-  // Initialize Sui and Walrus clients
   const suiClient = createSuiClient(config);
-  const walrusClient = new WalrusClient({
-    network: config.network,
-    suiClient,
-  });
+  const walrusClient = suiClient.$extend(walrus({ name: 'walrusClient' })).walrusClient;
 
   const walrusSystem = await loadWalrusSystem(config.network, suiClient, walrusClient);
 
-  // Display owner address
   core.info('\nStarting Publish Walrus Site...\n');
   const walBlance = await accountState(
     config.owner,
@@ -38,7 +31,6 @@ const main = async (): Promise<void> => {
     walrusSystem.walCoinType,
   );
 
-  // STEP 1: Load files from the specified directory
   core.info(`\n📦 Grouping files by size...`);
   const groups = groupFilesBySize(config.path);
 
@@ -46,7 +38,10 @@ const main = async (): Promise<void> => {
     failWithMessage('🚫 No files found to upload.');
   }
 
-  // STEP 2: Register Blob IDs
+  const protectedBlobIds = config.site_obj_id
+    ? new Set(await getUsedBlobIdsFromSite({ suiClient, siteObjectId: config.site_obj_id }))
+    : new Set<string>();
+
   core.info('\n📝 Registering Blobs...');
   const blobs = await registerBlobs({
     config,
@@ -55,59 +50,33 @@ const main = async (): Promise<void> => {
     walrusSystem,
     groups,
     walBlance,
-    signer,
+    signer: signingContext.signer,
+    protectedBlobIds,
   });
 
-  // Wait for 5 seconds to allow for blob registration
   await sleep(5000);
 
-  // STEP 3: Write Blobs to Walrus
   core.info('\n📤 Writing blobs to nodes...');
   const blobsWithNodes = await writeBlobs({
-    retryLimit: config.write_retry_limit || 5,
-    signer,
+    retryLimit: config.write_retry_limit ?? 5,
+    signer: signingContext.signer,
     config,
-    walrusSystem,
     suiClient,
     walrusClient,
     blobs,
+    protectedBlobIds,
   });
 
-  // STEP 4: Certify Blobs
-  core.info('\n🛡️ Certifying Blobs...');
-  await certifyBlobs({
+  core.info('\n🛡️ Certifying blobs and applying site changes...');
+  await deploySite({
     config,
     suiClient,
     walrusClient,
     walrusSystem,
     blobs: blobsWithNodes,
-    signer,
+    signingContext,
+    protectedBlobIds,
   });
-
-  // STEP 5: Create Site with Resources
-  if (config.site_obj_id) {
-    core.info('\n🛠️ Update Site with Resources...');
-    await updateSite({
-      config,
-      suiClient,
-      walrusClient,
-      walrusSystem,
-      blobs,
-      siteObjectId: config.site_obj_id,
-      signer,
-      isGitSigner,
-    });
-  } else {
-    core.info('\n🛠️ Creating Site with Resources...');
-    await createSite({
-      config,
-      suiClient,
-      walrusSystem,
-      blobs: blobsWithNodes,
-      signer,
-      isGitSigner,
-    });
-  }
 };
 
 main();

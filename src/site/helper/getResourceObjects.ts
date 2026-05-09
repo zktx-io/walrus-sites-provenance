@@ -1,4 +1,10 @@
-import { SuiClient } from '@mysten/sui/client';
+import { bcs } from '@mysten/sui/bcs';
+
+import { SuiClient, type SuiClientTypes } from '../../utils/suiClient';
+
+const ResourcePathStruct = bcs.struct('ResourcePath', {
+  path: bcs.string(),
+});
 
 export const getResourceObjects = async ({
   suiClient,
@@ -7,16 +13,29 @@ export const getResourceObjects = async ({
   suiClient: SuiClient;
   siteObjectId: string;
 }): Promise<{ objectId: string; path: string }[]> => {
-  const dynamicFields = await suiClient.getDynamicFields({
-    parentId: siteObjectId,
-  });
+  const resources: { objectId: string; path: string }[] = [];
+  let cursor: string | undefined = undefined;
+  let hasNextPage = true;
 
-  return dynamicFields.data
-    .filter(field => field.objectType.endsWith('::site::Resource'))
-    .map(field => {
-      return {
-        objectId: field.objectId,
-        path: (field.name.value as any).path,
-      };
+  while (hasNextPage) {
+    const page: SuiClientTypes.ListDynamicFieldsResponse = await suiClient.listDynamicFields({
+      parentId: siteObjectId,
+      cursor,
+      limit: 50,
     });
+
+    resources.push(
+      ...page.dynamicFields
+        .filter(field => field.valueType.endsWith('::site::Resource'))
+        .map(field => ({
+          objectId: field.fieldId,
+          path: ResourcePathStruct.parse(field.name.bcs).path,
+        })),
+    );
+
+    hasNextPage = page.hasNextPage;
+    cursor = page.cursor ?? undefined;
+  }
+
+  return resources;
 };

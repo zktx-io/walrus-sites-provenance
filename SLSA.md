@@ -14,6 +14,15 @@ This guide introduces the advanced features of the Walrus Sites GitHub Action, i
 | Input               | Default | Description                                                             |
 | ------------------- | ------- | ----------------------------------------------------------------------- |
 | `working-directory` | `.`     | Working directory of your Walrus Site (must contain `site.config.json`) |
+| `walrus-deprecation-ack` | `''` | Set to `1` to silence repeated ED25519 deprecation warnings after review. |
+
+## 📤 Action Outputs
+
+| Output           | Description                                         |
+| ---------------- | --------------------------------------------------- |
+| `site-object-id` | Sui object ID of the created or updated Walrus Site |
+| `site-base36`    | Base36 site identifier derived from the object ID   |
+| `site-url`       | Portal URL emitted for the target network           |
 
 ## 🔍 Why Provenance?
 
@@ -46,14 +55,21 @@ This reusable workflow:
 
 | Option                | Description                                                                   | Best For                        |
 | --------------------- | ----------------------------------------------------------------------------- | ------------------------------- |
-| `ED25519_PRIVATE_KEY` | Default. Stored as GitHub secret.                                             | Simpler setups                  |
 | `GIT_SIGNER_PIN`      | Secure external signer via [notary.wal.app/sign](https://notary.wal.app/sign) | Enhanced key hygiene & security |
+| `ED25519_PRIVATE_KEY` | Deprecated. Stored as GitHub secret for unattended CI.                        | Compatibility during v0.6.x     |
+| `WALRUS_DEPRECATION_ACK=1` | Silences repeated ED25519 deprecation warnings after accepting that this compatibility path is deprecated. | Unattended CI during v0.6.x |
+
+Set exactly one signing credential. If both `GIT_SIGNER_PIN` and `ED25519_PRIVATE_KEY` are provided, deployment fails before any transaction is built.
 
 If `GIT_SIGNER_PIN` is set, your workflow:
 
 - Generates a temporary transaction on devnet
 - Encrypts the signing payload with your PIN
 - Waits for the signer UI to decrypt and respond
+
+GitSigner is interactive. A person must approve each signing request in the notary UI, so it is not a drop-in replacement for unattended cron, Dependabot, or fully automated deployments. It also uses a devnet faucet plus Sui gRPC transport channel before signing starts; devnet or faucet outages can block deployments to any target network.
+
+The action itself runs on Node 24 and uses the official `@mysten/sui` gRPC/Core API. Custom Sui endpoints should be configured with `sui_grpc_url` and `sui_grpc_timeout_ms` in `site.config.json`; the older `sui_rpc_*` names are deprecated compatibility aliases.
 
 This ensures:
 
@@ -77,6 +93,9 @@ To ensure trusted, reproducible deployments, this workflow enforces the followin
 
 - ✅ **Provenance must match exact outputs**  
   All files are recursively hashed and encoded during the build step. If the `.intoto.jsonl` does not match the actual deployed files, verification will fail.
+
+- 🧾 **Strict site config validation**
+  `site.config.json` must exist and must include `network`, `owner`, `site_name`, `epochs`, and `path`. The action fails early for missing or invalid values instead of relying on implicit defaults.
 
 These safeguards ensure that what you see at `*.wal.app` is exactly what was built and signed from your GitHub repository.
 
@@ -108,10 +127,12 @@ jobs:
     uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.5.8
     with:
       working-directory: './my-site-folder'
+      # Optional. Use only after accepting the ED25519 v1.0.0 removal plan.
+      # walrus-deprecation-ack: '1'
     secrets:
-      ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
-      # or
       GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
+      # Deprecated compatibility path:
+      # ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
 ```
 
 **This will:**
@@ -120,6 +141,7 @@ jobs:
 - 📦 Recursively hash and encode all output files
 - 🧾 Generate and sign a `.intoto.jsonl` bundle using Sigstore
 - 🌐 Deploy your Walrus Site with attached provenance
+- 📄 Publish `.well-known/walrus-sites.intoto.jsonl` with the deployed site
 - ✅ Enable post-deployment verification via [notary.wal.app](https://notary.wal.app)
 
 ## 📄 What is `.intoto.jsonl`?

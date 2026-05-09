@@ -5,14 +5,26 @@ branding:
   icon: 'shield'
   color: 'blue'
 
-env:
-  GIT_SIGNER_PIN:
+inputs:
+  git-signer-pin:
     description: 'PIN used to decrypt the signing key, shared with the remote signer UI.'
     required: false
-  ED25519_PRIVATE_KEY:
-    description: 'Fallback private key in Sui format (e.g., suiprivkey...), used when remote signing is not enabled.'
-    required: true
+  ed25519-private-key:
+    description: 'Deprecated fallback private key in Sui format (suiprivkey...). Will be removed in v1.0.0.'
+    required: false
+    deprecationMessage: 'ED25519 private-key signing is deprecated and will be removed in v1.0.0. Use GitSigner for external signing.'
+  walrus-deprecation-ack:
+    description: 'Set to 1 to silence repeated ED25519 deprecation warnings after acknowledging the v1.0.0 removal plan.'
+    required: false
+
+outputs:
+  site-object-id:
+    description: 'Sui object ID of the created or updated Walrus Site.'
+  site-base36:
+    description: 'Base36 Walrus Site identifier derived from the site object ID.'
+  site-url:
+    description: 'Portal URL emitted for the target network.'
 
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'

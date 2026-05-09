@@ -1,0 +1,33 @@
+{
+  "upstreams": [
+    {
+      "name": "walrus-sites",
+      "repository": "https://github.com/MystenLabs/walrus-sites",
+      "release": "mainnet-v2.9.1",
+      "commit": "6669cec5f06ce2037b9b81b688e5b07addfd95cb",
+      "releaseUrl": "https://github.com/MystenLabs/walrus-sites/releases/tag/mainnet-v2.9.1",
+      "localPath": ".walrus/walrus-sites-mainnet-v2.9.1",
+      "role": "site deployment semantics"
+    },
+    {
+      "name": "ts-sdks:@mysten/walrus",
+      "repository": "https://github.com/MystenLabs/ts-sdks",
+      "release": "@mysten/walrus@1.1.4",
+      "commit": "a8f3df80e934ff8ad3951c544662aca67ff055c8",
+      "releaseUrl": "https://github.com/MystenLabs/ts-sdks/releases/tag/%40mysten%2Fwalrus%401.1.4",
+      "localPath": ".walrus/ts-sdks-mysten-walrus-1.1.4",
+      "packagePath": ".walrus/ts-sdks-mysten-walrus-1.1.4/packages/walrus",
+      "role": "Walrus TypeScript SDK compatibility"
+    },
+    {
+      "name": "ts-sdks:@mysten/sui",
+      "repository": "https://github.com/MystenLabs/ts-sdks",
+      "release": "@mysten/sui@2.16.0",
+      "commit": "e45d2771414317e05ba7d70f7f314d0fbdceb461",
+      "releaseUrl": "https://github.com/MystenLabs/ts-sdks/releases/tag/%40mysten%2Fsui%402.16.0",
+      "localPath": ".walrus/ts-sdks-mysten-sui-2.16.0",
+      "packagePath": ".walrus/ts-sdks-mysten-sui-2.16.0/packages/sui",
+      "role": "Sui TypeScript SDK compatibility required by @mysten/walrus"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import type { EnumInputShape } from '@mysten/bcs';
 import { SliversForNode } from '@mysten/walrus';
 
 export type Network = 'mainnet' | 'testnet';
@@ -8,52 +9,33 @@ export interface FileInfo {
   size: number;
   hash: string;
   buffer: Buffer;
-  headers: {
-    'Content-Type': string;
-    'Content-Encoding': string;
-  };
+  headers: Record<'Content-Type' | 'Content-Encoding', string>;
 }
 
-export interface FileGroup {
-  groupId: number;
-  size: number;
-  files: FileInfo[];
+export interface QuiltResourceFile extends FileInfo {
+  quiltPatchInternalId: string;
 }
 
+export type FileGroup = { groupId: number; size: number; files: FileInfo[] };
+
+type WalrusHash = EnumInputShape<{ Empty: boolean | object | null; Digest: Iterable<number> }>;
+type BlobEncodingType =
+  | 'RedStuff'
+  | 'RS2'
+  | { RedStuff: boolean | object | null }
+  | { RS2: boolean | object | null };
 interface BlobMetadata {
   V1: {
-    encoding_type:
-      | 'RedStuff'
-      | 'RS2'
-      | {
-          RedStuff: boolean | object | null;
-        }
-      | {
-          RS2: boolean | object | null;
-        };
+    encoding_type: BlobEncodingType;
     unencoded_length: string | number | bigint;
-    hashes: Iterable<{
-      primary_hash: import('@mysten/bcs').EnumInputShape<{
-        Empty: boolean | object | null;
-        Digest: Iterable<number>;
-      }>;
-      secondary_hash: import('@mysten/bcs').EnumInputShape<{
-        Empty: boolean | object | null;
-        Digest: Iterable<number>;
-      }>;
-    }> & {
-      length: number;
-    };
+    hashes: Iterable<{ primary_hash: WalrusHash; secondary_hash: WalrusHash }> & { length: number };
   };
 }
 
-export type StorageConfirmation = {
-  serializedMessage: string;
-  signature: string;
-};
+export type StorageConfirmation = { serializedMessage: string; signature: string };
 
 export interface BlobData {
-  files: FileInfo[];
+  files: QuiltResourceFile[];
   metadata: BlobMetadata;
   rootHash: Uint8Array<ArrayBufferLike>;
   sliversByNode: SliversForNode[];
@@ -61,9 +43,7 @@ export interface BlobData {
   confirmations?: (StorageConfirmation | null)[];
 }
 
-export interface BlobDictionary {
-  [blobId: string]: BlobData;
-}
+export type BlobDictionary = Record<string, BlobData>;
 
 export interface SiteConfig {
   network: Network;
@@ -72,7 +52,7 @@ export interface SiteConfig {
   metadata: {
     link: string;
     image_url: string;
-    name: string;
+    name?: string;
     description: string;
     project_url: string;
     creator: string;
@@ -81,6 +61,9 @@ export interface SiteConfig {
   path: string;
   write_retry_limit?: number;
   site_obj_id?: string;
+  sui_grpc_url?: string;
+  sui_grpc_timeout_ms?: number;
+  // Deprecated v0.6.x aliases for gRPC settings.
   sui_rpc_url?: string;
   sui_rpc_timeout_ms?: number;
 }

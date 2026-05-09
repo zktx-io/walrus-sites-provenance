@@ -1,21 +1,19 @@
 import * as core from '@actions/core';
-import { bcs } from '@mysten/sui/bcs';
-import { SuiClient } from '@mysten/sui/client';
-import { Signer } from '@mysten/sui/cryptography';
-import { Transaction, TransactionResult } from '@mysten/sui/transactions';
-import { WalrusClient } from '@mysten/walrus';
+import { Transaction } from '@mysten/sui/transactions';
+import { blobIdFromInt, WalrusClient } from '@mysten/walrus';
 
 import { BlobDictionary, FileGroup, SiteConfig } from '../types';
-import { base64url } from '../utils/base64url';
-import { Blob } from '../utils/blob';
-import { MAX_CMD_REGISTRATIONS } from '../utils/constants';
+import { mapWithConcurrencyLimit } from '../utils/concurrency';
+import { BLOB_OBJECT_LOOKUP_CONCURRENCY, MAX_BLOB_REGISTRATIONS_PER_TX } from '../utils/constants';
 import { convert } from '../utils/convert';
 import { getAllObjects } from '../utils/getAllObjects';
 import { WalrusSystem } from '../utils/loadWalrusSystem';
-import { signAndExecuteTransactionWithRetry, withSuiRpcRetry } from '../utils/suiRpcRetry';
+import { DeploymentSigner } from '../utils/signingContext';
+import { SuiClient } from '../utils/suiClient';
+import { getCreatedObjectIds, runTx } from '../utils/suiRetry';
 
-import { encodedBlobLength } from './helper/encodedBlobLength';
-import { getAllTokens } from './helper/getAllTokens';
+import { cleanupBlobs } from './helper/cleanupBlobs';
+import { quiltPatchInternalId } from './helper/quiltPatchInternalId';
 
 interface Registrations {
   groupId: number;
@@ -23,15 +21,7 @@ interface Registrations {
   rootHash: Uint8Array;
   size: number;
   epochs: number;
-  storageCost: bigint;
-  writeCost: bigint;
-  totalCost: bigint;
 }
-[] = [];
-
-const blobIdToInt = (blobId: string): bigint => {
-  return BigInt(bcs.u256().fromBase64(blobId.replaceAll('-', '+').replaceAll('_', '/')));
-};
 
 const buildRegistrations = async (
   walrusClient: WalrusClient,
@@ -45,23 +35,33 @@ const buildRegistrations = async (
   for (let i = 0; i < groups.length; i++) {
     const { files } = groups[i];
 
-    const buffers: Buffer[] = files.length > 1 ? [Buffer.from([0xff])] : []; // dummy byte for multiple files
-    for (const file of files) {
-      buffers.push(file.buffer);
-    }
-
-    const combinedBuffer = Buffer.concat(buffers);
-    const { blobId, metadata, sliversByNode, rootHash } =
-      await walrusClient.encodeBlob(combinedBuffer);
-    const {
-      storageCost,
-      writeCost,
-      totalCost: groupCost,
-    } = await walrusClient.storageCost(combinedBuffer.length, epochs);
+    const { quilt, index } = await walrusClient.encodeQuilt({
+      blobs: files.map(file => ({
+        contents: file.buffer,
+        identifier: file.name,
+      })),
+    });
+    const { blobId, metadata, sliversByNode, rootHash } = await walrusClient.encodeBlob(quilt);
+    const { totalCost: groupCost } = await walrusClient.storageCost(quilt.length, epochs);
+    const patchIdByFileName = new Map(
+      index.patches.map(patch => [
+        patch.identifier,
+        quiltPatchInternalId({
+          startIndex: patch.startIndex,
+          endIndex: patch.endIndex,
+        }),
+      ]),
+    );
 
     blobs[blobId] = {
       objectId: '',
-      files,
+      files: files.map(file => {
+        const patchId = patchIdByFileName.get(file.name);
+        if (!patchId) {
+          throw new Error(`No quilt patch found for resource ${file.name}`);
+        }
+        return { ...file, quiltPatchInternalId: patchId };
+      }),
       metadata,
       sliversByNode,
       rootHash,
@@ -70,19 +70,16 @@ const buildRegistrations = async (
       groupId: groups[i].groupId,
       blobId,
       rootHash,
-      size: combinedBuffer.length,
+      size: quilt.length,
       epochs,
-      storageCost,
-      writeCost,
-      totalCost: groupCost,
     });
     totalCost = totalCost + groupCost;
   }
-  const sortedRegistrations = registrations
-    .filter(r => blobs[r.blobId])
-    .sort((a, b) => (a.groupId ?? 0) - (b.groupId ?? 0));
-
-  return { blobs, registrations: sortedRegistrations, totalCost };
+  return {
+    blobs,
+    registrations: registrations.sort((a, b) => (a.groupId ?? 0) - (b.groupId ?? 0)),
+    totalCost,
+  };
 };
 
 export const registerBlobs = async ({
@@ -93,6 +90,7 @@ export const registerBlobs = async ({
   groups,
   walBlance,
   signer,
+  protectedBlobIds = new Set<string>(),
 }: {
   config: SiteConfig;
   suiClient: SuiClient;
@@ -100,10 +98,9 @@ export const registerBlobs = async ({
   walrusSystem: WalrusSystem;
   groups: FileGroup[];
   walBlance: bigint;
-  signer: Signer;
+  signer: DeploymentSigner;
+  protectedBlobIds?: Set<string>;
 }) => {
-  const systemState = await walrusClient.systemState();
-
   const { blobs, registrations, totalCost } = await buildRegistrations(
     walrusClient,
     config.epochs,
@@ -115,146 +112,126 @@ export const registerBlobs = async ({
     throw new Error(
       `Not enough WAL balance. Required: ${convert({ amount: totalCost.toString(), decimals })}, Available: ${convert({ amount: walBlance.toString(), decimals })}`,
     );
-  } else {
-    core.info(`🦭 Estimate cost: ${convert({ amount: totalCost.toString(), decimals })} WAL`);
   }
+  core.info(`🦭 Estimate cost: ${convert({ amount: totalCost.toString(), decimals })} WAL`);
 
-  let txIndex = 0;
-
-  const allWalTokenIds = await getAllTokens({
-    suiClient,
-    owner: config.owner,
-    coinType: walrusSystem.walCoinType,
-  });
-
-  for (let i = 0; i < registrations.length; i += MAX_CMD_REGISTRATIONS) {
-    const chunk = registrations.slice(i, i + MAX_CMD_REGISTRATIONS);
-    const transaction = new Transaction();
-    const systemObject = transaction.object(walrusSystem.systemObjectId);
-
-    const coin = transaction.object(allWalTokenIds[0]);
-
-    if (allWalTokenIds.length > 1) {
-      transaction.mergeCoins(
-        coin,
-        allWalTokenIds.slice(1).map(id => transaction.object(id)),
+  const registeredObjectIds = new Set<string>();
+  const registeredBlobIdsByObjectId = new Map<string, string>();
+  try {
+    for (let i = 0; i < registrations.length; i += MAX_BLOB_REGISTRATIONS_PER_TX) {
+      const chunk = registrations.slice(i, i + MAX_BLOB_REGISTRATIONS_PER_TX);
+      const transaction = new Transaction();
+      const registeredBlobs = chunk.map(item =>
+        transaction.add(
+          walrusClient.registerBlob({
+            blobId: item.blobId,
+            rootHash: item.rootHash,
+            size: item.size,
+            epochs: item.epochs,
+            deletable: true,
+            attributes: {
+              _walrusBlobType: 'quilt',
+            },
+          }),
+        ),
       );
-    }
 
-    const amounts: { storageCost: bigint; writeCost: bigint }[] = chunk.map(
-      ({ storageCost, writeCost }) => {
-        return { storageCost, writeCost };
-      },
-    );
-    const [...writeCoins] = transaction.splitCoins(
-      coin,
-      amounts.map(a => a.writeCost),
-    );
-    const [...storageCoins] = transaction.splitCoins(
-      coin,
-      amounts.map(a => a.storageCost),
-    );
-    const regisered: TransactionResult[] = [];
-    const subsidiesObject = walrusSystem.subsidiesObjectId
-      ? transaction.object(walrusSystem.subsidiesObjectId)
-      : undefined;
-    chunk.forEach((item, index) => {
-      const storage = subsidiesObject
-        ? transaction.moveCall({
-            target: `${walrusSystem.subsidiesPackageId}::subsidies::reserve_space`,
-            arguments: [
-              subsidiesObject,
-              systemObject,
-              transaction.pure.u64(encodedBlobLength(item.size, systemState.committee.n_shards)),
-              transaction.pure.u32(item.epochs),
-              storageCoins[index],
-            ],
-          })
-        : transaction.moveCall({
-            target: `${walrusSystem.systemPackageId}::system::reserve_space`,
-            arguments: [
-              systemObject,
-              transaction.pure.u64(encodedBlobLength(item.size, systemState.committee.n_shards)),
-              transaction.pure.u32(item.epochs),
-              storageCoins[index],
-            ],
-          });
-      regisered.push(
-        transaction.moveCall({
-          target: `${walrusSystem.systemPackageId}::system::register_blob`,
-          arguments: [
-            systemObject,
-            storage,
-            transaction.pure.u256(blobIdToInt(item.blobId)),
-            transaction.pure.u256(BigInt(bcs.u256().parse(item.rootHash))),
-            transaction.pure.u64(item.size),
-            transaction.pure.u8(1),
-            transaction.pure.bool(true),
-            writeCoins[index],
-          ],
-        }),
-      );
-    });
+      transaction.transferObjects(registeredBlobs, config.owner);
 
-    transaction.transferObjects([...regisered, ...storageCoins, ...writeCoins], config.owner);
+      const txNumber = Math.floor(i / MAX_BLOB_REGISTRATIONS_PER_TX) + 1;
+      const { digest, effects } = await runTx({
+        suiClient,
+        signer,
+        transaction,
+        operation: `registerBlobs:tx${txNumber}`,
+        logger: core,
+      });
 
-    // dry run transaction to estimate gas
-    transaction.setSender(signer.toSuiAddress());
-    const { input } = await withSuiRpcRetry(
-      async () =>
-        suiClient.dryRunTransactionBlock({
-          transactionBlock: await transaction.build({ client: suiClient }),
-        }),
-      { operation: 'registerBlobs:dryRunTransactionBlock', logger: core },
-    );
-    transaction.setGasBudget(parseInt(input.gasData.budget));
-
-    const { digest } = await signAndExecuteTransactionWithRetry(suiClient, signer, transaction, {
-      operation: 'registerBlobs:tx',
-      logger: core,
-    });
-
-    const { effects } = await withSuiRpcRetry(
-      async () =>
-        suiClient.waitForTransaction({
-          digest,
-          options: { showEffects: true },
-        }),
-      { operation: 'registerBlobs:waitForTransaction', logger: core },
-    );
-
-    if (effects!.status.status !== 'success') {
-      core.setFailed(
-        `Transaction ${digest} is ${effects!.status.status}: ${JSON.stringify(effects!.status.error)}`,
-      );
-      throw new Error('Transaction failed');
-    } else {
-      const txCreatedIds = effects!.created?.map(e => e.reference.objectId) ?? [];
+      const txCreatedIds = getCreatedObjectIds(effects);
+      txCreatedIds.forEach(objectId => registeredObjectIds.add(objectId));
 
       const createdObjects = await getAllObjects(suiClient, {
         ids: txCreatedIds,
-        options: { showType: true, showBcs: true },
       });
 
       const suiBlobObjects = createdObjects.filter(
-        obj =>
-          obj.data?.type === `${walrusSystem.blobPackageId}::blob::Blob` &&
-          obj.data?.bcs?.dataType === 'moveObject',
+        obj => obj.type === `${walrusSystem.blobPackageId}::blob::Blob`,
       );
-      for (const obj of suiBlobObjects) {
-        const parsed = Blob().fromBase64((obj.data as any).bcs.bcsBytes);
-        const blobId = base64url.fromNumber(parsed.blob_id);
-        blobs[blobId].objectId = parsed.id.id;
+      txCreatedIds.forEach(objectId => registeredObjectIds.delete(objectId));
+      suiBlobObjects.forEach(obj => registeredObjectIds.add(obj.objectId));
+      const parsedObjects = await mapWithConcurrencyLimit(
+        suiBlobObjects,
+        BLOB_OBJECT_LOOKUP_CONCURRENCY,
+        async obj => {
+          try {
+            return {
+              objectId: obj.objectId,
+              parsed: await walrusClient.getBlobObject(obj.objectId),
+            };
+          } catch (error) {
+            throw new Error(
+              `Failed to load registered Walrus Blob object ${obj.objectId}: ${(error as Error).message}`,
+            );
+          }
+        },
+      );
+
+      for (const { objectId, parsed } of parsedObjects) {
+        const blobId = blobIdFromInt(parsed.blob_id);
+        if (blobs[blobId]) {
+          blobs[blobId].objectId = objectId;
+          registeredBlobIdsByObjectId.set(objectId, blobId);
+          registeredBlobIdsByObjectId.set(parsed.id, blobId);
+        }
       }
 
-      core.info(`🚀 Transaction ${txIndex}, tx digest: ${digest}`);
-      txIndex++;
-      for (const { blobId, groupId } of chunk) {
-        const objectId = blobs[blobId]?.objectId;
-        const objectSuffix = objectId ? ` -> Object ID: ${objectId}` : ' -> Object ID: (not found)';
-        core.info(` + Blob ID: ${blobId} (Group ${groupId})${objectSuffix}`);
+      core.info(
+        `🚀 Registered ${chunk.length} quilt blob(s) in batch ${txNumber}, tx digest: ${digest}`,
+      );
+    }
+
+    const missingBlobIds = registrations
+      .map(item => item.blobId)
+      .filter(blobId => !blobs[blobId].objectId);
+
+    if (missingBlobIds.length > 0) {
+      throw new Error(
+        `Blob registration transaction(s) did not create Blob object(s) for: ${missingBlobIds.join(', ')}`,
+      );
+    }
+  } catch (error) {
+    const cleanupObjectIds = Array.from(registeredObjectIds).filter(objectId => {
+      const blobId = registeredBlobIdsByObjectId.get(objectId);
+      if (blobId && protectedBlobIds.has(blobId)) {
+        core.warning(
+          `Skipping cleanup for newly registered Blob object ${objectId} because blob ${blobId} is still referenced by the existing site.`,
+        );
+        return false;
+      }
+      return true;
+    });
+    if (cleanupObjectIds.length > 0) {
+      try {
+        await cleanupBlobs({
+          signer,
+          suiClient,
+          config,
+          walrusClient,
+          blobObjectsIds: cleanupObjectIds,
+        });
+      } catch (cleanupError) {
+        core.warning(
+          `Cleanup after failed blob registration also failed: ${(cleanupError as Error).message}`,
+        );
       }
     }
+    throw error;
+  }
+
+  for (const item of registrations) {
+    core.info(
+      ` + Quilt Blob ID: ${item.blobId} (Group ${item.groupId}) -> Object ID: ${blobs[item.blobId].objectId}`,
+    );
   }
 
   return blobs;
