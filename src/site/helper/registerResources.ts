@@ -2,12 +2,12 @@ import { Transaction, TransactionResult } from '@mysten/sui/transactions';
 import { blobIdToInt } from '@mysten/walrus';
 
 import { QUILT_PATCH_ID_INTERNAL_HEADER } from '../../blob/helper/quiltPatchInternalId';
-import { QuiltResourceFile } from '../../types';
+import { ResourceFile } from '../../types';
 
 export interface RegisterResourcesOption {
   packageId: string;
   site: TransactionResult | string;
-  file: QuiltResourceFile;
+  file: ResourceFile;
   blobId: string;
 }
 
@@ -18,7 +18,7 @@ export const registerResources = ({
   blobId,
 }: RegisterResourcesOption): ((transaction: Transaction) => TransactionResult) => {
   return (transaction: Transaction) => {
-    if (!file.quiltPatchInternalId) {
+    if (file.storageKind === 'quilt' && !file.quiltPatchInternalId) {
       throw new Error(`Resource ${file.name} is missing a quilt patch internal ID`);
     }
 
@@ -55,14 +55,16 @@ export const registerResources = ({
       ],
     });
 
-    transaction.moveCall({
-      target: `${packageId}::site::add_header`,
-      arguments: [
-        newResource,
-        transaction.pure.string(QUILT_PATCH_ID_INTERNAL_HEADER),
-        transaction.pure.string(file.quiltPatchInternalId),
-      ],
-    });
+    if (file.storageKind === 'quilt') {
+      transaction.moveCall({
+        target: `${packageId}::site::add_header`,
+        arguments: [
+          newResource,
+          transaction.pure.string(QUILT_PATCH_ID_INTERNAL_HEADER),
+          transaction.pure.string(file.quiltPatchInternalId),
+        ],
+      });
+    }
 
     return transaction.moveCall({
       target: `${packageId}::site::add_resource`,

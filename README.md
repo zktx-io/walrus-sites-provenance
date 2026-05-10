@@ -29,9 +29,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.5.9
+        uses: zktx-io/walrus-sites-provenance@v0.6.0
         env:
           GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
 ```
@@ -45,13 +45,11 @@ jobs:
 
 ## 🔐 Environment Variables
 
-| Variable              | Required | Description                                           |
-| --------------------- | -------- | ----------------------------------------------------- |
-| `GIT_SIGNER_PIN`      | optional | Enables secure remote signing via notary.wal.app/sign |
-| `ED25519_PRIVATE_KEY` | optional | Deprecated fallback key for unattended CI. Planned for removal in v1.0.0. |
-| `WALRUS_DEPRECATION_ACK` | optional | Set to `1` to silence repeated ED25519 deprecation warnings in unattended CI. |
+| Variable         | Required | Description                                           |
+| ---------------- | -------- | ----------------------------------------------------- |
+| `GIT_SIGNER_PIN` | required | Enables secure remote signing via notary.wal.app/sign |
 
-Set exactly one signing credential: either `GIT_SIGNER_PIN` or `ED25519_PRIVATE_KEY`. Supplying both fails the deployment.
+`ED25519_PRIVATE_KEY` signing has been removed. Deployments require `GIT_SIGNER_PIN`.
 
 ## 📤 Action Outputs
 
@@ -89,18 +87,18 @@ This file is validated before deployment. Missing `network`, `owner`, `site_name
 
 #### 🧹 Top-level fields
 
-| Field               | Type                       | Required | Description                                                       |
-| ------------------- | -------------------------- | -------- | ----------------------------------------------------------------- |
-| `network`           | `"mainnet"` \| `"testnet"` | ✅       | Network to deploy to                                              |
-| `owner`             | `string`                   | ✅       | Sui address that will own the deployed site                       |
-| `site_name`         | `string`                   | ✅       | Human-readable name of your site                                  |
-| `metadata`          | `object`                   | ❌       | Descriptive site metadata (see below)                             |
-| `epochs`            | `number`                   | ✅       | How long the site should be stored (in epochs)                    |
-| `path`              | `string`                   | ✅       | Directory containing your built static site                       |
-| `write_retry_limit` | `number`                   | ❌       | Number of times to retry failed blob writes                       |
-| `site_obj_id`       | `string`                   | ❌       | Existing site object ID to update (set this when updating a site) |
-| `sui_grpc_url`      | `string`                   | ❌       | Custom Sui gRPC base URL                                          |
-| `sui_grpc_timeout_ms` | `number`                 | ❌       | Custom Sui gRPC timeout in milliseconds                           |
+| Field                 | Type                       | Required | Description                                                       |
+| --------------------- | -------------------------- | -------- | ----------------------------------------------------------------- |
+| `network`             | `"mainnet"` \| `"testnet"` | ✅       | Network to deploy to                                              |
+| `owner`               | `string`                   | ✅       | Sui address that will own the deployed site                       |
+| `site_name`           | `string`                   | ✅       | Human-readable name of your site                                  |
+| `metadata`            | `object`                   | ❌       | Descriptive site metadata (see below)                             |
+| `epochs`              | `number`                   | ✅       | How long the site should be stored (in epochs)                    |
+| `path`                | `string`                   | ✅       | Directory containing your built static site                       |
+| `write_retry_limit`   | `number`                   | ❌       | Number of times to retry failed blob writes                       |
+| `site_obj_id`         | `string`                   | ❌       | Existing site object ID to update (set this when updating a site) |
+| `sui_grpc_url`        | `string`                   | ❌       | Custom Sui gRPC base URL                                          |
+| `sui_grpc_timeout_ms` | `number`                   | ❌       | Custom Sui gRPC timeout in milliseconds                           |
 
 > ✅ Leave `site_obj_id` empty when deploying a new site.  
 > ↻ Set `site_obj_id` only when **updating** an existing site deployment.
@@ -111,28 +109,24 @@ This file is validated before deployment. Missing `network`, `owner`, `site_name
 
 Metadata fields describe your site and help users understand and discover it. These values are stored on-chain and displayed in UIs.
 
-| Field         | Type      | Description                                                        |
-| ------------- | --------- | ------------------------------------------------------------------ |
-| `link`        | `string?` | Canonical URL for your app or homepage                             |
-| `image_url`   | `string?` | URL to a preview image or thumbnail for your site                  |
-| `description` | `string?` | Short summary of what your site does                               |
-| `project_url` | `string?` | Link to your source code repository                                |
-| `creator`     | `string?` | Name, alias, or address of the creator or organization             |
+| Field         | Type      | Description                                            |
+| ------------- | --------- | ------------------------------------------------------ |
+| `link`        | `string?` | Canonical URL for your app or homepage                 |
+| `image_url`   | `string?` | URL to a preview image or thumbnail for your site      |
+| `description` | `string?` | Short summary of what your site does                   |
+| `project_url` | `string?` | Link to your source code repository                    |
+| `creator`     | `string?` | Name, alias, or address of the creator or organization |
 
 ## 🔐 Signing Options
 
-This action supports two signing methods:
+This action signs deployment transactions through GitSigner:
 
-- **GIT_SIGNER_PIN** _(Optional)_: Enables secure remote signing via [notary.wal.app/sign](https://notary.wal.app/sign)
-- **ED25519_PRIVATE_KEY** _(Deprecated)_: Uses a Sui private key for unattended CI. This path is retained for v0.6.x compatibility and is planned for removal in v1.0.0.
+- **GIT_SIGNER_PIN**: Enables secure remote signing via [notary.wal.app/sign](https://notary.wal.app/sign)
 
 If `GIT_SIGNER_PIN` is set, the workflow uses an ephemeral on-chain transaction to request a signature.  
 This keeps your signing key outside of CI.
 
-GitSigner requires a person to approve signing in the notary UI and uses a devnet faucet plus Sui gRPC transport channel. If devnet or the faucet is unavailable, deployments that use GitSigner can be blocked even for mainnet/testnet site targets. For fully unattended CI, pin a version that still supports `ED25519_PRIVATE_KEY` until an external KMS/HSM signer is available.
-
-For unattended ED25519 deployments, set `WALRUS_DEPRECATION_ACK=1` after accepting that this compatibility path is deprecated. This only hides the repeated warning; it does not change signing behavior.
-When using the action directly, the equivalent action input is `walrus-deprecation-ack: '1'`.
+GitSigner requires a person to approve signing in the notary UI and uses a devnet faucet plus Sui gRPC transport channel. If devnet or the faucet is unavailable, deployments that use GitSigner can be blocked even for mainnet/testnet site targets.
 
 ## Deployment Flow
 
@@ -140,23 +134,23 @@ The action uses the official Walrus and Sui TypeScript SDKs to build deployment 
 
 The Walrus Sites CLI remains the reference for site semantics such as resources, routes, metadata, and PTB limits. This action does not shell out to the CLI because it has two CI-specific requirements:
 
-- It needs a single signing boundary that can route every deployment transaction through GitSigner or the deprecated ED25519 fallback.
+- It needs a single signing boundary that routes every deployment transaction through GitSigner.
 - It needs to attach provenance workflow behavior and action outputs without depending on a local CLI installation or CLI-managed signing.
 
 For that reason, the action follows the CLI and SDK behavior as reference material, but constructs the transactions in TypeScript.
 
 The deployment order is:
 
-1. Register Walrus quilt Blob objects on-chain.
-2. Upload encoded quilt data to Walrus storage nodes.
+1. Register Walrus Blob objects on-chain.
+2. Upload encoded raw blob or quilt data to Walrus storage nodes.
 3. Certify uploaded blobs and apply the Walrus Site create/update in a planned site PTB.
 4. Use continuation PTBs only when the site plan would exceed conservative PTB limits.
 
 Blob registration is intentionally separate from upload because storage-node upload needs the registered Blob object IDs. After upload, the action minimizes additional signatures by combining certification, resource registration, route updates, and safe old-blob cleanup into the fewest site PTBs possible. For small sites, the normal target is two signatures: one registration PTB and one certification/site/cleanup PTB.
 
-New resources are stored as Walrus quilt patches. They do not use byte ranges; each site resource receives an `x-wal-quilt-patch-internal-id` header that points to the patch inside the quilt blob.
+New resources use a hybrid Walrus storage layout for browser-facing delivery. `.wasm` files are stored as individual raw blobs, JS/CSS/font assets at or above 256 KiB are stored as raw blobs, other assets at or above 1 MiB are stored as raw blobs, and the remaining smaller resources are packed into quilts capped at 2 MiB per quilt. New resources do not use byte ranges; quilt resources receive an `x-wal-quilt-patch-internal-id` header, while raw resources are served through the raw blob path without that header.
 
-When updating an existing site, cleanup is still supported. The action compares old site resources against the current quilt Blob IDs, deduplicates shared old blobs, skips blobs still referenced by the new site, and only deletes owned Blob objects that Walrus marks as `deletable`.
+When updating an existing site, cleanup is still supported. The action compares old site resources against the current Blob IDs, deduplicates shared old blobs, skips blobs still referenced by the new site, and only deletes owned Blob objects that Walrus marks as `deletable`.
 
 ## Compatibility Notes
 
@@ -165,9 +159,10 @@ When updating an existing site, cleanup is still supported. The action compares 
 - `metadata.name` is deprecated and ignored. Use top-level `site_name`.
 - Sui access uses the official `@mysten/sui` gRPC/Core API. Use `sui_grpc_url` and `sui_grpc_timeout_ms` for custom endpoints; the old `sui_rpc_*` fields are deprecated aliases.
 - The action runtime is Node 24 to match the current `@mysten/sui`/`@mysten/walrus` SDK requirements.
-- The ED25519 path remains available for v0.6.x compatibility, but is deprecated and planned for removal in v1.0.0.
 - GitSigner is interactive and should not be treated as a replacement for unattended CI.
-- Deployments use quilt patch headers instead of byte-range resource entries. Existing range-based resources can still be read during update cleanup, but new resources are written through the quilt path.
+- Deployments use raw blob resources for browser-critical large assets and quilt patch headers for smaller resources instead of byte-range resource entries. Existing range-based resources can still be read during update cleanup, but new resources are written through the raw/quilt hybrid path.
+- The purpose of the hybrid layout is to keep large assets on the direct raw blob path while packing small resources together.
+- Resource headers are inferred from file extensions during deployment. `.wasm` files are registered with `content-type: application/wasm` so browser streaming compilation can be used.
 
 ## 📎 Advanced Usage: Provenance & GitSigner
 

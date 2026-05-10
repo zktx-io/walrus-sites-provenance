@@ -6,7 +6,11 @@ import * as core from '@actions/core';
 import { glob } from 'glob';
 
 import { FileGroup, FileInfo } from '../types';
-import { MAX_BLOB_SIZE } from '../utils/constants';
+import {
+  MAX_QUILT_GROUP_SIZE,
+  RAW_DEFAULT_ASSET_THRESHOLD,
+  RAW_PRIORITY_ASSET_THRESHOLD,
+} from '../utils/constants';
 
 const contentTypeMap: Record<string, string> = {
   aac: 'audio/aac',
@@ -73,6 +77,7 @@ const contentTypeMap: Record<string, string> = {
   txt: 'text/plain',
   vsd: 'application/vnd.visio',
   wav: 'audio/wav',
+  wasm: 'application/wasm',
   weba: 'audio/webm',
   webm: 'video/webm',
   webp: 'image/webp',
@@ -94,10 +99,59 @@ const deployIgnorePatterns = [
   '**/Thumbs.db',
 ];
 
+const priorityRawAssetExtensions = new Set([
+  'js',
+  'mjs',
+  'css',
+  'eot',
+  'otf',
+  'ttf',
+  'woff',
+  'woff2',
+]);
+
 const sha256ToU256LE = (buffer: Buffer): string => {
   const hash = createHash('sha256').update(buffer).digest();
   const reversed = Buffer.from(hash).reverse();
   return BigInt('0x' + reversed.toString('hex')).toString();
+};
+
+const shouldStoreAsRawBlob = (extension: string, size: number): boolean => {
+  if (extension === 'wasm') {
+    return true;
+  }
+  if (priorityRawAssetExtensions.has(extension)) {
+    return size >= RAW_PRIORITY_ASSET_THRESHOLD;
+  }
+  return size >= RAW_DEFAULT_ASSET_THRESHOLD;
+};
+
+const appendQuiltGroups = (groups: FileGroup[], files: FileInfo[]) => {
+  let currentGroup: FileGroup = {
+    groupId: groups.length,
+    storageKind: 'quilt',
+    files: [],
+    size: 0,
+  };
+  const sortedFiles = [...files].sort((a, b) => a.size - b.size || a.name.localeCompare(b.name));
+
+  for (const file of sortedFiles) {
+    if (currentGroup.size + file.size > MAX_QUILT_GROUP_SIZE && currentGroup.files.length > 0) {
+      groups.push(currentGroup);
+      currentGroup = {
+        groupId: groups.length,
+        storageKind: 'quilt',
+        files: [],
+        size: 0,
+      };
+    }
+    currentGroup.files.push(file);
+    currentGroup.size += file.size;
+  }
+
+  if (currentGroup.files.length > 0) {
+    groups.push(currentGroup);
+  }
 };
 
 export const groupFilesBySize = (outputDir: string): FileGroup[] => {
@@ -108,20 +162,18 @@ export const groupFilesBySize = (outputDir: string): FileGroup[] => {
     return [];
   }
 
-  const wellKnown = ['.well-known/walrus-sites.intoto.jsonl', '.well-known/site.config.json'];
   const allFiles = glob
     .sync('**/*', { cwd: siteRoot, dot: true, ignore: deployIgnorePatterns, nodir: true })
     .sort();
 
-  const normalFiles: FileInfo[] = [];
-  const specialFiles: FileInfo[] = [];
-  let specialFilesSize = 0;
+  const rawFiles: FileInfo[] = [];
+  const quiltFiles: FileInfo[] = [];
 
   for (const relativePath of allFiles) {
     const fullPath = path.join(siteRoot, relativePath);
     const fileBuffer = fs.readFileSync(fullPath);
-    const ext = path.extname(relativePath).slice(1);
-    const contentType = contentTypeMap[ext.toLowerCase()] ?? 'application/octet-stream';
+    const ext = path.extname(relativePath).slice(1).toLowerCase();
+    const contentType = contentTypeMap[ext] ?? 'application/octet-stream';
 
     const fileInfo: FileInfo = {
       path: fullPath,
@@ -135,41 +187,25 @@ export const groupFilesBySize = (outputDir: string): FileGroup[] => {
       },
     };
 
-    if (wellKnown.includes(relativePath)) {
-      specialFiles.push(fileInfo);
-      specialFilesSize += fileInfo.size;
+    if (shouldStoreAsRawBlob(ext, fileInfo.size)) {
+      rawFiles.push(fileInfo);
     } else {
-      normalFiles.push(fileInfo);
+      quiltFiles.push(fileInfo);
     }
   }
 
-  const groups: FileGroup[] = [];
-
-  if (specialFiles.length > 0) {
-    groups.push({
-      groupId: 0,
-      files: [...specialFiles],
-      size: specialFilesSize,
-    });
-  }
-
-  let currentGroup: FileGroup = { groupId: groups.length, files: [], size: 0 };
-  const sortedNormalFiles = normalFiles.sort((a, b) => b.size - a.size);
-  for (const file of sortedNormalFiles) {
-    if (currentGroup.size + file.size > MAX_BLOB_SIZE && currentGroup.files.length > 0) {
-      groups.push(currentGroup);
-      currentGroup = { groupId: currentGroup.groupId + 1, files: [], size: 0 };
-    }
-    currentGroup.files.push(file);
-    currentGroup.size += file.size;
-  }
-
-  if (currentGroup.files.length > 0) {
-    groups.push(currentGroup);
-  }
+  const groups: FileGroup[] = rawFiles
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((file, groupId) => ({
+      groupId,
+      storageKind: 'raw',
+      files: [file],
+      size: file.size,
+    }));
+  appendQuiltGroups(groups, quiltFiles);
 
   for (const group of groups) {
-    core.info(`✅ Group ${group.groupId} (${group.size} bytes)`);
+    core.info(`✅ Group ${group.groupId} ${group.storageKind} (${group.size} bytes)`);
     for (const file of group.files) {
       core.info(` + ${file.name} (${file.size} bytes)`);
     }

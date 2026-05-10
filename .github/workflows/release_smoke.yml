@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       owner:
-        description: 'Sui address that owns the smoke Walrus Site. Must match ED25519_PRIVATE_KEY when that signer is used.'
+        description: 'Sui address that owns the smoke Walrus Site.'
         required: true
         type: string
       network:
@@ -20,14 +20,6 @@ on:
         required: true
         default: '1'
         type: string
-      signer-mode:
-        description: 'Signing credential to use. Only the selected secret is injected.'
-        required: true
-        default: 'git-signer'
-        type: choice
-        options:
-          - git-signer
-          - ed25519
       verify-site:
         description: 'Verify the deployed site and provenance file through a portal after deployment.'
         required: true
@@ -57,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout action source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Create smoke site fixture
         run: |
@@ -86,6 +78,7 @@ jobs:
             <circle cx="24" cy="24" r="12" fill="#ffffff"/>
           </svg>
           SVG
+          printf '\0asm\1\0\0\0' > smoke-dist/assets/smoke.wasm
           cat > smoke-dist/.well-known/walrus-sites.intoto.jsonl <<'JSONL'
           {"_type":"https://in-toto.io/Statement/v0.1","subject":[],"predicateType":"https://slsa.dev/provenance/v1","predicate":{"buildType":"release-smoke"}}
           JSONL
@@ -107,11 +100,8 @@ jobs:
       - name: Run local action
         id: deploy
         uses: ./
-        with:
-          walrus-deprecation-ack: '1'
         env:
-          GIT_SIGNER_PIN: ${{ inputs.signer-mode == 'git-signer' && secrets.GIT_SIGNER_PIN || '' }}
-          ED25519_PRIVATE_KEY: ${{ inputs.signer-mode == 'ed25519' && secrets.ED25519_PRIVATE_KEY || '' }}
+          GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
 
       - name: Verify deployed site resolves
         if: ${{ inputs.verify-site }}
@@ -147,6 +137,7 @@ jobs:
             if curl -fsS "$SITE_URL" > /dev/null && \
                curl -fsS "$SITE_URL/style.css" > /dev/null && \
                curl -fsS "$SITE_URL/assets/logo.svg" > /dev/null && \
+               curl -fsS "$SITE_URL/assets/smoke.wasm" > /dev/null && \
                curl -fsS "$SITE_URL/.well-known/walrus-sites.intoto.jsonl" > /dev/null; then
               echo "Resolved $SITE_URL, multi-file assets, and provenance file."
               exit 0

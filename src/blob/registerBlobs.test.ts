@@ -47,6 +47,7 @@ const config: SiteConfig = {
 
 const group = (index: number): FileGroup => ({
   groupId: index,
+  storageKind: 'quilt',
   size: 10,
   files: [
     {
@@ -157,8 +158,96 @@ describe('registerBlobs', () => {
       'registerBlobs:tx2',
     ]);
     expect(walrusClient.registerBlob).toHaveBeenCalledTimes(101);
+    expect(walrusClient.registerBlob.mock.calls[0][0].attributes).toEqual({
+      _walrusBlobType: 'quilt',
+    });
     expect(result[blobIdFromInt('1000')].objectId).toBe('0xblob0');
     expect(result[blobIdFromInt('1100')].objectId).toBe('0xblob100');
+  });
+
+  it('registers raw groups without quilt encoding or quilt blob attributes', async () => {
+    const blobId = blobIdFromInt('1500');
+    const rawGroup: FileGroup = {
+      ...group(0),
+      storageKind: 'raw',
+      size: 12,
+      files: [
+        {
+          ...group(0).files[0],
+          name: '/assets/app.js',
+          buffer: Buffer.from('raw-js-bytes'),
+          size: 12,
+          headers: {
+            'Content-Type': 'text/javascript',
+            'Content-Encoding': 'identity',
+          },
+        },
+      ],
+    };
+    const walrusClient = {
+      encodeQuilt: jest.fn(),
+      encodeBlob: jest.fn(async () => ({
+        blobId,
+        metadata: {},
+        sliversByNode: [],
+        rootHash: new Uint8Array([1]),
+      })),
+      storageCost: jest.fn(async () => ({
+        storageCost: 1n,
+        writeCost: 1n,
+        totalCost: 2n,
+      })),
+      registerBlob: jest.fn(() => (transaction: any) => {
+        const [coin] = transaction.splitCoins(transaction.gas, [transaction.pure.u64(1)]);
+        return coin;
+      }),
+      getBlobObject: jest.fn(async () => ({
+        id: '0xblob0',
+        blob_id: '1500',
+      })),
+    };
+
+    mockRunTx.mockResolvedValueOnce({
+      digest: 'digest-1',
+      effects: {
+        changedObjects: [
+          {
+            idOperation: 'Created',
+            outputState: 'ObjectWrite',
+            objectId: '0xblob0',
+          },
+        ],
+      },
+    });
+    mockGetAllObjects.mockResolvedValueOnce([
+      {
+        objectId: '0xblob0',
+        type: '0xblobpkg::blob::Blob',
+      },
+    ]);
+
+    const result = await registerBlobs({
+      config,
+      suiClient: {} as any,
+      walrusClient: walrusClient as any,
+      walrusSystem: { blobPackageId: '0xblobpkg', sitePackageId: '0xsitepkg' },
+      groups: [rawGroup],
+      walBlance: 1_000n,
+      signer: { toSuiAddress: () => config.owner } as any,
+    });
+
+    expect(walrusClient.encodeQuilt).not.toHaveBeenCalled();
+    expect(walrusClient.encodeBlob).toHaveBeenCalledWith(rawGroup.files[0].buffer);
+    expect(walrusClient.storageCost).toHaveBeenCalledWith(rawGroup.files[0].buffer.length, 1);
+    expect(walrusClient.registerBlob.mock.calls[0][0]).not.toHaveProperty('attributes');
+    expect(result[blobId]).toMatchObject({
+      objectId: '0xblob0',
+      storageKind: 'raw',
+    });
+    expect(result[blobId].files[0]).toMatchObject({
+      name: '/assets/app.js',
+      storageKind: 'raw',
+    });
   });
 
   it('cleans up already registered blob objects when a later registration batch fails', async () => {

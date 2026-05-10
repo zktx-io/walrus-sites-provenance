@@ -38061,6 +38061,7 @@ const contentTypeMap = {
     txt: 'text/plain',
     vsd: 'application/vnd.visio',
     wav: 'audio/wav',
+    wasm: 'application/wasm',
     weba: 'audio/webm',
     webm: 'video/webm',
     webp: 'image/webp',
@@ -38080,10 +38081,54 @@ const deployIgnorePatterns = [
     '**/.DS_Store',
     '**/Thumbs.db',
 ];
+const priorityRawAssetExtensions = new Set([
+    'js',
+    'mjs',
+    'css',
+    'eot',
+    'otf',
+    'ttf',
+    'woff',
+    'woff2',
+]);
 const sha256ToU256LE = (buffer) => {
     const hash = (0, crypto_1.createHash)('sha256').update(buffer).digest();
     const reversed = Buffer.from(hash).reverse();
     return BigInt('0x' + reversed.toString('hex')).toString();
+};
+const shouldStoreAsRawBlob = (extension, size) => {
+    if (extension === 'wasm') {
+        return true;
+    }
+    if (priorityRawAssetExtensions.has(extension)) {
+        return size >= constants_1.RAW_PRIORITY_ASSET_THRESHOLD;
+    }
+    return size >= constants_1.RAW_DEFAULT_ASSET_THRESHOLD;
+};
+const appendQuiltGroups = (groups, files) => {
+    let currentGroup = {
+        groupId: groups.length,
+        storageKind: 'quilt',
+        files: [],
+        size: 0,
+    };
+    const sortedFiles = [...files].sort((a, b) => a.size - b.size || a.name.localeCompare(b.name));
+    for (const file of sortedFiles) {
+        if (currentGroup.size + file.size > constants_1.MAX_QUILT_GROUP_SIZE && currentGroup.files.length > 0) {
+            groups.push(currentGroup);
+            currentGroup = {
+                groupId: groups.length,
+                storageKind: 'quilt',
+                files: [],
+                size: 0,
+            };
+        }
+        currentGroup.files.push(file);
+        currentGroup.size += file.size;
+    }
+    if (currentGroup.files.length > 0) {
+        groups.push(currentGroup);
+    }
 };
 const groupFilesBySize = (outputDir) => {
     const siteRoot = path_1.default.resolve(process.cwd(), outputDir);
@@ -38091,18 +38136,16 @@ const groupFilesBySize = (outputDir) => {
         core.setFailed(`❌ Provided path "${siteRoot}" does not exist.`);
         return [];
     }
-    const wellKnown = ['.well-known/walrus-sites.intoto.jsonl', '.well-known/site.config.json'];
     const allFiles = glob_1.glob
         .sync('**/*', { cwd: siteRoot, dot: true, ignore: deployIgnorePatterns, nodir: true })
         .sort();
-    const normalFiles = [];
-    const specialFiles = [];
-    let specialFilesSize = 0;
+    const rawFiles = [];
+    const quiltFiles = [];
     for (const relativePath of allFiles) {
         const fullPath = path_1.default.join(siteRoot, relativePath);
         const fileBuffer = fs_1.default.readFileSync(fullPath);
-        const ext = path_1.default.extname(relativePath).slice(1);
-        const contentType = contentTypeMap[ext.toLowerCase()] ?? 'application/octet-stream';
+        const ext = path_1.default.extname(relativePath).slice(1).toLowerCase();
+        const contentType = contentTypeMap[ext] ?? 'application/octet-stream';
         const fileInfo = {
             path: fullPath,
             name: `/${relativePath}`,
@@ -38114,37 +38157,24 @@ const groupFilesBySize = (outputDir) => {
                 'Content-Encoding': 'identity',
             },
         };
-        if (wellKnown.includes(relativePath)) {
-            specialFiles.push(fileInfo);
-            specialFilesSize += fileInfo.size;
+        if (shouldStoreAsRawBlob(ext, fileInfo.size)) {
+            rawFiles.push(fileInfo);
         }
         else {
-            normalFiles.push(fileInfo);
+            quiltFiles.push(fileInfo);
         }
     }
-    const groups = [];
-    if (specialFiles.length > 0) {
-        groups.push({
-            groupId: 0,
-            files: [...specialFiles],
-            size: specialFilesSize,
-        });
-    }
-    let currentGroup = { groupId: groups.length, files: [], size: 0 };
-    const sortedNormalFiles = normalFiles.sort((a, b) => b.size - a.size);
-    for (const file of sortedNormalFiles) {
-        if (currentGroup.size + file.size > constants_1.MAX_BLOB_SIZE && currentGroup.files.length > 0) {
-            groups.push(currentGroup);
-            currentGroup = { groupId: currentGroup.groupId + 1, files: [], size: 0 };
-        }
-        currentGroup.files.push(file);
-        currentGroup.size += file.size;
-    }
-    if (currentGroup.files.length > 0) {
-        groups.push(currentGroup);
-    }
+    const groups = rawFiles
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((file, groupId) => ({
+        groupId,
+        storageKind: 'raw',
+        files: [file],
+        size: file.size,
+    }));
+    appendQuiltGroups(groups, quiltFiles);
     for (const group of groups) {
-        core.info(`✅ Group ${group.groupId} (${group.size} bytes)`);
+        core.info(`✅ Group ${group.groupId} ${group.storageKind} (${group.size} bytes)`);
         for (const file of group.files) {
             core.info(` + ${file.name} (${file.size} bytes)`);
         }
@@ -38338,7 +38368,8 @@ const writeBlobHelper = async (walrusClient, retryLimit, { blobId, ...options })
             attempt++;
             if (attempt > retryLimit)
                 break;
-            core.warning(`🔁 Retry attempt ${attempt} for blob ${blobId}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            core.warning(`🔁 Retry attempt ${attempt} for blob ${blobId}: ${errorMessage}`);
             await (0, exports.sleep)(10000);
         }
     }
@@ -38407,7 +38438,43 @@ const buildRegistrations = async (walrusClient, epochs, groups) => {
     const registrations = [];
     let totalCost = BigInt(0);
     for (let i = 0; i < groups.length; i++) {
-        const { files } = groups[i];
+        const group = groups[i];
+        const { files } = group;
+        if (group.storageKind === 'raw') {
+            if (files.length !== 1) {
+                throw new Error(`Raw blob group ${group.groupId} must contain exactly one file`);
+            }
+            const file = files[0];
+            const { blobId, metadata, sliversByNode, rootHash } = await walrusClient.encodeBlob(file.buffer);
+            if (blobs[blobId]?.storageKind && blobs[blobId].storageKind !== 'raw') {
+                throw new Error(`Blob ID ${blobId} is already registered as ${blobs[blobId].storageKind}`);
+            }
+            const isNewBlob = !blobs[blobId];
+            if (isNewBlob) {
+                blobs[blobId] = {
+                    storageKind: 'raw',
+                    objectId: '',
+                    files: [],
+                    metadata,
+                    sliversByNode,
+                    rootHash,
+                };
+            }
+            blobs[blobId].files.push({ ...file, storageKind: 'raw' });
+            if (isNewBlob) {
+                const { totalCost: groupCost } = await walrusClient.storageCost(file.buffer.length, epochs);
+                registrations.push({
+                    groupId: group.groupId,
+                    storageKind: 'raw',
+                    blobId,
+                    rootHash,
+                    size: file.buffer.length,
+                    epochs,
+                });
+                totalCost = totalCost + groupCost;
+            }
+            continue;
+        }
         const { quilt, index } = await walrusClient.encodeQuilt({
             blobs: files.map(file => ({
                 contents: file.buffer,
@@ -38415,7 +38482,9 @@ const buildRegistrations = async (walrusClient, epochs, groups) => {
             })),
         });
         const { blobId, metadata, sliversByNode, rootHash } = await walrusClient.encodeBlob(quilt);
-        const { totalCost: groupCost } = await walrusClient.storageCost(quilt.length, epochs);
+        if (blobs[blobId]?.storageKind && blobs[blobId].storageKind !== 'quilt') {
+            throw new Error(`Blob ID ${blobId} is already registered as ${blobs[blobId].storageKind}`);
+        }
         const patchIdByFileName = new Map(index.patches.map(patch => [
             patch.identifier,
             (0, quiltPatchInternalId_1.quiltPatchInternalId)({
@@ -38423,27 +38492,37 @@ const buildRegistrations = async (walrusClient, epochs, groups) => {
                 endIndex: patch.endIndex,
             }),
         ]));
-        blobs[blobId] = {
-            objectId: '',
-            files: files.map(file => {
-                const patchId = patchIdByFileName.get(file.name);
-                if (!patchId) {
-                    throw new Error(`No quilt patch found for resource ${file.name}`);
-                }
-                return { ...file, quiltPatchInternalId: patchId };
-            }),
-            metadata,
-            sliversByNode,
-            rootHash,
-        };
-        registrations.push({
-            groupId: groups[i].groupId,
-            blobId,
-            rootHash,
-            size: quilt.length,
-            epochs,
+        const resourceFiles = files.map(file => {
+            const patchId = patchIdByFileName.get(file.name);
+            if (!patchId) {
+                throw new Error(`No quilt patch found for resource ${file.name}`);
+            }
+            return { ...file, storageKind: 'quilt', quiltPatchInternalId: patchId };
         });
-        totalCost = totalCost + groupCost;
+        const isNewBlob = !blobs[blobId];
+        if (isNewBlob) {
+            blobs[blobId] = {
+                storageKind: 'quilt',
+                objectId: '',
+                files: [],
+                metadata,
+                sliversByNode,
+                rootHash,
+            };
+        }
+        blobs[blobId].files.push(...resourceFiles);
+        if (isNewBlob) {
+            const { totalCost: groupCost } = await walrusClient.storageCost(quilt.length, epochs);
+            registrations.push({
+                groupId: group.groupId,
+                storageKind: 'quilt',
+                blobId,
+                rootHash,
+                size: quilt.length,
+                epochs,
+            });
+            totalCost = totalCost + groupCost;
+        }
     }
     return {
         blobs,
@@ -38470,9 +38549,13 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walrusSystem, gr
                 size: item.size,
                 epochs: item.epochs,
                 deletable: true,
-                attributes: {
-                    _walrusBlobType: 'quilt',
-                },
+                ...(item.storageKind === 'quilt'
+                    ? {
+                        attributes: {
+                            _walrusBlobType: 'quilt',
+                        },
+                    }
+                    : {}),
             })));
             transaction.transferObjects(registeredBlobs, config.owner);
             const txNumber = Math.floor(i / constants_1.MAX_BLOB_REGISTRATIONS_PER_TX) + 1;
@@ -38510,7 +38593,7 @@ const registerBlobs = async ({ config, suiClient, walrusClient, walrusSystem, gr
                     registeredBlobIdsByObjectId.set(parsed.id, blobId);
                 }
             }
-            core.info(`🚀 Registered ${chunk.length} quilt blob(s) in batch ${txNumber}, tx digest: ${digest}`);
+            core.info(`🚀 Registered ${chunk.length} Walrus blob(s) in batch ${txNumber}, tx digest: ${digest}`);
         }
         const missingBlobIds = registrations
             .map(item => item.blobId)
@@ -38807,10 +38890,10 @@ const CERTIFY_BLOB_COST = { commands: 1, bytes: 2_048 };
 const REMOVE_RESOURCE_COST = (path) => ({ commands: 1, bytes: path.length + 96 });
 const CLEANUP_BLOB_COST = { commands: 2, bytes: 128 };
 const resourceCost = (file) => ({
-    commands: 6,
+    commands: file.storageKind === 'quilt' ? 6 : 5,
     bytes: file.name.length +
         file.hash.length +
-        file.quiltPatchInternalId.length +
+        (file.storageKind === 'quilt' ? file.quiltPatchInternalId.length : 0) +
         Object.entries(file.headers).reduce((size, [name, value]) => size + name.length + value.length, 0) +
         256,
 });
@@ -39325,7 +39408,7 @@ const walrus_1 = __nccwpck_require__(5435);
 const quiltPatchInternalId_1 = __nccwpck_require__(4063);
 const registerResources = ({ packageId, site, file, blobId, }) => {
     return (transaction) => {
-        if (!file.quiltPatchInternalId) {
+        if (file.storageKind === 'quilt' && !file.quiltPatchInternalId) {
             throw new Error(`Resource ${file.name} is missing a quilt patch internal ID`);
         }
         const range = transaction.moveCall({
@@ -39357,14 +39440,16 @@ const registerResources = ({ packageId, site, file, blobId, }) => {
                 transaction.pure.string(file.headers['Content-Type']),
             ],
         });
-        transaction.moveCall({
-            target: `${packageId}::site::add_header`,
-            arguments: [
-                newResource,
-                transaction.pure.string(quiltPatchInternalId_1.QUILT_PATCH_ID_INTERNAL_HEADER),
-                transaction.pure.string(file.quiltPatchInternalId),
-            ],
-        });
+        if (file.storageKind === 'quilt') {
+            transaction.moveCall({
+                target: `${packageId}::site::add_header`,
+                arguments: [
+                    newResource,
+                    transaction.pure.string(quiltPatchInternalId_1.QUILT_PATCH_ID_INTERNAL_HEADER),
+                    transaction.pure.string(file.quiltPatchInternalId),
+                ],
+            });
+        }
         return transaction.moveCall({
             target: `${packageId}::site::add_resource`,
             arguments: [typeof site === 'string' ? transaction.object(site) : site, newResource],
@@ -39483,8 +39568,10 @@ async function mapWithConcurrencyLimit(items, concurrency, mapper) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SITE_PTB_BYTE_BUDGET = exports.SITE_PTB_COMMAND_BUDGET = exports.BLOB_OBJECT_LOOKUP_CONCURRENCY = exports.MAX_BLOB_CLEANUPS_PER_TX = exports.MAX_BLOB_REGISTRATIONS_PER_TX = exports.MAX_BLOB_SIZE = void 0;
-exports.MAX_BLOB_SIZE = 5 * 1024 * 1024; // 5MB
+exports.SITE_PTB_BYTE_BUDGET = exports.SITE_PTB_COMMAND_BUDGET = exports.BLOB_OBJECT_LOOKUP_CONCURRENCY = exports.MAX_BLOB_CLEANUPS_PER_TX = exports.MAX_BLOB_REGISTRATIONS_PER_TX = exports.RAW_DEFAULT_ASSET_THRESHOLD = exports.RAW_PRIORITY_ASSET_THRESHOLD = exports.MAX_QUILT_GROUP_SIZE = void 0;
+exports.MAX_QUILT_GROUP_SIZE = 2 * 1024 * 1024; // 2 MiB
+exports.RAW_PRIORITY_ASSET_THRESHOLD = 256 * 1024; // 256 KiB
+exports.RAW_DEFAULT_ASSET_THRESHOLD = 1024 * 1024; // 1 MiB
 exports.MAX_BLOB_REGISTRATIONS_PER_TX = 100;
 exports.MAX_BLOB_CLEANUPS_PER_TX = 100;
 exports.BLOB_OBJECT_LOOKUP_CONCURRENCY = 10;
@@ -40332,28 +40419,20 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getSigningContext = void 0;
 const core = __importStar(__nccwpck_require__(7484));
-const ed25519_1 = __nccwpck_require__(7107);
 const utils_1 = __nccwpck_require__(9945);
 const gitSigner_1 = __nccwpck_require__(6579);
 const suiAddress_1 = __nccwpck_require__(4588);
 const readSecret = (inputName, envName) => {
     return (core.getInput(inputName, { required: false }) || process.env[envName] || '').trim();
 };
-const hasDeprecationAck = () => {
-    const ack = (core.getInput('walrus-deprecation-ack', { required: false }) ||
-        process.env.WALRUS_DEPRECATION_ACK ||
-        '')
-        .trim()
-        .toLowerCase();
-    return ['1', 'true', 'yes'].includes(ack);
-};
 const getSigningContext = async (config) => {
     const gitSignerPin = readSecret('git-signer-pin', 'GIT_SIGNER_PIN');
-    const ed25519PrivateKey = readSecret('ed25519-private-key', 'ED25519_PRIVATE_KEY');
+    const removedEd25519PrivateKey = readSecret('ed25519-private-key', 'ED25519_PRIVATE_KEY');
     // Defensive normalization for tests and future call sites that may bypass loadConfig().
     const owner = (0, suiAddress_1.normalizeConfiguredSuiAddress)(config.owner, 'owner');
-    if (gitSignerPin && ed25519PrivateKey) {
-        throw new Error('Use exactly one signing credential: GIT_SIGNER_PIN/git-signer-pin or ED25519_PRIVATE_KEY/ed25519-private-key.');
+    if (removedEd25519PrivateKey) {
+        core.setFailed('❌ ED25519 private-key signing has been removed. Use GitSigner instead.');
+        throw new Error('ED25519_PRIVATE_KEY/ed25519-private-key signing has been removed. Set GIT_SIGNER_PIN/git-signer-pin.');
     }
     if (gitSignerPin) {
         try {
@@ -40383,30 +40462,8 @@ const getSigningContext = async (config) => {
             throw new Error('Process will be terminated.');
         }
     }
-    if (!ed25519PrivateKey) {
-        core.setFailed('❌ Signing credential is missing.');
-        throw new Error('Set GIT_SIGNER_PIN/git-signer-pin or ED25519_PRIVATE_KEY/ed25519-private-key.');
-    }
-    try {
-        const signer = ed25519_1.Ed25519Keypair.fromSecretKey(ed25519PrivateKey);
-        const address = (0, utils_1.normalizeSuiAddress)(signer.toSuiAddress());
-        if (address !== owner) {
-            throw new Error(`ED25519_PRIVATE_KEY address ${address} does not match site.config.json owner ${owner}.`);
-        }
-        if (!hasDeprecationAck()) {
-            core.warning('ED25519_PRIVATE_KEY signing is deprecated and will be removed in v1.0.0. Use GitSigner for external signing. Set WALRUS_DEPRECATION_ACK=1 to hide this warning.');
-        }
-        return {
-            mode: 'ed25519',
-            address,
-            signer,
-            finalize: async () => undefined,
-        };
-    }
-    catch (err) {
-        core.setFailed(`❌ Failed to create ED25519 signer: ${err.message}`);
-        throw new Error('Process will be terminated.');
-    }
+    core.setFailed('❌ Signing credential is missing.');
+    throw new Error('Set GIT_SIGNER_PIN/git-signer-pin.');
 };
 exports.getSigningContext = getSigningContext;
 

@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import { Transaction } from '@mysten/sui/transactions';
 import { blobIdFromInt, WalrusClient } from '@mysten/walrus';
 
-import { BlobDictionary, FileGroup, SiteConfig } from '../types';
+import { BlobDictionary, FileGroup, ResourceStorageKind, SiteConfig } from '../types';
 import { mapWithConcurrencyLimit } from '../utils/concurrency';
 import { BLOB_OBJECT_LOOKUP_CONCURRENCY, MAX_BLOB_REGISTRATIONS_PER_TX } from '../utils/constants';
 import { convert } from '../utils/convert';
@@ -17,6 +17,7 @@ import { quiltPatchInternalId } from './helper/quiltPatchInternalId';
 
 interface Registrations {
   groupId: number;
+  storageKind: ResourceStorageKind;
   blobId: string;
   rootHash: Uint8Array;
   size: number;
@@ -33,7 +34,47 @@ const buildRegistrations = async (
   let totalCost = BigInt(0);
 
   for (let i = 0; i < groups.length; i++) {
-    const { files } = groups[i];
+    const group = groups[i];
+    const { files } = group;
+
+    if (group.storageKind === 'raw') {
+      if (files.length !== 1) {
+        throw new Error(`Raw blob group ${group.groupId} must contain exactly one file`);
+      }
+
+      const file = files[0];
+      const { blobId, metadata, sliversByNode, rootHash } = await walrusClient.encodeBlob(
+        file.buffer,
+      );
+      if (blobs[blobId]?.storageKind && blobs[blobId].storageKind !== 'raw') {
+        throw new Error(`Blob ID ${blobId} is already registered as ${blobs[blobId].storageKind}`);
+      }
+      const isNewBlob = !blobs[blobId];
+      if (isNewBlob) {
+        blobs[blobId] = {
+          storageKind: 'raw',
+          objectId: '',
+          files: [],
+          metadata,
+          sliversByNode,
+          rootHash,
+        };
+      }
+      blobs[blobId].files.push({ ...file, storageKind: 'raw' });
+      if (isNewBlob) {
+        const { totalCost: groupCost } = await walrusClient.storageCost(file.buffer.length, epochs);
+        registrations.push({
+          groupId: group.groupId,
+          storageKind: 'raw',
+          blobId,
+          rootHash,
+          size: file.buffer.length,
+          epochs,
+        });
+        totalCost = totalCost + groupCost;
+      }
+      continue;
+    }
 
     const { quilt, index } = await walrusClient.encodeQuilt({
       blobs: files.map(file => ({
@@ -42,7 +83,9 @@ const buildRegistrations = async (
       })),
     });
     const { blobId, metadata, sliversByNode, rootHash } = await walrusClient.encodeBlob(quilt);
-    const { totalCost: groupCost } = await walrusClient.storageCost(quilt.length, epochs);
+    if (blobs[blobId]?.storageKind && blobs[blobId].storageKind !== 'quilt') {
+      throw new Error(`Blob ID ${blobId} is already registered as ${blobs[blobId].storageKind}`);
+    }
     const patchIdByFileName = new Map(
       index.patches.map(patch => [
         patch.identifier,
@@ -52,28 +95,38 @@ const buildRegistrations = async (
         }),
       ]),
     );
-
-    blobs[blobId] = {
-      objectId: '',
-      files: files.map(file => {
-        const patchId = patchIdByFileName.get(file.name);
-        if (!patchId) {
-          throw new Error(`No quilt patch found for resource ${file.name}`);
-        }
-        return { ...file, quiltPatchInternalId: patchId };
-      }),
-      metadata,
-      sliversByNode,
-      rootHash,
-    };
-    registrations.push({
-      groupId: groups[i].groupId,
-      blobId,
-      rootHash,
-      size: quilt.length,
-      epochs,
+    const resourceFiles = files.map(file => {
+      const patchId = patchIdByFileName.get(file.name);
+      if (!patchId) {
+        throw new Error(`No quilt patch found for resource ${file.name}`);
+      }
+      return { ...file, storageKind: 'quilt' as const, quiltPatchInternalId: patchId };
     });
-    totalCost = totalCost + groupCost;
+
+    const isNewBlob = !blobs[blobId];
+    if (isNewBlob) {
+      blobs[blobId] = {
+        storageKind: 'quilt',
+        objectId: '',
+        files: [],
+        metadata,
+        sliversByNode,
+        rootHash,
+      };
+    }
+    blobs[blobId].files.push(...resourceFiles);
+    if (isNewBlob) {
+      const { totalCost: groupCost } = await walrusClient.storageCost(quilt.length, epochs);
+      registrations.push({
+        groupId: group.groupId,
+        storageKind: 'quilt',
+        blobId,
+        rootHash,
+        size: quilt.length,
+        epochs,
+      });
+      totalCost = totalCost + groupCost;
+    }
   }
   return {
     blobs,
@@ -129,9 +182,13 @@ export const registerBlobs = async ({
             size: item.size,
             epochs: item.epochs,
             deletable: true,
-            attributes: {
-              _walrusBlobType: 'quilt',
-            },
+            ...(item.storageKind === 'quilt'
+              ? {
+                  attributes: {
+                    _walrusBlobType: 'quilt',
+                  },
+                }
+              : {}),
           }),
         ),
       );
@@ -186,7 +243,7 @@ export const registerBlobs = async ({
       }
 
       core.info(
-        `🚀 Registered ${chunk.length} quilt blob(s) in batch ${txNumber}, tx digest: ${digest}`,
+        `🚀 Registered ${chunk.length} Walrus blob(s) in batch ${txNumber}, tx digest: ${digest}`,
       );
     }
 

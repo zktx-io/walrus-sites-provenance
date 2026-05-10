@@ -16,14 +16,16 @@ After each implementation slice, check its callers, tests, generated bundle impa
 
 Runtime changes must leave tests, lint, typecheck, build, release-tag checks, upstream-lock checks, and `dist/` verification passing.
 
+Documentation changes should record implemented behavior, operational constraints, and purpose. Do not add incident timelines, debugging logs, or upstream-service critique to README/SLSA/AGENTS.
+
 ## Current Deployment Architecture
 
 The deployment flow is:
 
 1. Load and validate `site.config.json`.
-2. Create a signing context using exactly one credential source.
-3. Register encoded Walrus quilt Blob objects on-chain.
-4. Upload encoded quilt data to Walrus storage nodes.
+2. Create a GitSigner signing context using `GIT_SIGNER_PIN`.
+3. Register encoded Walrus Blob objects on-chain.
+4. Upload encoded raw blob or quilt data to Walrus storage nodes.
 5. Plan certification, site create/update, route changes, and safe cleanup into site PTBs.
 6. Emit site outputs and send the GitSigner finalization notification when applicable.
 
@@ -31,15 +33,22 @@ Blob registration is separate from upload because storage-node upload needs regi
 
 The site deployment planner is the only site mutation path. Do not reintroduce standalone `certifyBlobs`, `createSite`, or `updateSite` flows that bypass planner budgets, cleanup rules, or the signing context.
 
-New resources are stored as Walrus quilt patches. They do not use byte ranges. Each resource receives an `x-wal-quilt-patch-internal-id` header that points to the patch inside the quilt blob.
+New resources use a hybrid Walrus storage layout for browser-facing delivery:
 
-`FileInfo` represents raw local files. `QuiltResourceFile` represents deployable site resources and must include a `quiltPatchInternalId`. Resource registration must accept `QuiltResourceFile`, not raw `FileInfo`.
+- `.wasm` files are stored as individual raw blobs.
+- `.js`, `.mjs`, `.css`, and font files at or above 256 KiB are stored as individual raw blobs.
+- Other files at or above 1 MiB are stored as individual raw blobs.
+- Remaining smaller files are packed into quilts capped at 2 MiB per quilt.
+
+New resources do not use byte ranges. Quilt resources receive an `x-wal-quilt-patch-internal-id` header that points to the patch inside the quilt blob. Raw resources do not receive that header and are served through the raw blob resource path.
+
+`FileInfo` represents raw local files. `RawResourceFile` and `QuiltResourceFile` represent deployable site resources, and `ResourceFile` is their union. Only `QuiltResourceFile` includes `quiltPatchInternalId`. Resource registration must accept `ResourceFile`, not raw `FileInfo`.
 
 Deployment file discovery includes dotfiles and extensionless files so `.well-known/walrus-sites.intoto.jsonl`, `.nojekyll`, `CNAME`, and similar static-site files are preserved. It must continue to ignore VCS, dependency, and OS metadata such as `.git/`, `.hg/`, `.svn/`, `node_modules/`, `.DS_Store`, and `Thumbs.db`.
 
 ## Cleanup Rules
 
-Successful update cleanup is keyed by old quilt Blob IDs, not individual resource patch IDs. Never delete a Blob object that is still referenced by current resources. Deduplicate repeated old resources that share the same quilt Blob, and only include owned Blob objects marked `deletable === true`.
+Successful update cleanup is keyed by old Blob IDs, not individual resource patch IDs. Never delete a Blob object that is still referenced by current resources. Deduplicate repeated old resources that share the same Blob, and only include owned Blob objects marked `deletable === true`.
 
 Failure cleanup uses transaction-boundary rules:
 
@@ -100,9 +109,7 @@ This repository is an orchestrator. Keep it focused on GitHub Action execution, 
 
 All deployment transactions must go through the project signing context and the single `runTx` execution path. Call sites build `Transaction` values and hand them to `runTx`; they must not directly simulate, set gas budgets, sign, execute, or wait for deployment transactions.
 
-Set exactly one signing credential: `GIT_SIGNER_PIN` or `ED25519_PRIVATE_KEY`.
-
-`ED25519_PRIVATE_KEY` remains available as a deprecated compatibility path. It must not be mixed with GitSigner credentials.
+Set `GIT_SIGNER_PIN` for deployment signing. `ED25519_PRIVATE_KEY` signing has been removed. Do not reintroduce `ED25519_PRIVATE_KEY`, `ed25519-private-key`, `WALRUS_DEPRECATION_ACK`, or `walrus-deprecation-ack` as compatibility paths.
 
 GitSigner uses a devnet faucet plus Sui gRPC transport channel and requires a human to approve notary UI requests. It is not unattended CI. Its finalization call is a fire-and-forget notification; deployment success must not depend on a verified finalization response.
 
@@ -130,4 +137,4 @@ Run the full local gate before publishing a tag:
 - `npm run build`
 - `git diff --check`
 
-Run the manual release smoke workflow before publishing a release tag. The smoke site must include multiple resources, including `.well-known/walrus-sites.intoto.jsonl`, so provenance and multi-patch quilt resolution are exercised.
+Run the manual release smoke workflow before publishing a release tag. The smoke site must include multiple resources, including `.well-known/walrus-sites.intoto.jsonl`, a raw asset such as `.wasm` or a large JS bundle, and enough small files to exercise multi-patch quilt resolution.

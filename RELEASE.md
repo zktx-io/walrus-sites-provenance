@@ -32,10 +32,9 @@ If the release includes these current behaviors, mention them in user-facing rel
 - `site.config.json` is required and validates `network`, `owner`, `site_name`, `epochs`, and `path`.
 - The action runtime is Node 24.
 - Sui client access uses the official gRPC/Core API. `sui_grpc_url` and `sui_grpc_timeout_ms` are the preferred endpoint settings; `sui_rpc_*` names are deprecated aliases.
-- `ED25519_PRIVATE_KEY` remains supported as a deprecated compatibility path.
-- `GIT_SIGNER_PIN` is interactive and depends on the devnet faucet plus Sui gRPC transport channel.
-- `WALRUS_DEPRECATION_ACK=1` or the `walrus-deprecation-ack` input silences repeated ED25519 warnings.
-- New site resources are stored as Walrus quilt patches and use `x-wal-quilt-patch-internal-id`.
+- `GIT_SIGNER_PIN` is required, interactive, and depends on the devnet faucet plus Sui gRPC transport channel.
+- `ED25519_PRIVATE_KEY` signing and the ED25519 deprecation acknowledgement input are removed.
+- New site resources use the raw/quilt hybrid storage layout.
 - Small deployments normally use one registration PTB and one certification/site/cleanup PTB.
 - Prettier formatting is enforced as a lint error in PR CI.
 
@@ -43,7 +42,7 @@ If the release includes these current behaviors, mention them in user-facing rel
 
 Run the manual `Release Smoke Deploy` workflow before publishing the tag.
 
-Select exactly one signer mode. The default smoke mode is GitSigner because it exercises the external-signing path; choose ED25519 only for unattended compatibility checks.
+The smoke workflow uses GitSigner.
 
 Mainnet smoke deploys spend real gas and WAL. For testnet URL verification, provide a public testnet portal host; `wal.app` only supports mainnet.
 
@@ -52,9 +51,10 @@ The smoke fixture must include multiple resources:
 - `index.html`
 - `style.css`
 - a small asset
+- a raw asset such as `.wasm` or a large JS bundle
 - `.well-known/walrus-sites.intoto.jsonl`
 
-This verifies provenance-file deployment and single-quilt multi-patch resolution.
+This verifies provenance-file deployment, raw resource registration, and single-quilt multi-patch resolution.
 
 ## SDK And Upstream Changes
 

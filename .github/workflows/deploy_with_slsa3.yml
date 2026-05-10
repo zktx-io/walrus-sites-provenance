@@ -12,16 +12,14 @@ on:
         required: false
         type: string
         default: '.'
-      walrus-deprecation-ack:
+      node-version:
         required: false
         type: string
-        default: ''
+        default: '24'
 
     secrets:
       GIT_SIGNER_PIN:
-        required: false
-      ED25519_PRIVATE_KEY:
-        required: false
+        required: true
 
     outputs:
       site-object-id:
@@ -41,7 +39,7 @@ jobs:
       working_directory_checked_out: ${{ steps.check.outputs.working_directory_checked_out }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check if working directory is not root
         id: check
@@ -54,10 +52,14 @@ jobs:
 
       - name: Upload working directory as artifact
         if: ${{ steps.check.outputs.working_directory_checked_out == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: site-working-directory
-          path: ${{ inputs.working-directory }}
+          include-hidden-files: true
+          path: |
+            ${{ inputs.working-directory }}
+            !${{ inputs.working-directory }}/.git/**
+            !${{ inputs.working-directory }}/node_modules/**
 
   build-site:
     needs: preprocess
@@ -73,19 +75,20 @@ jobs:
     steps:
       - name: Download working directory (only if needed)
         if: ${{ needs.preprocess.outputs.working_directory_checked_out == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: site-working-directory
           path: .
 
       - name: Checkout repository
         if: ${{ needs.preprocess.outputs.working_directory_checked_out != 'true' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: ${{ inputs.node-version }}
+          package-manager-cache: false
 
       - name: Parse config
         id: parse
@@ -126,15 +129,16 @@ jobs:
           echo "base64_hashes=$(echo -n "$HASHES" | base64 -w0)" >> "$GITHUB_OUTPUT"
 
       - name: Upload site config
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: site.config.json
           path: site.config.json
 
       - name: Upload output directory
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: site-output
+          include-hidden-files: true
           path: ${{ steps.parse.outputs.output_dir }}
 
   provenance:
@@ -154,12 +158,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download provenance file
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: walrus-sites.intoto.jsonl
 
       - name: Download site output files
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: site-output
           path: ${{ needs.build-site.outputs.output_dir }}
@@ -196,18 +200,18 @@ jobs:
       site_url: ${{ steps.deploy.outputs['site-url'] }}
     steps:
       - name: Download site config
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: site.config.json
 
       - name: Download output directory
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: site-output
           path: ${{ needs.build-site.outputs.output_dir }}
 
       - name: Download provenance file
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: walrus-sites.intoto.jsonl
           path: ${{ needs.build-site.outputs.output_dir }}/.well-known
@@ -219,9 +223,6 @@ jobs:
       - name: Deploy to Walrus Sites
         id: deploy
         # Release checklist: update this self-reference tag atomically with README.md and SLSA.md.
-        uses: zktx-io/walrus-sites-provenance@v0.5.9
-        with:
-          walrus-deprecation-ack: ${{ inputs.walrus-deprecation-ack }}
+        uses: zktx-io/walrus-sites-provenance@v0.6.0
         env:
           GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
-          ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}

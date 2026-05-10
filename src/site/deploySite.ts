@@ -3,7 +3,7 @@ import { Transaction, TransactionResult } from '@mysten/sui/transactions';
 import { WalrusClient } from '@mysten/walrus';
 
 import { cleanupBlobs } from '../blob/helper/cleanupBlobs';
-import { BlobDictionary, QuiltResourceFile, SiteConfig } from '../types';
+import { BlobDictionary, ResourceFile, SiteConfig } from '../types';
 import { SITE_PTB_BYTE_BUDGET, SITE_PTB_COMMAND_BUDGET } from '../utils/constants';
 import { failWithMessage } from '../utils/failWithMessage';
 import { getAllObjects } from '../utils/getAllObjects';
@@ -20,7 +20,7 @@ import {
 import { getResourceObjects } from './helper/getResourceObjects';
 import { registerResources } from './helper/registerResources';
 
-type ResourceEntry = { blobId: string; file: QuiltResourceFile };
+type ResourceEntry = { blobId: string; file: ResourceFile };
 type CleanupCandidate = { blobId: string; objectId: string; deletable: boolean; endEpoch: number };
 type SiteRef = TransactionResult | string;
 type PlannedSiteTx = {
@@ -28,7 +28,7 @@ type PlannedSiteTx = {
   removalPaths: string[];
   resources: ResourceEntry[];
   routeReset: boolean;
-  routeInserts: QuiltResourceFile[];
+  routeInserts: ResourceFile[];
   cleanupObjectIds: string[];
   commandCost: number;
   byteCost: number;
@@ -41,12 +41,12 @@ const CERTIFY_BLOB_COST: Cost = { commands: 1, bytes: 2_048 };
 const REMOVE_RESOURCE_COST = (path: string): Cost => ({ commands: 1, bytes: path.length + 96 });
 const CLEANUP_BLOB_COST: Cost = { commands: 2, bytes: 128 };
 
-const resourceCost = (file: QuiltResourceFile): Cost => ({
-  commands: 6,
+const resourceCost = (file: ResourceFile): Cost => ({
+  commands: file.storageKind === 'quilt' ? 6 : 5,
   bytes:
     file.name.length +
     file.hash.length +
-    file.quiltPatchInternalId.length +
+    (file.storageKind === 'quilt' ? file.quiltPatchInternalId.length : 0) +
     Object.entries(file.headers).reduce(
       (size, [name, value]) => size + name.length + value.length,
       0,
@@ -56,7 +56,7 @@ const resourceCost = (file: QuiltResourceFile): Cost => ({
 
 const routeResetCost = (isUpdate: boolean): Cost => ({ commands: isUpdate ? 2 : 1, bytes: 96 });
 
-const routeInsertCost = ({ name }: QuiltResourceFile): Cost => ({
+const routeInsertCost = ({ name }: ResourceFile): Cost => ({
   commands: 1,
   bytes: name.length * 2 + 96,
 });
@@ -123,7 +123,7 @@ export const collectResourceEntries = (blobs: BlobDictionary): ResourceEntry[] =
     })),
   );
 
-const htmlRouteFiles = (blobs: BlobDictionary): QuiltResourceFile[] =>
+const htmlRouteFiles = (blobs: BlobDictionary): ResourceFile[] =>
   Object.values(blobs)
     .flatMap(blob => blob.files)
     .filter(file => file.name.endsWith('.html'));
@@ -174,7 +174,7 @@ export const planSiteTransactions = ({
   certBlobIds: string[];
   removalPaths: string[];
   resources: ResourceEntry[];
-  routeFiles: QuiltResourceFile[];
+  routeFiles: ResourceFile[];
   cleanupObjectIds: string[];
 }): PlannedSiteTx[] => {
   const plans: PlannedSiteTx[] = [];
@@ -288,7 +288,7 @@ const addRouteInsert = (
   transaction: Transaction,
   packageId: string,
   site: SiteRef,
-  file: QuiltResourceFile,
+  file: ResourceFile,
 ) => {
   const siteRef = typeof site === 'string' ? transaction.object(site) : site;
   const route = file.name === '/index.html' ? '/*' : file.name;

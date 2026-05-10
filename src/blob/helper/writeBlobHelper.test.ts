@@ -44,4 +44,35 @@ describe('writeBlobHelper', () => {
     );
     expect(mockCore.warning).not.toHaveBeenCalled();
   });
+
+  it('includes the failed write error in retry warnings', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const walrusClient = {
+        writeEncodedBlobToNodes: jest
+          .fn<() => Promise<unknown[]>>()
+          .mockRejectedValueOnce(new Error('storage node unavailable'))
+          .mockResolvedValueOnce([]),
+      };
+
+      const writePromise = writeBlobHelper(walrusClient as any, 1, {
+        blobId: 'blob-id',
+        metadata: {} as any,
+        sliversByNode: [],
+        objectId: '0xblob',
+        deletable: true,
+      });
+
+      await jest.advanceTimersByTimeAsync(10000);
+
+      await expect(writePromise).resolves.toEqual([]);
+
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        '🔁 Retry attempt 1 for blob blob-id: storage node unavailable',
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

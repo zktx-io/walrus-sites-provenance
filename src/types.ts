@@ -12,11 +12,25 @@ export interface FileInfo {
   headers: Record<'Content-Type' | 'Content-Encoding', string>;
 }
 
+export type ResourceStorageKind = 'raw' | 'quilt';
+
+export interface RawResourceFile extends FileInfo {
+  storageKind: 'raw';
+}
+
 export interface QuiltResourceFile extends FileInfo {
+  storageKind: 'quilt';
   quiltPatchInternalId: string;
 }
 
-export type FileGroup = { groupId: number; size: number; files: FileInfo[] };
+export type ResourceFile = RawResourceFile | QuiltResourceFile;
+
+export type FileGroup = {
+  groupId: number;
+  storageKind: ResourceStorageKind;
+  size: number;
+  files: FileInfo[];
+};
 
 type WalrusHash = EnumInputShape<{ Empty: boolean | object | null; Digest: Iterable<number> }>;
 type BlobEncodingType =
@@ -35,7 +49,8 @@ interface BlobMetadata {
 export type StorageConfirmation = { serializedMessage: string; signature: string };
 
 export interface BlobData {
-  files: QuiltResourceFile[];
+  storageKind: ResourceStorageKind;
+  files: ResourceFile[];
   metadata: BlobMetadata;
   rootHash: Uint8Array<ArrayBufferLike>;
   sliversByNode: SliversForNode[];

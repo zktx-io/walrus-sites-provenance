@@ -11,10 +11,10 @@ This guide introduces the advanced features of the Walrus Sites GitHub Action, i
 
 ## 📁 Inputs
 
-| Input               | Default | Description                                                             |
-| ------------------- | ------- | ----------------------------------------------------------------------- |
-| `working-directory` | `.`     | Working directory of your Walrus Site (must contain `site.config.json`) |
-| `walrus-deprecation-ack` | `''` | Set to `1` to silence repeated ED25519 deprecation warnings after review. |
+| Input                    | Default | Description                                                               |
+| ------------------------ | ------- | ------------------------------------------------------------------------- |
+| `working-directory`      | `.`     | Working directory of your Walrus Site (must contain `site.config.json`)   |
+| `node-version`           | `24`    | Node.js version used for dependency installation and `npm run build`.     |
 
 ## 📤 Action Outputs
 
@@ -51,15 +51,13 @@ This reusable workflow:
 
 > This gives you end-to-end verifiability, from GitHub commit to on-chain content.
 
-## 🔐 Signing: Private Key vs GitSigner
+## 🔐 Signing
 
-| Option                | Description                                                                   | Best For                        |
-| --------------------- | ----------------------------------------------------------------------------- | ------------------------------- |
-| `GIT_SIGNER_PIN`      | Secure external signer via [notary.wal.app/sign](https://notary.wal.app/sign) | Enhanced key hygiene & security |
-| `ED25519_PRIVATE_KEY` | Deprecated. Stored as GitHub secret for unattended CI.                        | Compatibility during v0.6.x     |
-| `WALRUS_DEPRECATION_ACK=1` | Silences repeated ED25519 deprecation warnings after accepting that this compatibility path is deprecated. | Unattended CI during v0.6.x |
+| Option           | Description                                                                   | Best For                        |
+| ---------------- | ----------------------------------------------------------------------------- | ------------------------------- |
+| `GIT_SIGNER_PIN` | Secure external signer via [notary.wal.app/sign](https://notary.wal.app/sign) | Enhanced key hygiene & security |
 
-Set exactly one signing credential. If both `GIT_SIGNER_PIN` and `ED25519_PRIVATE_KEY` are provided, deployment fails before any transaction is built.
+`ED25519_PRIVATE_KEY` signing has been removed. Deployments require `GIT_SIGNER_PIN`.
 
 If `GIT_SIGNER_PIN` is set, your workflow:
 
@@ -70,6 +68,8 @@ If `GIT_SIGNER_PIN` is set, your workflow:
 GitSigner is interactive. A person must approve each signing request in the notary UI, so it is not a drop-in replacement for unattended cron, Dependabot, or fully automated deployments. It also uses a devnet faucet plus Sui gRPC transport channel before signing starts; devnet or faucet outages can block deployments to any target network.
 
 The action itself runs on Node 24 and uses the official `@mysten/sui` gRPC/Core API. Custom Sui endpoints should be configured with `sui_grpc_url` and `sui_grpc_timeout_ms` in `site.config.json`; the older `sui_rpc_*` names are deprecated compatibility aliases.
+
+Deployment storage uses a portal-compatible hybrid layout. Large browser-critical assets are registered as raw Walrus blobs (`.wasm` always, JS/CSS/font assets at or above 256 KiB, and other assets at or above 1 MiB), while smaller resources are packed into quilts capped at 2 MiB. Quilt resources have `x-wal-quilt-patch-internal-id`; raw resources do not.
 
 This ensures:
 
@@ -124,15 +124,13 @@ permissions:
 
 jobs:
   deploy-with-provenance:
-    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.5.9
+    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.6.0
     with:
       working-directory: './my-site-folder'
-      # Optional. Use only after accepting the ED25519 v1.0.0 removal plan.
-      # walrus-deprecation-ack: '1'
+      # Optional. Defaults to Node 24 for GitHub Actions Node 20 deprecation compatibility.
+      # node-version: '24'
     secrets:
       GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
-      # Deprecated compatibility path:
-      # ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
 ```
 
 **This will:**

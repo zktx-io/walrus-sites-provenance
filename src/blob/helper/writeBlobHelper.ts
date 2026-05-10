@@ -25,7 +25,8 @@ export const writeBlobHelper = async (
       lastError = error;
       attempt++;
       if (attempt > retryLimit) break;
-      core.warning(`🔁 Retry attempt ${attempt} for blob ${blobId}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      core.warning(`🔁 Retry attempt ${attempt} for blob ${blobId}: ${errorMessage}`);
       await sleep(10000);
     }
   }

@@ -1,6 +1,5 @@
 import { jest } from '@jest/globals';
 import type { SignatureWithBytes } from '@mysten/sui/cryptography';
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
 
 import { SiteConfig } from '../types';
@@ -52,55 +51,31 @@ describe('getSigningContext', () => {
     delete process.env.ED25519_PRIVATE_KEY;
     delete process.env['INPUT_GIT-SIGNER-PIN'];
     delete process.env['INPUT_ED25519-PRIVATE-KEY'];
-    delete process.env.WALRUS_DEPRECATION_ACK;
   });
 
-  it('keeps ED25519 mode with a deprecation warning', async () => {
-    const keypair = Ed25519Keypair.generate();
-    process.env.ED25519_PRIVATE_KEY = keypair.getSecretKey();
-
-    const context = await getSigningContext(baseConfig(keypair.toSuiAddress()));
-
-    expect(context.mode).toBe('ed25519');
-    expect(context.address).toBe(keypair.toSuiAddress());
-    expect(mockCore.warning).toHaveBeenCalledWith(expect.stringContaining('deprecated'));
-  });
-
-  it('allows ED25519 deprecation warning acknowledgement for unattended CI', async () => {
-    const keypair = Ed25519Keypair.generate();
-    process.env.ED25519_PRIVATE_KEY = keypair.getSecretKey();
-    process.env.WALRUS_DEPRECATION_ACK = '1';
-
-    const context = await getSigningContext(baseConfig(keypair.toSuiAddress()));
-
-    expect(context.mode).toBe('ed25519');
-    expect(mockCore.warning).not.toHaveBeenCalledWith(expect.stringContaining('deprecated'));
-  });
-
-  it('rejects mixed GitSigner and ED25519 credentials', async () => {
-    const keypair = Ed25519Keypair.generate();
+  it('rejects removed ED25519 credentials even when GitSigner is also configured', async () => {
     process.env.GIT_SIGNER_PIN = '123456';
-    process.env.ED25519_PRIVATE_KEY = keypair.getSecretKey();
-
-    await expect(getSigningContext(baseConfig(keypair.toSuiAddress()))).rejects.toThrow(
-      'Use exactly one signing credential',
-    );
-  });
-
-  it('rejects an ED25519 key that does not match config.owner', async () => {
-    const keypair = Ed25519Keypair.generate();
-    process.env.ED25519_PRIVATE_KEY = keypair.getSecretKey();
+    process.env.ED25519_PRIVATE_KEY = 'suiprivkey-removed';
 
     await expect(getSigningContext(baseConfig('0x1'))).rejects.toThrow(
-      'Process will be terminated.',
+      'ED25519_PRIVATE_KEY/ed25519-private-key signing has been removed',
     );
-    expect(mockCore.setFailed).toHaveBeenCalledWith(expect.stringContaining('does not match'));
+    expect(mockCore.setFailed).toHaveBeenCalledWith(expect.stringContaining('has been removed'));
+  });
+
+  it('rejects removed ED25519 action input credentials', async () => {
+    mockCore.getInput.mockImplementation((name: string) =>
+      name === 'ed25519-private-key' ? 'suiprivkey-removed' : '',
+    );
+
+    await expect(getSigningContext(baseConfig('0x1'))).rejects.toThrow(
+      'ED25519_PRIVATE_KEY/ed25519-private-key signing has been removed',
+    );
+    expect(mockCore.setFailed).toHaveBeenCalledWith(expect.stringContaining('has been removed'));
   });
 
   it('rejects missing signing credentials', async () => {
-    await expect(getSigningContext(baseConfig('0x1'))).rejects.toThrow(
-      'Set GIT_SIGNER_PIN/git-signer-pin or ED25519_PRIVATE_KEY/ed25519-private-key.',
-    );
+    await expect(getSigningContext(baseConfig('0x1'))).rejects.toThrow('Set GIT_SIGNER_PIN');
     expect(mockCore.setFailed).toHaveBeenCalledWith(
       expect.stringContaining('Signing credential is missing'),
     );

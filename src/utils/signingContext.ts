@@ -1,6 +1,5 @@
 import * as core from '@actions/core';
 import type { SignatureWithBytes } from '@mysten/sui/cryptography';
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
 
 import { SiteConfig } from '../types';
@@ -8,11 +7,11 @@ import { SiteConfig } from '../types';
 import { GitSigner } from './gitSigner';
 import { normalizeConfiguredSuiAddress } from './suiAddress';
 
-export type SigningMode = 'git-signer' | 'ed25519';
+export type SigningMode = 'git-signer';
 
 /**
- * Narrow deployment signer surface. Keep this structurally compatible with
- * Ed25519Keypair and GitSigner only; do not add Keypair-only methods here.
+ * Narrow deployment signer surface. Keep this structurally compatible with GitSigner;
+ * do not add Keypair-only methods here.
  */
 export interface DeploymentSigner {
   toSuiAddress(): string;
@@ -31,26 +30,16 @@ const readSecret = (inputName: string, envName: string): string => {
   return (core.getInput(inputName, { required: false }) || process.env[envName] || '').trim();
 };
 
-const hasDeprecationAck = (): boolean => {
-  const ack = (
-    core.getInput('walrus-deprecation-ack', { required: false }) ||
-    process.env.WALRUS_DEPRECATION_ACK ||
-    ''
-  )
-    .trim()
-    .toLowerCase();
-  return ['1', 'true', 'yes'].includes(ack);
-};
-
 export const getSigningContext = async (config: SiteConfig): Promise<SigningContext> => {
   const gitSignerPin = readSecret('git-signer-pin', 'GIT_SIGNER_PIN');
-  const ed25519PrivateKey = readSecret('ed25519-private-key', 'ED25519_PRIVATE_KEY');
+  const removedEd25519PrivateKey = readSecret('ed25519-private-key', 'ED25519_PRIVATE_KEY');
   // Defensive normalization for tests and future call sites that may bypass loadConfig().
   const owner = normalizeConfiguredSuiAddress(config.owner, 'owner');
 
-  if (gitSignerPin && ed25519PrivateKey) {
+  if (removedEd25519PrivateKey) {
+    core.setFailed('❌ ED25519 private-key signing has been removed. Use GitSigner instead.');
     throw new Error(
-      'Use exactly one signing credential: GIT_SIGNER_PIN/git-signer-pin or ED25519_PRIVATE_KEY/ed25519-private-key.',
+      'ED25519_PRIVATE_KEY/ed25519-private-key signing has been removed. Set GIT_SIGNER_PIN/git-signer-pin.',
     );
   }
 
@@ -85,34 +74,6 @@ export const getSigningContext = async (config: SiteConfig): Promise<SigningCont
     }
   }
 
-  if (!ed25519PrivateKey) {
-    core.setFailed('❌ Signing credential is missing.');
-    throw new Error(
-      'Set GIT_SIGNER_PIN/git-signer-pin or ED25519_PRIVATE_KEY/ed25519-private-key.',
-    );
-  }
-
-  try {
-    const signer = Ed25519Keypair.fromSecretKey(ed25519PrivateKey);
-    const address = normalizeSuiAddress(signer.toSuiAddress());
-    if (address !== owner) {
-      throw new Error(
-        `ED25519_PRIVATE_KEY address ${address} does not match site.config.json owner ${owner}.`,
-      );
-    }
-    if (!hasDeprecationAck()) {
-      core.warning(
-        'ED25519_PRIVATE_KEY signing is deprecated and will be removed in v1.0.0. Use GitSigner for external signing. Set WALRUS_DEPRECATION_ACK=1 to hide this warning.',
-      );
-    }
-    return {
-      mode: 'ed25519',
-      address,
-      signer,
-      finalize: async () => undefined,
-    };
-  } catch (err) {
-    core.setFailed(`❌ Failed to create ED25519 signer: ${(err as Error).message}`);
-    throw new Error('Process will be terminated.');
-  }
+  core.setFailed('❌ Signing credential is missing.');
+  throw new Error('Set GIT_SIGNER_PIN/git-signer-pin.');
 };

@@ -4,7 +4,7 @@ import { Transaction } from '@mysten/sui/transactions';
 import { blobIdFromInt } from '@mysten/walrus';
 
 import { QUILT_PATCH_ID_INTERNAL_HEADER } from '../../blob/helper/quiltPatchInternalId';
-import { BlobDictionary, QuiltResourceFile } from '../../types';
+import { BlobDictionary, QuiltResourceFile, RawResourceFile } from '../../types';
 
 import { registerResources } from './registerResources';
 
@@ -17,9 +17,23 @@ const file = (name: string, size: number, hash: string): QuiltResourceFile => ({
   size,
   hash,
   buffer: Buffer.from(name),
+  storageKind: 'quilt',
   quiltPatchInternalId: '0x0101000200',
   headers: {
     'Content-Type': name.endsWith('.html') ? 'text/html' : 'text/css',
+    'Content-Encoding': 'identity',
+  },
+});
+
+const rawFile = (name: string, size: number, hash: string): RawResourceFile => ({
+  name,
+  path: `/fixture${name}`,
+  size,
+  hash,
+  buffer: Buffer.from(name),
+  storageKind: 'raw',
+  headers: {
+    'Content-Type': name.endsWith('.js') ? 'text/javascript' : 'application/octet-stream',
     'Content-Encoding': 'identity',
   },
 });
@@ -116,6 +130,26 @@ describe('site PTB resource registration shape', () => {
       `${packageId}::site::new_range_option`,
       `${packageId}::site::new_resource`,
       `${packageId}::site::add_header`,
+      `${packageId}::site::add_header`,
+      `${packageId}::site::add_header`,
+      `${packageId}::site::add_resource`,
+    ]);
+  });
+
+  it('registers raw resources without quilt patch headers', () => {
+    const blobId = blobIdFromInt('457');
+    const blobs: BlobDictionary = {
+      [blobId]: {
+        storageKind: 'raw',
+        files: [rawFile('/assets/app.js', 300_000, '3')],
+      } as any,
+    };
+    const pureStrings = pureStringInputsFor(resourceTransactionFor(blobs));
+
+    expect(pureStrings).not.toContain(QUILT_PATCH_ID_INTERNAL_HEADER);
+    expect(commandTargetsFor(blobs)).toEqual([
+      `${packageId}::site::new_range_option`,
+      `${packageId}::site::new_resource`,
       `${packageId}::site::add_header`,
       `${packageId}::site::add_header`,
       `${packageId}::site::add_resource`,

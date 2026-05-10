@@ -9,13 +9,6 @@ inputs:
   git-signer-pin:
     description: 'PIN used to decrypt the signing key, shared with the remote signer UI.'
     required: false
-  ed25519-private-key:
-    description: 'Deprecated fallback private key in Sui format (suiprivkey...). Will be removed in v1.0.0.'
-    required: false
-    deprecationMessage: 'ED25519 private-key signing is deprecated and will be removed in v1.0.0. Use GitSigner for external signing.'
-  walrus-deprecation-ack:
-    description: 'Set to 1 to silence repeated ED25519 deprecation warnings after acknowledging the v1.0.0 removal plan.'
-    required: false
 
 outputs:
   site-object-id:

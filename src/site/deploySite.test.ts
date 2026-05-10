@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 import { blobIdFromInt } from '@mysten/walrus';
 
-import type { BlobDictionary, QuiltResourceFile } from '../types';
+import type { BlobDictionary, QuiltResourceFile, RawResourceFile, ResourceFile } from '../types';
 
 import type { OldBlobObjectCandidate } from './helper/getOldBlobObjectCandidates';
 
@@ -65,6 +65,7 @@ const file = (name: string, hash = '1'): QuiltResourceFile => ({
   size: 10,
   hash,
   buffer: Buffer.from(name),
+  storageKind: 'quilt',
   quiltPatchInternalId: '0x0101000200',
   headers: {
     'Content-Type': name.endsWith('.html') ? 'text/html' : 'text/css',
@@ -72,8 +73,22 @@ const file = (name: string, hash = '1'): QuiltResourceFile => ({
   },
 });
 
-const blob = (blobId: string, files: QuiltResourceFile[]): BlobDictionary => ({
+const rawFile = (name: string, hash = '1'): RawResourceFile => ({
+  name,
+  path: `/fixture${name}`,
+  size: 300_000,
+  hash,
+  buffer: Buffer.from(name),
+  storageKind: 'raw',
+  headers: {
+    'Content-Type': name.endsWith('.js') ? 'text/javascript' : 'application/octet-stream',
+    'Content-Encoding': 'identity',
+  },
+});
+
+const blob = (blobId: string, files: ResourceFile[]): BlobDictionary => ({
   [blobId]: {
+    storageKind: files[0]?.storageKind ?? 'quilt',
     files,
     objectId: `0x${blobId.slice(-8)}`,
   } as any,
@@ -121,6 +136,26 @@ describe('site deployment planner', () => {
     expect(plans[0].resources).toHaveLength(1);
     expect(plans[0].routeReset).toBe(true);
     expect(plans[0].cleanupObjectIds).toEqual(['0xoldblob']);
+  });
+
+  it('plans mixed raw and quilt resources in the same site PTB', () => {
+    const rawBlobId = blobIdFromInt('103');
+    const quiltBlobId = blobIdFromInt('104');
+    const blobs: BlobDictionary = {
+      ...blob(rawBlobId, [rawFile('/assets/app.js')]),
+      ...blob(quiltBlobId, [file('/index.html')]),
+    };
+    const plans = planSiteTransactions({
+      isCreate: true,
+      certBlobIds: [rawBlobId, quiltBlobId],
+      removalPaths: [],
+      resources: collectResourceEntries(blobs),
+      routeFiles: [file('/index.html')],
+      cleanupObjectIds: [],
+    });
+
+    expect(plans).toHaveLength(1);
+    expect(plans[0].resources.map(resource => resource.file.storageKind)).toEqual(['raw', 'quilt']);
   });
 
   it('splits continuation PTBs before routes when resources exceed the budget', () => {
