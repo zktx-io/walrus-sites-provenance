@@ -67,6 +67,39 @@ describe('groupFilesBySize', () => {
     );
   });
 
+  it('stores provenance as a standalone raw blob and excludes site configs', () => {
+    fs.mkdirSync(path.join(siteRoot, '.well-known'), { recursive: true });
+    fs.mkdirSync(path.join(siteRoot, 'assets'), { recursive: true });
+    fs.writeFileSync(path.join(siteRoot, 'index.html'), '<main>ok</main>');
+    fs.writeFileSync(path.join(siteRoot, 'assets', 'app.wasm'), '\0asm');
+    fs.writeFileSync(
+      path.join(siteRoot, '.well-known', 'walrus-sites.intoto.jsonl'),
+      '{"predicateType":"test"}\n',
+    );
+    fs.writeFileSync(
+      path.join(siteRoot, '.well-known', 'site.config.json'),
+      '{"network":"testnet"}\n',
+    );
+    fs.writeFileSync(path.join(siteRoot, 'site.config.json'), '{"network":"testnet"}\n');
+
+    const groups = groupFilesBySize(siteRoot);
+    const provenanceGroup = groups.find(group =>
+      group.files.some(file => file.name === '/.well-known/walrus-sites.intoto.jsonl'),
+    );
+    const names = groups.flatMap(group => group.files.map(file => file.name));
+
+    expect(provenanceGroup?.storageKind).toBe('raw');
+    expect(provenanceGroup?.files.map(file => file.name)).toEqual([
+      '/.well-known/walrus-sites.intoto.jsonl',
+    ]);
+    expect(names).not.toEqual(
+      expect.arrayContaining(['/site.config.json', '/.well-known/site.config.json']),
+    );
+    expect(groups.find(group => group.files[0]?.name === '/assets/app.wasm')?.storageKind).toBe(
+      'raw',
+    );
+  });
+
   it('stores wasm files as single raw blobs with the browser streaming MIME type', () => {
     fs.mkdirSync(path.join(siteRoot, 'assets'), { recursive: true });
     fs.writeFileSync(path.join(siteRoot, 'assets', 'sui_move_wasm_bg.wasm'), '\0asm');

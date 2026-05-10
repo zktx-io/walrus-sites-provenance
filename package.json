@@ -1,6 +1,6 @@
 {
   "name": "walrus-sites-provenance",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Deploy Walrus sites with cryptographic provenance using SLSA + Sigstore.",
   "keywords": [
     "sui",

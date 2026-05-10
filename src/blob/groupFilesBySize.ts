@@ -95,6 +95,8 @@ const contentTypeMap: Record<string, string> = {
 const deployIgnorePatterns = [
   '**/.{git,hg,svn}{,/**}',
   '**/node_modules{,/**}',
+  'site.config.json',
+  '**/site.config.json',
   '**/.DS_Store',
   '**/Thumbs.db',
 ];
@@ -109,6 +111,8 @@ const priorityRawAssetExtensions = new Set([
   'woff',
   'woff2',
 ]);
+
+const provenanceArtifactPath = '.well-known/walrus-sites.intoto.jsonl';
 
 const sha256ToU256LE = (buffer: Buffer): string => {
   const hash = createHash('sha256').update(buffer).digest();
@@ -187,21 +191,24 @@ export const groupFilesBySize = (outputDir: string): FileGroup[] => {
       },
     };
 
-    if (shouldStoreAsRawBlob(ext, fileInfo.size)) {
+    if (relativePath === provenanceArtifactPath || shouldStoreAsRawBlob(ext, fileInfo.size)) {
       rawFiles.push(fileInfo);
     } else {
       quiltFiles.push(fileInfo);
     }
   }
 
-  const groups: FileGroup[] = rawFiles
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((file, groupId) => ({
-      groupId,
+  const groups: FileGroup[] = [];
+
+  for (const file of rawFiles.sort((a, b) => a.name.localeCompare(b.name))) {
+    groups.push({
+      groupId: groups.length,
       storageKind: 'raw',
       files: [file],
       size: file.size,
-    }));
+    });
+  }
+
   appendQuiltGroups(groups, quiltFiles);
 
   for (const group of groups) {

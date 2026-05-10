@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.6.0
+        uses: zktx-io/walrus-sites-provenance@v0.6.1
         env:
           GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
 ```
@@ -103,7 +103,9 @@ This file is validated before deployment. Missing `network`, `owner`, `site_name
 > ✅ Leave `site_obj_id` empty when deploying a new site.  
 > ↻ Set `site_obj_id` only when **updating** an existing site deployment.
 > `sui_rpc_url` and `sui_rpc_timeout_ms` are deprecated v0.6.x aliases and are treated as gRPC endpoint settings because Sui JSON-RPC is being retired.
-> `path` should point to a clean build output directory. Dotfiles and extensionless files inside that directory are included in the deployment, while common VCS/system metadata such as `.git/`, `.hg/`, `.svn/`, `node_modules/`, `.DS_Store`, and `Thumbs.db` is ignored. Keep `.well-known/walrus-sites.intoto.jsonl` in this directory when deploying SLSA provenance.
+> `path` should point to a clean build output directory. Dotfiles and extensionless files inside that directory are included in the deployment, while common VCS/system metadata such as `.git/`, `.hg/`, `.svn/`, `node_modules/`, `.DS_Store`, `Thumbs.db`, and `site.config.json` is ignored. Direct action deployments may include an existing `.well-known/walrus-sites.intoto.jsonl`; the full SLSA workflow generates and injects that file after provenance is created.
+
+`site.config.json` is control-plane configuration, not a public site resource. Do not copy it into the build output. In the full SLSA workflow, also do not generate `.well-known/walrus-sites.intoto.jsonl` yourself; the workflow creates it from the verified build subjects and adds it only at deployment time.
 
 #### 🖼 `metadata` (Optional)
 
@@ -148,7 +150,7 @@ The deployment order is:
 
 Blob registration is intentionally separate from upload because storage-node upload needs the registered Blob object IDs. After upload, the action minimizes additional signatures by combining certification, resource registration, route updates, and safe old-blob cleanup into the fewest site PTBs possible. For small sites, the normal target is two signatures: one registration PTB and one certification/site/cleanup PTB.
 
-New resources use a hybrid Walrus storage layout for browser-facing delivery. `.wasm` files are stored as individual raw blobs, JS/CSS/font assets at or above 256 KiB are stored as raw blobs, other assets at or above 1 MiB are stored as raw blobs, and the remaining smaller resources are packed into quilts capped at 2 MiB per quilt. New resources do not use byte ranges; quilt resources receive an `x-wal-quilt-patch-internal-id` header, while raw resources are served through the raw blob path without that header.
+New resources use a hybrid Walrus storage layout for browser-facing delivery. `.well-known/walrus-sites.intoto.jsonl` is stored as an individual raw blob when present. `site.config.json` remains deployment configuration only and is not included in deployed site resources. `.wasm` files are stored as individual raw blobs, JS/CSS/font assets at or above 256 KiB are stored as raw blobs, other assets at or above 1 MiB are stored as raw blobs, and the remaining smaller resources are packed into quilts capped at 2 MiB per quilt. New resources do not use byte ranges; quilt resources receive an `x-wal-quilt-patch-internal-id` header, while raw resources are served through the raw blob path without that header.
 
 When updating an existing site, cleanup is still supported. The action compares old site resources against the current Blob IDs, deduplicates shared old blobs, skips blobs still referenced by the new site, and only deletes owned Blob objects that Walrus marks as `deletable`.
 
@@ -161,7 +163,7 @@ When updating an existing site, cleanup is still supported. The action compares 
 - The action runtime is Node 24 to match the current `@mysten/sui`/`@mysten/walrus` SDK requirements.
 - GitSigner is interactive and should not be treated as a replacement for unattended CI.
 - Deployments use raw blob resources for browser-critical large assets and quilt patch headers for smaller resources instead of byte-range resource entries. Existing range-based resources can still be read during update cleanup, but new resources are written through the raw/quilt hybrid path.
-- The purpose of the hybrid layout is to keep large assets on the direct raw blob path while packing small resources together.
+- The purpose of the hybrid layout is to keep large assets and provenance on the direct raw blob path while packing other small resources together.
 - Resource headers are inferred from file extensions during deployment. `.wasm` files are registered with `content-type: application/wasm` so browser streaming compilation can be used.
 
 ## 📎 Advanced Usage: Provenance & GitSigner

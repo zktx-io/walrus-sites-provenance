@@ -69,7 +69,7 @@ GitSigner is interactive. A person must approve each signing request in the nota
 
 The action itself runs on Node 24 and uses the official `@mysten/sui` gRPC/Core API. Custom Sui endpoints should be configured with `sui_grpc_url` and `sui_grpc_timeout_ms` in `site.config.json`; the older `sui_rpc_*` names are deprecated compatibility aliases.
 
-Deployment storage uses a portal-compatible hybrid layout. Large browser-critical assets are registered as raw Walrus blobs (`.wasm` always, JS/CSS/font assets at or above 256 KiB, and other assets at or above 1 MiB), while smaller resources are packed into quilts capped at 2 MiB. Quilt resources have `x-wal-quilt-patch-internal-id`; raw resources do not.
+Deployment storage uses a portal-compatible hybrid layout. `.well-known/walrus-sites.intoto.jsonl` is stored as an individual raw Walrus blob when present. `site.config.json` remains deployment configuration only and is not included in deployed site resources. Large browser-critical assets are registered as raw Walrus blobs (`.wasm` always, JS/CSS/font assets at or above 256 KiB, and other assets at or above 1 MiB), while other smaller resources are packed into quilts capped at 2 MiB. Quilt resources have `x-wal-quilt-patch-internal-id`; raw resources do not.
 
 This ensures:
 
@@ -94,8 +94,16 @@ To ensure trusted, reproducible deployments, this workflow enforces the followin
 - ✅ **Provenance must match exact outputs**  
   All files are recursively hashed and encoded during the build step. If the `.intoto.jsonl` does not match the actual deployed files, verification will fail.
 
+- 📄 **Reserved metadata paths**
+  The full SLSA workflow generates `.well-known/walrus-sites.intoto.jsonl` after hashing build output and injects it only for deployment. Do not emit `.well-known/walrus-sites.intoto.jsonl` or any `site.config.json` file from `npm run build`; the workflow rejects those paths before provenance generation.
+
 - 🧾 **Strict site config validation**
   `site.config.json` must exist and must include `network`, `owner`, `site_name`, `epochs`, and `path`. The action fails early for missing or invalid values instead of relying on implicit defaults.
+
+- ⚙️ **SLSA generator runtime warnings**
+  The provenance job calls `slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0`. That upstream reusable workflow currently invokes helper actions that declare Node 20 and a Go setup step that looks for `go.sum` in the caller workspace. As a result, GitHub may annotate `provenance / detect-env` or `provenance / generator` with Node 20 deprecation warnings and `Restore cache failed: Dependencies file is not found ... go.sum`. These warnings come from the upstream generator workflow, not from this action runtime, which uses Node 24.
+
+  For GitHub-hosted runners, setting `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` in the caller workflow does not reliably reach the nested SLSA reusable workflow because workflow-level `env` values are not propagated to called workflows. On self-hosted runners, the variable can be set on the runner machine. Otherwise, update the SLSA generator reference when a newer exact `vX.Y.Z` release is available; exact tags are required so generated provenance remains verifiable.
 
 These safeguards ensure that what you see at `*.wal.app` is exactly what was built and signed from your GitHub repository.
 
@@ -124,7 +132,7 @@ permissions:
 
 jobs:
   deploy-with-provenance:
-    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.6.0
+    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.6.1
     with:
       working-directory: './my-site-folder'
       # Optional. Defaults to Node 24 for GitHub Actions Node 20 deprecation compatibility.

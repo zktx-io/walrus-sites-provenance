@@ -18,6 +18,8 @@ Runtime changes must leave tests, lint, typecheck, build, release-tag checks, up
 
 Documentation changes should record implemented behavior, operational constraints, and purpose. Do not add incident timelines, debugging logs, or upstream-service critique to README/SLSA/AGENTS.
 
+When changing provenance or config metadata handling, first identify which path owns each file in the direct action and in the full SLSA workflow. `site.config.json` is control-plane configuration for loading deployment settings; `.well-known/walrus-sites.intoto.jsonl` is deployable provenance metadata. Verify the build hash subject set, artifact upload/download steps, file discovery ignores, blob grouping, release smoke fixture, README/SLSA docs, and `dist/` before treating either file as a normal static asset.
+
 ## Current Deployment Architecture
 
 The deployment flow is:
@@ -35,6 +37,8 @@ The site deployment planner is the only site mutation path. Do not reintroduce s
 
 New resources use a hybrid Walrus storage layout for browser-facing delivery:
 
+- `.well-known/walrus-sites.intoto.jsonl` is stored as an individual raw blob when present.
+- `site.config.json` is deployment configuration only and is not included in deployed site resources.
 - `.wasm` files are stored as individual raw blobs.
 - `.js`, `.mjs`, `.css`, and font files at or above 256 KiB are stored as individual raw blobs.
 - Other files at or above 1 MiB are stored as individual raw blobs.
@@ -44,7 +48,7 @@ New resources do not use byte ranges. Quilt resources receive an `x-wal-quilt-pa
 
 `FileInfo` represents raw local files. `RawResourceFile` and `QuiltResourceFile` represent deployable site resources, and `ResourceFile` is their union. Only `QuiltResourceFile` includes `quiltPatchInternalId`. Resource registration must accept `ResourceFile`, not raw `FileInfo`.
 
-Deployment file discovery includes dotfiles and extensionless files so `.well-known/walrus-sites.intoto.jsonl`, `.nojekyll`, `CNAME`, and similar static-site files are preserved. It must continue to ignore VCS, dependency, and OS metadata such as `.git/`, `.hg/`, `.svn/`, `node_modules/`, `.DS_Store`, and `Thumbs.db`.
+Deployment file discovery includes dotfiles and extensionless files so `.well-known/walrus-sites.intoto.jsonl`, `.nojekyll`, `CNAME`, and similar static-site files are preserved. It must continue to ignore deployment configuration, VCS, dependency, and OS metadata such as `site.config.json`, `.git/`, `.hg/`, `.svn/`, `node_modules/`, `.DS_Store`, and `Thumbs.db`.
 
 ## Cleanup Rules
 
