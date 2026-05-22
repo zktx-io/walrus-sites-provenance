@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Deploy to Walrus Sites
-        uses: zktx-io/walrus-sites-provenance@v0.6.1
+        uses: zktx-io/walrus-sites-provenance@v0.6.2
         env:
           GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
 ```

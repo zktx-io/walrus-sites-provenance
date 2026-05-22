@@ -39825,9 +39825,8 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GitSigner = exports.findGitSignerResponseTransaction = exports.createGitSignerResponseScanState = void 0;
+exports.GitSigner = exports.splitGitSignerTransportBytes = exports.findGitSignerResponseTransaction = exports.createGitSignerResponseScanState = void 0;
 const crypto_1 = __nccwpck_require__(6982);
 const core = __importStar(__nccwpck_require__(7484));
 const bcs_1 = __nccwpck_require__(7982);
@@ -39846,7 +39845,7 @@ const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
 const RETRY_MAX = 31;
 const RETRY_DELAY = 5000;
-const RESPONSE_SCAN_MAX_CHECKPOINTS = 100;
+const GIT_SIGNER_TRANSPORT_CHUNK_SIZE = 16380;
 const toSafeCheckpointNumber = (checkpoint, context) => {
     if (checkpoint == null) {
         throw new Error(`${context} did not return a checkpoint.`);
@@ -39871,21 +39870,21 @@ const getTransactionCheckpoint = async (client, digest, logger) => {
 const createGitSignerResponseScanState = async (client, requestDigest, logger) => {
     const requestCheckpoint = await getTransactionCheckpoint(client, requestDigest, logger);
     return {
-        requestDigest,
-        requestCheckpoint,
-        nextCheckpoint: requestCheckpoint,
+        baselineDigest: requestDigest,
+        baselineCheckpoint: requestCheckpoint,
     };
 };
 exports.createGitSignerResponseScanState = createGitSignerResponseScanState;
-const findGitSignerResponseTransaction = async ({ client, ephemeralAddress, scanState, logger, maxCheckpointsPerScan = RESPONSE_SCAN_MAX_CHECKPOINTS, }) => {
+const findNextSentDigestAfterBaseline = async ({ client, ephemeralAddress, scanState, logger, }) => {
     const currentCheckpoint = await getLatestCheckpointHeight(client, logger);
-    if (scanState.nextCheckpoint > currentCheckpoint) {
+    if (scanState.baselineCheckpoint > currentCheckpoint) {
         return null;
     }
-    const checkpointsToScan = Math.max(1, maxCheckpointsPerScan);
-    const endCheckpoint = Math.min(currentCheckpoint, scanState.nextCheckpoint + checkpointsToScan - 1);
     const normalizedEphemeral = (0, utils_1.normalizeSuiAddress)(ephemeralAddress);
-    for (let sequenceNumber = scanState.nextCheckpoint; sequenceNumber <= endCheckpoint; sequenceNumber++) {
+    const sentDigests = [];
+    // gRPC does not expose "latest sent transaction for address"; rebuild the
+    // ephemeral sender's list from the baseline checkpoint on every poll.
+    for (let sequenceNumber = scanState.baselineCheckpoint; sequenceNumber <= currentCheckpoint; sequenceNumber++) {
         const { response } = await (0, suiRetry_1.withSuiRetry)(async () => client.ledgerService.getCheckpoint({
             checkpointId: {
                 oneofKind: 'sequenceNumber',
@@ -39895,34 +39894,50 @@ const findGitSignerResponseTransaction = async ({ client, ephemeralAddress, scan
                 paths: ['transactions.digest', 'transactions.transaction.sender'],
             },
         }), { operation: 'GitSigner:getCheckpoint', logger, retries: 6 });
-        let requestSeen = sequenceNumber !== scanState.requestCheckpoint;
         for (const transaction of response.checkpoint?.transactions ?? []) {
             const digest = transaction.digest;
             if (!digest) {
                 continue;
             }
-            if (digest === scanState.requestDigest) {
-                requestSeen = true;
-                continue;
-            }
-            if (!requestSeen) {
+            if (digest === scanState.baselineDigest) {
+                sentDigests.push(digest);
                 continue;
             }
             const sender = transaction.transaction?.sender;
             if (!sender || (0, utils_1.normalizeSuiAddress)(sender) !== normalizedEphemeral) {
                 continue;
             }
-            const result = await (0, suiRetry_1.withSuiRetry)(async () => client.getTransaction({
-                digest,
-                include: { transaction: true },
-            }), { operation: 'GitSigner:getResponseTransaction', logger, retries: 6 });
-            return (0, suiRetry_1.getTransactionFromResult)(result);
+            sentDigests.push(digest);
         }
     }
-    scanState.nextCheckpoint = endCheckpoint + 1;
-    return null;
+    const baselineIndex = sentDigests.indexOf(scanState.baselineDigest);
+    return baselineIndex >= 0 ? (sentDigests[baselineIndex + 1] ?? null) : null;
+};
+const findGitSignerResponseTransaction = async ({ client, ephemeralAddress, scanState, logger, }) => {
+    const responseDigest = await findNextSentDigestAfterBaseline({
+        client,
+        ephemeralAddress,
+        scanState,
+        logger,
+    });
+    if (!responseDigest) {
+        return null;
+    }
+    const result = await (0, suiRetry_1.withSuiRetry)(async () => client.getTransaction({
+        digest: responseDigest,
+        include: { transaction: true },
+    }), { operation: 'GitSigner:getResponseTransaction', logger, retries: 6 });
+    return (0, suiRetry_1.getTransactionFromResult)(result);
 };
 exports.findGitSignerResponseTransaction = findGitSignerResponseTransaction;
+const splitGitSignerTransportBytes = (input, chunkSize = GIT_SIGNER_TRANSPORT_CHUNK_SIZE) => {
+    const chunks = [];
+    for (let i = 0; i < input.length; i += chunkSize) {
+        chunks.push(input.slice(i, i + chunkSize));
+    }
+    return chunks;
+};
+exports.splitGitSignerTransportBytes = splitGitSignerTransportBytes;
 const deriveKey = async (pin, salt) => {
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(pin), { name: 'PBKDF2' }, false, ['deriveKey']);
@@ -40023,7 +40038,7 @@ class GitSigner extends cryptography_1.Keypair {
         return {
             ephemeralAddress,
             secretKey: ephemeralKeypair.getSecretKey(),
-            signer: new _a({
+            signer: new GitSigner({
                 network,
                 realAddress: address,
                 ephemeralKeypair,
@@ -40065,16 +40080,40 @@ class GitSigner extends cryptography_1.Keypair {
             return false;
         }
     }
-    static #splitUint8Array(input, chunkSize = 16380) {
-        const chunks = [];
-        for (let i = 0; i < input.length; i += chunkSize) {
-            chunks.push(input.slice(i, i + chunkSize));
+    async #parseResponseTransaction(payload, responseTransaction) {
+        if (!responseTransaction?.transaction) {
+            return null;
         }
-        return chunks;
+        const tx = responseTransaction.transaction;
+        const firstInput = tx.inputs[0];
+        const secondInput = tx.inputs[1];
+        if (firstInput &&
+            secondInput &&
+            'Pure' in firstInput &&
+            'Pure' in secondInput &&
+            !bcs_1.bcs.Bool.parse((0, utils_1.fromBase64)(firstInput.Pure.bytes))) {
+            const decrypted = await decryptBytes(new Uint8Array(bcs_1.bcs.vector(bcs_1.bcs.u8()).parse((0, utils_1.fromBase64)(secondInput.Pure.bytes))), this.#pin);
+            const received = JSON.parse(new TextDecoder().decode(decrypted));
+            if (received.intent !== payload.intent) {
+                core.setFailed(`Unexpected intent: received ${received.intent}, expected ${payload.intent}`);
+                throw new Error('Process will be terminated.');
+            }
+            const verify = await this.#verifySignature(payload, received.signature);
+            if (!verify) {
+                core.setFailed(`Signature verification failed for address ${this.#realAddress}`);
+                throw new Error('Process will be terminated.');
+            }
+            return {
+                bytes: payload.bytes,
+                signature: received.signature,
+            };
+        }
+        core.setFailed(`Invalid tx type or structure: ${JSON.stringify(tx)}`);
+        throw new Error('Process will be terminated.');
     }
     async #sendRequest(payload, isEnd) {
         const encrypted = await encryptBytes(new TextEncoder().encode(JSON.stringify(payload)), this.#pin);
-        const chunks = _a.#splitUint8Array((0, utils_1.fromBase64)(encrypted));
+        const chunks = (0, exports.splitGitSignerTransportBytes)((0, utils_1.fromBase64)(encrypted));
         const ephemeralAddress = this.#ephemeralKeypair.getPublicKey().toSuiAddress();
         const tx = new transactions_1.Transaction();
         tx.setSender(ephemeralAddress);
@@ -40104,35 +40143,9 @@ class GitSigner extends cryptography_1.Keypair {
                 scanState: responseScanState,
                 logger: core,
             });
-            if (responseTransaction?.transaction) {
-                const tx = responseTransaction.transaction;
-                const firstInput = tx.inputs[0];
-                const secondInput = tx.inputs[1];
-                if (firstInput &&
-                    secondInput &&
-                    'Pure' in firstInput &&
-                    'Pure' in secondInput &&
-                    !bcs_1.bcs.Bool.parse((0, utils_1.fromBase64)(firstInput.Pure.bytes))) {
-                    const decrypted = await decryptBytes(new Uint8Array(bcs_1.bcs.vector(bcs_1.bcs.u8()).parse((0, utils_1.fromBase64)(secondInput.Pure.bytes))), this.#pin);
-                    const received = JSON.parse(new TextDecoder().decode(decrypted));
-                    if (received.intent !== payload.intent) {
-                        core.setFailed(`Unexpected intent: received ${received.intent}, expected ${payload.intent}`);
-                        throw new Error('Process will be terminated.');
-                    }
-                    const verify = await this.#verifySignature(payload, received.signature);
-                    if (!verify) {
-                        core.setFailed(`Signature verification failed for address ${this.#realAddress}`);
-                        throw new Error('Process will be terminated.');
-                    }
-                    return {
-                        bytes: payload.bytes,
-                        signature: received.signature,
-                    };
-                }
-                else {
-                    core.setFailed(`Invalid tx type or structure: ${JSON.stringify(tx)}`);
-                    throw new Error('Process will be terminated.');
-                }
+            const signature = await this.#parseResponseTransaction(payload, responseTransaction);
+            if (signature) {
+                return signature;
             }
             await (0, writeBlobHelper_1.sleep)(sleepTime);
         }
@@ -40160,7 +40173,6 @@ class GitSigner extends cryptography_1.Keypair {
     }
 }
 exports.GitSigner = GitSigner;
-_a = GitSigner;
 
 
 /***/ }),

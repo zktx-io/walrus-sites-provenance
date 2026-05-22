@@ -132,7 +132,7 @@ permissions:
 
 jobs:
   deploy-with-provenance:
-    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.6.1
+    uses: zktx-io/walrus-sites-provenance/.github/workflows/deploy_with_slsa3.yml@v0.6.2
     with:
       working-directory: './my-site-folder'
       # Optional. Defaults to Node 24 for GitHub Actions Node 20 deprecation compatibility.

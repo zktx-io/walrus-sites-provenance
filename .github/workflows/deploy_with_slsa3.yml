@@ -235,6 +235,6 @@ jobs:
       - name: Deploy to Walrus Sites
         id: deploy
         # Release checklist: update this self-reference tag atomically with README.md and SLSA.md.
-        uses: zktx-io/walrus-sites-provenance@v0.6.1
+        uses: zktx-io/walrus-sites-provenance@v0.6.2
         env:
           GIT_SIGNER_PIN: ${{ secrets.GIT_SIGNER_PIN }}
